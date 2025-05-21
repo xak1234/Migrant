@@ -6,94 +6,85 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@700&display=swap" rel="stylesheet">
   <style>
-    body {
+    html, body {
+      height: 100%;
       margin: 0;
-      background: #20242c;
-      color: #fff;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
       font-family: 'Roboto', Arial, sans-serif;
+      min-height: 100vh;
+      min-width: 100vw;
+      background: url('migrant3.jpg') center center/cover no-repeat fixed;
+      /* Overlay a dark gradient for contrast */
+      position: relative;
+      z-index: 1;
+    }
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(25,28,37,0.55); /* semi-transparent dark overlay */
+      z-index: 2;
+      pointer-events: none;
+    }
+    .main-content {
+      position: relative;
+      z-index: 3;
       display: flex;
       flex-direction: column;
-      min-height: 100vh;
       align-items: center;
       justify-content: flex-start;
-    }
-    header {
-      text-align: center;
-      margin-top: 32px;
-    }
-    .cover-img {
-      max-width: 90vw;
-      width: 900px;
-      margin-top: 24px;
-      border-radius: 18px;
-      box-shadow: 0 6px 48px 0 #111c, 0 0 0 6px #fff1;
-      object-fit: cover;
+      min-height: 100vh;
+      padding-top: 48px;
+      padding-bottom: 48px;
     }
     h1 {
-      font-size: 2.7rem;
-      letter-spacing: 2px;
-      margin-bottom: 10px;
       color: #38ffe4;
+      font-size: 2.5rem;
+      margin-bottom: 10px;
       text-shadow: 2px 2px 10px #0cf, 0 0 4px #fff7;
+      letter-spacing: 2px;
     }
     .tagline {
       color: #ffdc4e;
-      font-size: 1.2rem;
-      letter-spacing: 1.5px;
+      font-size: 1.1rem;
       margin-bottom: 22px;
       text-shadow: 0 1px 2px #000b;
     }
-    main {
-      width: 100%;
-      max-width: 1100px;
-      padding: 36px 8px 48px 8px;
-      margin: 0 auto;
-    }
     .game-container {
-      margin-top: 28px;
-      padding: 0;
-      background: #16191f;
-      border-radius: 18px;
-      box-shadow: 0 6px 40px 0 #111b;
-      min-height: 540px;
+      background: rgba(20,24,32,0.82);
+      border-radius: 16px;
+      box-shadow: 0 8px 48px 0 #111b, 0 0 0 6px #fff1;
+      padding: 24px 12px 20px 12px;
+      margin-top: 18px;
+      min-width: 330px;
+      max-width: 980px;
+      width: 95vw;
+      min-height: 560px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
     }
-    iframe {
-      width: 100%;
-      min-height: 540px;
-      border: none;
-      border-radius: 0 0 18px 18px;
-      background: #20242c;
-      box-shadow: 0 2px 24px 0 #0008;
-    }
-    @media (max-width: 1000px) {
-      .cover-img { width: 100%; }
-      main { padding: 6px; }
-      iframe { min-height: 420px; }
-      .game-container { min-height: 420px; }
-    }
-    @media (max-width: 600px) {
-      h1 { font-size: 1.6rem; }
-      .cover-img { width: 100%; }
-      .game-container { min-height: 260px; }
-      iframe { min-height: 260px; }
+    @media (max-width: 700px) {
+      h1 { font-size: 1.25rem; }
+      .main-content { padding-top: 12px; }
+      .game-container { padding: 8px 2px; min-width: 0; width: 99vw; }
     }
   </style>
 </head>
 <body>
-  <header>
+  <div class="overlay"></div>
+  <div class="main-content">
     <h1>Migrantopoly</h1>
-    <div class="tagline"></div>
-    <!-- Use your actual image file -->
-    <img src="migrant3.jpg" alt="Migrantopoly Cover" class="cover-img" />
-  </header>
-  <main>
+    <div class="tagline">Journey to Security. Play the controversy.</div>
     <div class="game-container">
-      <iframe src="missile.html" title=""></iframe>
+      <!-- Paste all your actual game HTML here (the board, player stats, dice, everything) -->
+      <!-- Or, if you want, you can iframe missile.html like before: -->
+      <!-- <iframe src="missile.html" title="Migrantopoly Game" style="width:100%;min-height:540px;border:none;border-radius:12px;"></iframe> -->
+      <!-- Replace below with your full game code if not using iframe -->
+      <p style="color:#fff;text-align:center;">Your Migrantopoly game goes here.</p>
     </div>
-  </main>
+  </div>
 </body>
 </html>
