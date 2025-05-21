@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Migrantopoly – The Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      background: #20242c;
+      color: #fff;
+      font-family: 'Roboto', Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    header {
+      text-align: center;
+      margin-top: 32px;
+    }
+    .cover-img {
+      max-width: 90vw;
+      width: 900px;
+      margin-top: 24px;
+      border-radius: 18px;
+      box-shadow: 0 6px 48px 0 #111c, 0 0 0 6px #fff1;
+      object-fit: cover;
+    }
+    h1 {
+      font-size: 2.7rem;
+      letter-spacing: 2px;
+      margin-bottom: 10px;
+      color: #38ffe4;
+      text-shadow: 2px 2px 10px #0cf, 0 0 4px #fff7;
+    }
+    .tagline {
+      color: #ffdc4e;
+      font-size: 1.2rem;
+      letter-spacing: 1.5px;
+      margin-bottom: 22px;
+      text-shadow: 0 1px 2px #000b;
+    }
+    main {
+      width: 100%;
+      max-width: 1100px;
+      padding: 36px 8px 48px 8px;
+      margin: 0 auto;
+    }
+    .game-container {
+      margin-top: 28px;
+      padding: 0;
+      background: #16191f;
+      border-radius: 18px;
+      box-shadow: 0 6px 40px 0 #111b;
+      min-height: 540px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    iframe {
+      width: 100%;
+      min-height: 540px;
+      border: none;
+      border-radius: 0 0 18px 18px;
+      background: #20242c;
+      box-shadow: 0 2px 24px 0 #0008;
+    }
+    @media (max-width: 1000px) {
+      .cover-img { width: 100%; }
+      main { padding: 6px; }
+      iframe { min-height: 420px; }
+      .game-container { min-height: 420px; }
+    }
+    @media (max-width: 600px) {
+      h1 { font-size: 1.6rem; }
+      .cover-img { width: 100%; }
+      .game-container { min-height: 260px; }
+      iframe { min-height: 260px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Migrantopoly</h1>
+    <div class="tagline">Journey to Security. Play the controversy.</div>
+    <!-- Use your actual image file -->
+    <img src="migrant3.jpg" alt="Migrantopoly Cover" class="cover-img" />
+  </header>
+  <main>
+    <div class="game-container">
+      <iframe src="missile.html" title="Migrantopoly Game"></iframe>
+    </div>
+  </main>
+</body>
+</html>
