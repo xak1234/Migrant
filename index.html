@@ -1212,9 +1212,8 @@
 
                 if (currentAnimatedPosition === 0 && prevPositionForGoPassCheck !== 0 && !player.inDetention) {
                     govPayout(player, 200); 
-                    govPayout(player, 200); 
                     player.getOutOfDetentionCards = (player.getOutOfDetentionCards || 0) + 1; 
-                    logEvent(`${player.name} passed Dole and collected £400 (+1 LegalAid).`);
+                    logEvent(`${player.name} passed Dole and collected £200 (+1 LegalAid).`);
                     updatePlayerInfo(); 
                 }
             }
@@ -1260,26 +1259,23 @@
             logEvent(`${player.name} landed on ${currentSpace.name}.`);
             let actionCompleted = false; 
 
-            const genericPenaltySpaces = ['Detention Center']; 
-            if (genericPenaltySpaces.includes(currentSpace.name) && currentSpace.type === 'detention_visiting') {
-                logEvent(`${player.name} has to pay £200 for landing on ${currentSpace.name}.`);
-                makePayment(player, bank, 200);
-                updatePlayerInfo();
-            }
+            // Detention Center no longer takes player cash when landed on
+            // as per new game rules
 
             if (currentSpace.name === 'Crime Spree !!! Arrest' ||
-                currentSpace.name === 'Go to Detention Center' ||
                 (currentSpace.name === 'Detention Center' && currentSpace.type === 'detention_visiting') ||
                 (currentSpace.name === 'Dole' && currentSpace.type === 'go')
             ) {
                 player.getOutOfDetentionCards = (player.getOutOfDetentionCards || 0) + 1;
-                
-                if (currentSpace.name !== 'Go to Detention Center') { 
-                    govPayout(player, 100);
-                    logEvent(`${player.name} receives +£100 from UK Gov and +1 LegalAid for action on ${currentSpace.name}.`);
-                } else {
-                    logEvent(`${player.name} receives +1 LegalAid for action on ${currentSpace.name}. (No Gov Payout for Go to Detention)`);
-                }
+                govPayout(player, 100);
+                logEvent(`${player.name} receives +£100 from UK Gov and +1 LegalAid for action on ${currentSpace.name}.`);
+                updatePlayerInfo();
+            }
+            
+            // Special handling for Go to Detention Center - player loses 100
+            if (currentSpace.name === 'Go to Detention Center') {
+                makePayment(player, bank, 100);
+                logEvent(`${player.name} loses £100 for landing on Go to Detention Center.`);
                 updatePlayerInfo();
             }
 
