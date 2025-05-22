@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Migrantopoly Online</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    #board {
+      margin: 20px auto;
+      width: 600px;
+      height: 600px;
+      border: 2px solid #333;
+      position: relative;
+    }
+    .token {
+      width: 30px;
+      height: 30px;
+      position: absolute;
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      border: 1px solid #000;
+      border-radius: 50%;
+    }
+    .player1::before { content: "🐱"; }
+    .player2::before { content: "🐶"; }
+    .player3::before { content: "⛵"; }
+    .player4::before { content: "🔪"; }
+    .aiToken::before { content: "💻"; }
+    #startGameBtn { display: none; margin: 10px; padding: 10px 20px; }
+    .dice {
+      width: 60px;
+      height: 60px;
+      margin: 10px auto;
+      font-size: 32px;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.3s ease;
+    }
+    .dice:active {
+      transform: rotate(360deg);
+    }
+  </style>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+</head>
+<body>
+  <h1>Migrantopoly Online</h1>
+  <p id="playerInfo">Joining game...</p>
+  <button id="startGameBtn" onclick="startGame()">Start Game</button>
+  <div class="dice" onclick="rollDice()" id="dice">?</div>
+  <p id="diceResult">Click the dice to roll</p>
+  <div id="board"></div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+      projectId: "YOUR_PROJECT",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "YOUR_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let myPlayerId = "";
+    let isGameStarted = false;
+
+    // Pre-game lobby & join logic
+    db.ref("gameState").once("value").then(stateSnap => {
+      if (stateSnap.val() === "started") return alert("Game already started!");
+      db.ref("players").once("value").then(snap => {
+        const players = snap.val() || {};
+        const count = Object.keys(players).length;
+        if (count >= 4) return alert("Game full!");
+        myPlayerId = "player" + (count + 1);
+        db.ref("players/" + myPlayerId).set({ position: 0 });
+        document.getElementById("playerInfo").innerText = "You are " + myPlayerId;
+        if (myPlayerId === "player1") document.getElementById("startGameBtn").style.display = "inline-block";
+        if (count === 0) {
+          // AI fallback
+          setTimeout(() => db.ref("players/player2").set({ position: 0, isAI: true }), 5000);
+        }
+      });
+    });
+
+    // Start game (only player1)
+    function startGame() {
+      if (myPlayerId === "player1") db.ref("gameState").set("started");
+    }
+    db.ref("gameState").on("value", s => {
+      isGameStarted = (s.val() === "started");
+      if (isGameStarted) document.getElementById("startGameBtn").style.display = "none";
+    });
+
+    // Dice roll animation & sync
+    function rollDice() {
+      if (!isGameStarted) return alert("Game hasn't started yet.");
+      const dice = document.getElementById("dice");
+      dice.innerText = "?"; dice.style.transform = "rotate(0deg)";
+      setTimeout(() => {
+        const r = Math.floor(Math.random() * 6) + 1;
+        dice.innerText = r;
+        document.getElementById("diceResult").innerText = "You rolled a " + r;
+        db.ref("dice").set({ player: myPlayerId, roll: r });
+      }, 300);
+    }
+
+    // Apply roll to positions & AI turn
+    db.ref("dice").on("value", snap => {
+      const d = snap.val();
+      if (!d) return;
+      db.ref("players/" + d.player).once("value").then(ps => {
+        const oldP = ps.val().position || 0;
+        const newP = (oldP + d.roll) % 20;
+        db.ref("players/" + d.player).set({ position: newP, isAI: ps.val().isAI || false });
+        if (ps.val().isAI) {
+          setTimeout(() => {
+            const ar = Math.floor(Math.random() * 6) + 1;
+            db.ref("dice").set({ player: "player2", roll: ar });
+          }, 2000);
+        }
+      });
+    });
+
+    // Render tokens
+    db.ref("players").on("value", snap => {
+      document.getElementById("board").innerHTML = "";
+      const all = snap.val() || {};
+      for (let id in all) {
+        const pos = all[id].position;
+        const div = document.createElement("div");
+        div.className = "token " + (all[id].isAI ? "aiToken" : id);
+        div.style.left = (pos * 25) % 500 + "px";
+        div.style.top  = Math.floor(pos / 10) * 50 + "px";
+        document.getElementById("board").appendChild(div);
+      }
+    });
+  </script>
+</body>
+</html>
