@@ -56,11 +56,11 @@
 
         #board-container {
             display: grid;
-            grid-template-columns: 100px repeat(7, 70px) 100px;
-            grid-template-rows: 100px repeat(7, 70px) 100px;
+            grid-template-columns: 100px repeat(9, 60px) 100px;
+            grid-template-rows: 100px repeat(9, 60px) 100px;
             border: 3px solid #7f8c8d; 
-            width: 690px; 
-            height: 690px;
+            width: 800px; 
+            height: 800px;
             position: relative;
             background-color: rgba(52, 73, 94, 0.68); 
             border-radius: 10px;
@@ -630,7 +630,7 @@
     <script>
         // --- Game Data ---
         let boardLayout = [
-            // Side 1 (Bottom Row)
+            // Side 1 (Bottom Row) - 11 spaces
             { id: 0, name: "Dole", type: "go" },
             { id: 1, name: "Tent in Field 1", type: "property", price: 60, rent: [4, 10, 20, 40, 80], color: "brown", groupId: "brown" },
             { id: 2, name: "Welfare Card", type: "welfare" },
@@ -640,42 +640,50 @@
             { id: 6, name: "Tesco Cardboard Skip 1", type: "property", price: 100, rent: [6, 15, 30, 60, 120], color: "light-blue", groupId: "lightblue" },
             { id: 7, name: "Your Rented Boat Sank", type: "opportunity" }, // New card
             { id: 8, name: "Tesco Cardboard Skip 2", type: "property", price: 120, rent: [8, 15, 30, 60, 120], color: "light-blue", groupId: "lightblue" },
+            { id: 9, name: "Tesco Cardboard Skip 3", type: "property", price: 140, rent: [10, 15, 30, 60, 120], color: "light-blue", groupId: "lightblue" },
+            { id: 10, name: "Detention Center", type: "detention_visiting" },
 
-            // Side 2 (Right Column)
-            { id: 9, name: "Detention Center", type: "detention_visiting" },
-            { id: 10, name: "Payout: Job Seeker's", type: "payout", amount: 100 },
-            { id: 11, name: "Tesco Cardboard Skip 3", type: "property", price: 140, rent: [10, 15, 30, 60, 120], color: "light-blue", groupId: "lightblue" },
+            // Side 2 (Right Column) - 11 spaces
+            { id: 11, name: "Payout: Job Seeker's", type: "payout", amount: 100 },
             { id: 12, name: "Council Highrise 1", type: "property", price: 160, rent: [12, 25, 50, 100, 200], color: "pink", groupId: "pink" },
             { id: 13, name: "Customs Raid Kebab House", type: "opportunity" }, // New card
-            { id: 14, name: "Forced Marriage", type: "set_property", price: 200, rent_base: 200, groupId: "special_set" },
-            { id: 15, name: "Welfare Card", type: "welfare" },
-            { id: 16, name: "Council Highrise 2", type: "property", price: 180, rent: [14, 25, 50, 100, 200], color: "pink", groupId: "pink" },
-            { id: 17, name: "Council Highrise 3", type: "property", price: 200, rent: [16, 25, 50, 100, 200], color: "pink", groupId: "pink" },
-
-            // Side 3 (Top Row)
-            { id: 18, name: "Crime Spree !!! Arrest", type: "crime_spree", amount: 50 }, // This amount is the fine
-            { id: 19, name: "Gypsy Estate 1", type: "property", price: 220, rent: [18, 35, 70, 140, 280], color: "orange", groupId: "orange" },
+            { id: 14, name: "Council Highrise 2", type: "property", price: 180, rent: [14, 25, 50, 100, 200], color: "pink", groupId: "pink" },
+            { id: 15, name: "Council Highrise 3", type: "property", price: 200, rent: [16, 25, 50, 100, 200], color: "pink", groupId: "pink" },
+            { id: 16, name: "Forced Marriage", type: "set_property", price: 200, rent_base: 200, groupId: "special_set" },
+            { id: 17, name: "Welfare Card", type: "welfare" },
+            { id: 18, name: "Gypsy Estate 1", type: "property", price: 220, rent: [18, 35, 70, 140, 280], color: "orange", groupId: "orange" },
+            { id: 19, name: "Gypsy Estate 2", type: "property", price: 240, rent: [20, 35, 70, 140, 280], color: "orange", groupId: "orange" },
             { id: 20, name: "Opportunity Card", type: "opportunity" },
-            { id: 21, name: "Gypsy Estate 2", type: "property", price: 240, rent: [20, 35, 70, 140, 280], color: "orange", groupId: "orange" },
-            { id: 22, name: "Child Wives", type: "set_property", price: 200, rent_base: 200, groupId: "special_set" },
-            { id: 23, name: "Cash Laundering Shop Reported", type: "opportunity" }, // New card
-            { id: 24, name: "Fake ID Cards", type: "payout", amount: 100 }, 
-            { id: 25, name: "Gypsy Estate 3", type: "property", price: 260, rent: [22, 35, 70, 140, 280], color: "orange", groupId: "orange" },
-            { id: 26, name: "Holiday Inn 1", type: "property", price: 280, rent: [24, 45, 90, 180, 360], color: "red", groupId: "red" },
+            { id: 21, name: "Crime Spree !!! Arrest", type: "crime_spree", amount: 50 }, // This amount is the fine
 
-            // Side 4 (Left Column)
-            { id: 27, name: "Go to Detention Center", type: "go_to_detention" },
-            { id: 28, name: "Welfare Card", type: "welfare" },
-            { id: 29, name: "Holiday Inn 2", type: "property", price: 300, rent: [26, 45, 90, 180, 360], color: "red", groupId: "red" },
-            { id: 30, name: "Holiday Inn 3", type: "property", price: 320, rent: [28, 45, 90, 180, 360], color: "red", groupId: "red" },
-            { id: 31, name: "I Dont speak English", type: "set_property", price: 200, rent_base: 200, groupId: "special_set" },
-            { id: 32, name: "Fake Cigarettes are Camel Shit", type: "opportunity" }, // New card
-            { id: 33, name: "Luxury Flat 1", type: "property", price: 350, rent: [30, 60, 120, 240, 480], color: "green", groupId: "green" },
+            // Side 3 (Top Row) - 11 spaces
+            { id: 22, name: "Gypsy Estate 3", type: "property", price: 260, rent: [22, 35, 70, 140, 280], color: "orange", groupId: "orange" },
+            { id: 23, name: "Child Wives", type: "set_property", price: 200, rent_base: 200, groupId: "special_set" },
+            { id: 24, name: "Cash Laundering Shop Reported", type: "opportunity" }, // New card
+            { id: 25, name: "Holiday Inn 1", type: "property", price: 280, rent: [24, 45, 90, 180, 360], color: "red", groupId: "red" },
+            { id: 26, name: "Holiday Inn 2", type: "property", price: 300, rent: [26, 45, 90, 180, 360], color: "red", groupId: "red" },
+            { id: 27, name: "Fake ID Cards", type: "payout", amount: 100 },
+            { id: 28, name: "Holiday Inn 3", type: "property", price: 320, rent: [28, 45, 90, 180, 360], color: "red", groupId: "red" },
+            { id: 29, name: "I Dont speak English", type: "set_property", price: 200, rent_base: 200, groupId: "special_set" },
+            { id: 30, name: "Luxury Flat 1", type: "property", price: 350, rent: [30, 60, 120, 240, 480], color: "green", groupId: "green" },
+            { id: 31, name: "Luxury Flat 2", type: "property", price: 400, rent: [35, 60, 120, 240, 480], color: "green", groupId: "green" },
+            { id: 32, name: "Go to Detention Center", type: "go_to_detention" },
+
+            // Side 4 (Left Column) - 11 spaces
+            { id: 33, name: "Welfare Card", type: "welfare" },
             { id: 34, name: "Opportunity Card", type: "opportunity" },
-            { id: 35, name: "Luxury Flat 2", type: "property", price: 400, rent: [35, 60, 120, 240, 480], color: "green", groupId: "green" },
+            { id: 35, name: "Fake Cigarettes are Camel Shit", type: "opportunity" }, // New card
+            { id: 36, name: "Opportunity Card", type: "opportunity" },
+            { id: 37, name: "Welfare Card", type: "welfare" },
+            { id: 38, name: "Opportunity Card", type: "opportunity" },
+            { id: 39, name: "Welfare Card", type: "welfare" },
+            { id: 40, name: "Opportunity Card", type: "opportunity" },
+            { id: 41, name: "Welfare Card", type: "welfare" },
+            { id: 42, name: "Opportunity Card", type: "opportunity" },
+            { id: 43, name: "Dole", type: "go" }, // Duplicate of id: 0 to complete the loop
         ];
 
-        const detentionCenterSpaceId = 9; // Updated ID for Detention Center
+        const detentionCenterSpaceId = 10; // Updated ID for Detention Center
         const TENANCY_COST = 50;
         const PR_COST = 150;
         const MAX_TENANCIES = 3;
@@ -822,7 +830,7 @@
                     }
                     spaceDiv.appendChild(bars);
                 }
-                if (s.name === 'Go to Detention Center') {
+                if (s.type === 'go_to_detention') {
                     const arrow = document.createElement('div');
                     arrow.className = 'detention-arrow';
                     arrow.textContent = '→';
@@ -868,18 +876,18 @@
                     spaceDiv.appendChild(ownerIndicator);
                 }
 
-                // Bottom row (9 spaces)
+                // Bottom row (11 spaces)
                 if (i === 0) { spaceDiv.style.gridArea = `1 / 1`; }              
-                else if (i >= 1 && i <= 8) { spaceDiv.style.gridArea = `1 / ${i + 1}`; } 
-                // Right column (9 spaces)
-                else if (i === 9) { spaceDiv.style.gridArea = `1 / 9`; }             
-                else if (i >= 10 && i <= 17) { spaceDiv.style.gridArea = `${(i - 9) + 1} / 9`; } 
-                // Top row (9 spaces)
-                else if (i === 18) { spaceDiv.style.gridArea = `9 / 9`; }            
-                else if (i >= 19 && i <= 26) { spaceDiv.style.gridArea = `9 / ${9 - (i - 18)}`; } 
-                // Left column (9 spaces)
-                else if (i === 27) { spaceDiv.style.gridArea = `9 / 1`; }            
-                else if (i >= 28 && i <= 35) { spaceDiv.style.gridArea = `${9 - (i - 27)} / 1`; } 
+                else if (i >= 1 && i <= 9) { spaceDiv.style.gridArea = `1 / ${i + 1}`; } 
+                else if (i === 10) { spaceDiv.style.gridArea = `1 / 11`; }
+                // Right column (11 spaces)
+                else if (i >= 11 && i <= 20) { spaceDiv.style.gridArea = `${(i - 10)} / 11`; } 
+                else if (i === 21) { spaceDiv.style.gridArea = `11 / 11`; }
+                // Top row (11 spaces)
+                else if (i >= 22 && i <= 31) { spaceDiv.style.gridArea = `11 / ${11 - (i - 22)}`; } 
+                else if (i === 32) { spaceDiv.style.gridArea = `11 / 1`; }
+                // Left column (11 spaces)
+                else if (i >= 33 && i <= 43) { spaceDiv.style.gridArea = `${11 - (i - 33)} / 1`; }
 
 
                 boardContainer.appendChild(spaceDiv);
