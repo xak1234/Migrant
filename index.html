@@ -567,6 +567,22 @@
             font-weight: bold;
         }
 
+        /* --- Token Flashing Animations --- */
+        .token-flash {
+            animation: token-flash-animation 0.7s infinite alternate;
+        }
+        @keyframes token-flash-animation {
+            0% { opacity: 1; transform: scale(1.1); filter: drop-shadow(0 0 6px currentColor) drop-shadow(0 0 3px #fff); }
+            100% { opacity: 0.6; transform: scale(1); filter: drop-shadow(0 0 3px currentColor); }
+        }
+        .token-move-flash {
+            animation: token-move-flash-animation 0.2s infinite;
+        }
+        @keyframes token-move-flash-animation {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
 </style>
 </head>
 <body>
@@ -686,7 +702,6 @@
             // Go
             tempBoard.push(initialBoardLayout.find(s => s.id === 0)); //0
 
-            // --- MODIFICATION START ---
             // Side 1: Swapping "Welfare Card" (initialBoardLayout id: 2) with "Boat Sank After Renting" (newBoardLocations[0])
             const welfareCardOriginal = initialBoardLayout.find(s => s.id === 2);
             const boatSankProperty = newBoardLocations[0];
@@ -699,7 +714,6 @@
             tempBoard.push(welfareCardOriginal);                        // Swapped: "Welfare Card" takes original slot of "Boat Sank After Renting"
             
             tempBoard.push(...initialBoardLayout.filter(s => s.id >= 5 && s.id <= 7)); // Original ids 5 (Fake PIP), 6 (Tesco Skip 1), 7 (Tesco Skip 2)
-            // --- MODIFICATION END ---
             
             // Corner 1
             tempBoard.push(initialBoardLayout.find(s => s.id === 8)); // Detention Center (Original id: 8)
@@ -859,11 +873,15 @@
                     spaceDiv.classList.add('corner');
                 }
                 
-                if (['Fake PIP declined', 'Fake ID Cards'].includes(s.name)) { 
+                // MODIFIED: Payout: Job Seeker's to yellow
+                if (['Fake PIP declined', 'Fake ID Cards', "Payout: Job Seeker's"].includes(s.name)) { 
                     spaceDiv.classList.add('yellow-boardname');
-                } else if (["Payout: Job Seeker's"].includes(s.name)) { 
-                    spaceDiv.classList.add('red-boardname');
                 }
+                // Original red-boardname for Payout: Job Seeker's removed.
+                // else if (["Payout: Job Seeker's"].includes(s.name)) { 
+                //    spaceDiv.classList.add('red-boardname'); // This was the old one
+                // }
+
 
                 if (s.name === "Dole" && s.type === "go"){ 
                      spaceDiv.classList.add('dole-space'); 
@@ -933,16 +951,15 @@
                     spaceDiv.appendChild(ownerIndicator);
                 }
 
-                // UPDATED Grid Positioning Logic for 10x10 effective grid (IDs 0-35 for a 36-space board)
                 const currentId = s.id;
-                if (currentId === 0) { spaceDiv.style.gridArea = `1 / 1`; } // Dole (Go)
-                else if (currentId >= 1 && currentId <= 8) { spaceDiv.style.gridArea = `1 / ${currentId + 1}`; } // Top row (excluding corners)
-                else if (currentId === 9) { spaceDiv.style.gridArea = `1 / 10`; } // Detention Center (Visiting)           
-                else if (currentId >= 10 && currentId <= 17) { spaceDiv.style.gridArea = `${(currentId - 9) + 1} / 10`; } // Right column
-                else if (currentId === 18) { spaceDiv.style.gridArea = `10 / 10`; } // Crime Spree !!! Arrest           
-                else if (currentId >= 19 && currentId <= 26) { spaceDiv.style.gridArea = `10 / ${10 - (currentId - 18)}`; } // Bottom row
-                else if (currentId === 27) { spaceDiv.style.gridArea = `10 / 1`; } // Go to Detention Center           
-                else if (currentId >= 28 && currentId <= 35) { spaceDiv.style.gridArea = `${10 - (currentId - 27)} / 1`; } // Left column
+                if (currentId === 0) { spaceDiv.style.gridArea = `1 / 1`; } 
+                else if (currentId >= 1 && currentId <= 8) { spaceDiv.style.gridArea = `1 / ${currentId + 1}`; } 
+                else if (currentId === 9) { spaceDiv.style.gridArea = `1 / 10`; }            
+                else if (currentId >= 10 && currentId <= 17) { spaceDiv.style.gridArea = `${(currentId - 9) + 1} / 10`; } 
+                else if (currentId === 18) { spaceDiv.style.gridArea = `10 / 10`; }            
+                else if (currentId >= 19 && currentId <= 26) { spaceDiv.style.gridArea = `10 / ${10 - (currentId - 18)}`; } 
+                else if (currentId === 27) { spaceDiv.style.gridArea = `10 / 1`; }           
+                else if (currentId >= 28 && currentId <= 35) { spaceDiv.style.gridArea = `${10 - (currentId - 27)} / 1`; } 
 
 
                 boardContainer.appendChild(spaceDiv);
@@ -994,7 +1011,6 @@
 
 
         function initializeGame() {
-            // reformatBoardLayout(); // Called globally once
             detentionCenterSpaceId = boardLayout.find(s => s.name === "Detention Center").id;
             getPlayerSetup(); 
 
@@ -1287,6 +1303,8 @@
             const tokenElement = document.getElementById(`player${player.id}-token`);
             if (!tokenElement) return;
 
+            tokenElement.classList.add('token-move-flash'); // Start move flash
+
             let currentAnimatedPosition = player.position;
             for (let i = 0; i < steps; i++) {
                 let prevPositionForGoPassCheck = currentAnimatedPosition;
@@ -1315,6 +1333,7 @@
                 }
             }
             player.position = currentAnimatedPosition;
+            tokenElement.classList.remove('token-move-flash'); // End move flash
         }
 
 
@@ -1638,7 +1657,10 @@
                 player.healthServices = 0;
 
                 const token = document.getElementById(`player${player.id}-token`);
-                if (token) token.style.display = 'none'; 
+                if (token) {
+                    token.style.display = 'none'; 
+                    token.classList.remove('token-flash', 'token-move-flash');
+                }
 
                 updatePlayerInfo(); 
                 updateBoardDisplay(); 
@@ -1657,6 +1679,9 @@
             developPropertyButton.style.display = 'none';
             buyPropertyButton.style.display = 'none';
             otherActionsContainer.style.display = 'none'; 
+
+            const currentToken = document.getElementById(`player${player.id}-token`);
+            if (currentToken) currentToken.classList.remove('token-flash');
 
             if (onBoardCardDisplayDiv) { 
                 onBoardCardDisplayDiv.style.display = 'flex'; 
@@ -1702,6 +1727,7 @@
                 if (player.isBankrupt || player.inDetention) { 
                     player.playerActionTakenThisTurn = true;
                 } else if (['moveToNearestPayout', 'advanceToGo'].includes(currentCardBeingExecuted.action)) {
+                  // Landing on these new spaces will determine playerActionTakenThisTurn
                 } else if (!['goToDetentionDirect'].includes(currentCardBeingExecuted.action)) {
                     if (lastRollWasDoublesGlobal && !player.inDetention && !player.isBankrupt) {
                         player.playerActionTakenThisTurn = false; 
@@ -1858,7 +1884,7 @@
                     player.inDetention = false;
                     player.missedTurnsInDetention = 0;
                     logEvent(`${player.name} used Legal Aid card and is free from Detention.`);
-                    player.playerActionTakenThisTurn = false; 
+                    player.playerActionTakenThisTurn = false; // Player is free, turn continues with roll if applicable
                     updateUIForCurrentPlayer();
                 };
                 detentionActionsDiv.appendChild(useCardBtn);
@@ -1874,10 +1900,10 @@
                         player.inDetention = false;
                         player.missedTurnsInDetention = 0;
                         logEvent(`${player.name} paid £${fineAmount} fine and is free from Detention.`);
-                        player.playerActionTakenThisTurn = false; 
+                        player.playerActionTakenThisTurn = false;  // Player is free, turn continues
                     } else {
                         logEvent(`${player.name} attempted to pay fine but failed.`);
-                        player.playerActionTakenThisTurn = true; 
+                        player.playerActionTakenThisTurn = true; // Failed to pay, action taken
                     }
                     updateUIForCurrentPlayer();
                 };
@@ -1887,7 +1913,7 @@
             const rollDoublesBtn = document.createElement('button');
             rollDoublesBtn.textContent = "Roll for Doubles (1 Chance)";
             rollDoublesBtn.onclick = async () => { 
-                detentionActionsDiv.innerHTML = ''; 
+                detentionActionsDiv.innerHTML = ''; // This action commits the turn's attempt
                 const { totalRoll, die1, die2, isDoubles } = rollDiceInternal(); 
                 lastRollWasDoublesGlobal = isDoubles; 
                 
@@ -1902,15 +1928,10 @@
                     logEvent(`${player.name} rolled doubles (${totalRoll}) and is free from Detention! Moves ${totalRoll}.`);
                     await movePlayerAnimated(player, totalRoll); 
                     await handleLandOnSpace(player); 
-                    
-                    if (lastRollWasDoublesGlobal && cardDisplayContainer.style.display === 'none' && !player.inDetention && !player.isBankrupt) {
-                        player.playerActionTakenThisTurn = false;
-                    } else if (!player.inDetention && !player.isBankrupt) { 
-                        player.playerActionTakenThisTurn = true; 
-                    }
+                    // playerActionTakenThisTurn will be determined by handleLandOnSpace and subsequent doubles logic
                 } else {
                     logEvent(`${player.name} rolled ${totalRoll} (not doubles). Stays in Detention.`);
-                    player.playerActionTakenThisTurn = true; 
+                    player.playerActionTakenThisTurn = true; // Failed roll, action for this turn regarding getting out is done.
                 }
                 updateUIForCurrentPlayer(); 
             };
@@ -1942,6 +1963,9 @@
         function showDevelopmentOptions() { 
             const player = players[currentPlayerIndex];
             if (player.isBankrupt) return;
+
+            const currentToken = document.getElementById(`player${player.id}-token`);
+            if (currentToken) currentToken.classList.remove('token-flash');
 
             developPropertyOptionsDiv.innerHTML = '';
             let canDevelopSomething = false;
@@ -2124,6 +2148,12 @@
             logEvent("--- GAME OVER ---");
             currentTurnDisplay.textContent = "Game Over!";
             currentTurnDisplay.style.color = '#ecf0f1'; 
+
+            players.forEach(p => { // Remove flash from all tokens
+                const token = document.getElementById(`player${p.id}-token`);
+                if (token) token.classList.remove('token-flash', 'token-move-flash');
+            });
+
             rollDiceButton.style.display = 'none';
             rollDiceButton.disabled = true;
             endTurnButton.style.display = 'none';
@@ -2183,10 +2213,29 @@
 
             const player = players[currentPlayerIndex];
 
+            // Manage token flashing
+            players.forEach(p => { 
+                const token = document.getElementById(`player${p.id}-token`);
+                if (token) token.classList.remove('token-flash');
+            });
+
+            if (gameActive && player && !player.isBankrupt && !player.isAI) {
+                const currentToken = document.getElementById(`player${player.id}-token`);
+                if (currentToken) {
+                    if (cardDisplayContainer.style.display === 'none' && 
+                        developPropertyContainer.style.display === 'none' &&
+                        (!onBoardCardDisplayDiv || onBoardCardDisplayDiv.style.display === 'none')) {
+                        currentToken.classList.add('token-flash');
+                    }
+                }
+            }
+
+
             rollDiceButton.style.display = 'none';
             rollDiceButton.classList.remove('main-action-button');
             endTurnButton.style.display = 'none';
             endTurnButton.classList.remove('main-action-button');
+            if (endTurnButton) endTurnButton.disabled = false; // Re-enable end turn button initially
             buyPropertyButton.style.display = 'none';
             developPropertyButton.style.display = 'none';
             otherActionsContainer.style.display = 'block'; 
@@ -2197,6 +2246,8 @@
                 endTurnButton.style.display = 'block'; 
                 endTurnButton.classList.add('main-action-button');
                 otherActionsContainer.style.display = 'none'; 
+                const playerToken = document.getElementById(`player${player.id}-token`);
+                if (playerToken) playerToken.classList.remove('token-flash');
                 updatePlayerInfo(); 
                 if (gameActive && player.isAI) { setTimeout(nextTurn, 1000); }
                 return;
@@ -2204,6 +2255,8 @@
 
             if (player.isAI) {
                 otherActionsContainer.style.display = 'none'; 
+                const aiToken = document.getElementById(`player${player.id}-token`);
+                if(aiToken) aiToken.classList.remove('token-flash'); // AI token doesn't need to flash for UI indication
                 updatePlayerInfo();
                 if (gameActive && !player.isBankrupt) { 
                     setTimeout(() => executeAITurn(player), 500); 
@@ -2217,23 +2270,31 @@
                 (onBoardCardDisplayDiv && onBoardCardDisplayDiv.style.display !== 'none') ) { 
                 logEvent("UI Update: Modal (card, develop, or on-board card) is active for human.");
                 otherActionsContainer.style.display = 'none'; 
+                const playerToken = document.getElementById(`player${player.id}-token`); // Token shouldn't flash if modal is up
+                if (playerToken) playerToken.classList.remove('token-flash');
                 updatePlayerInfo();
                 return;
             }
 
             if (player.inDetention) {
                 logEvent(`UI Update: ${player.name} is in Detention. Setting up detention actions.`);
-                handleDetentionTurn(player); 
-                if (player.playerActionTakenThisTurn) { 
+                handleDetentionTurn(player); // This will populate detentionActionsDiv
+                // If playerActionTakenThisTurn became true inside handleDetentionTurn (e.g. failed roll)
+                // and they are still in detention, then End Turn should be the only option.
+                if (player.playerActionTakenThisTurn && player.inDetention) { 
                     endTurnButton.style.display = 'block';
                     endTurnButton.classList.add('main-action-button');
                     otherActionsContainer.style.display = 'none'; 
+                    detentionActionsDiv.innerHTML = ''; // Clear again to ensure no lingering buttons if state is tricky
                 } else if (!player.inDetention) { 
+                    // Got out of detention this turn, proceed as normal (roll dice etc.)
+                    // This case should mean playerActionTakenThisTurn is false, and roll dice button is shown.
                     rollDiceButton.style.display = 'block';
                     rollDiceButton.classList.add('main-action-button');
                     rollDiceButton.disabled = false;
-                    otherActionsContainer.style.display = 'none';
+                    otherActionsContainer.style.display = 'none'; // No buy/develop yet
                 }
+                // If playerActionTakenThisTurn is false AND player still in detention, detentionActionsDiv has buttons.
             } else if (!player.playerActionTakenThisTurn) { 
                 logEvent(`UI Update: ${player.name} must roll dice.`);
                 rollDiceButton.style.display = 'block';
@@ -2259,15 +2320,15 @@
                 if (!canBuyCurrent) {
                     buyPropertyButton.style.display = 'none';
                 }
-                developPropertyButton.style.display = 'none';
+                developPropertyButton.style.display = 'none'; // Can't develop before rolling and landing
 
-                if (canBuyCurrent) {
+                if (canBuyCurrent) { // Only show other actions if buy is an option *before* roll (e.g. landed previously, didn't buy, rolled doubles)
                     otherActionsContainer.style.display = 'block';
                 } else {
                     otherActionsContainer.style.display = 'none'; 
                 }
 
-            } else { 
+            } else { // playerActionTakenThisTurn is TRUE, not in detention
                 logEvent(`UI Update: ${player.name} can take optional actions or end turn.`);
                 endTurnButton.style.display = 'block';
                 endTurnButton.classList.add('main-action-button');
@@ -2297,6 +2358,35 @@
                 }
             }
             updatePlayerInfo(); 
+
+            // Auto End Turn Logic
+            if (gameActive && !player.isAI && !player.isBankrupt && !player.inDetention && player.playerActionTakenThisTurn) {
+                const modalsClosed = cardDisplayContainer.style.display === 'none' &&
+                                     developPropertyContainer.style.display === 'none' &&
+                                     (!onBoardCardDisplayDiv || onBoardCardDisplayDiv.style.display === 'none');
+                
+                // Check if 'otherActionsContainer' is hidden (meaning no buy/develop shown) OR if it's shown but both buttons inside are hidden
+                const noOptionalActionsAvailable = (otherActionsContainer.style.display === 'none') ||
+                                                 (otherActionsContainer.style.display === 'block' && 
+                                                  buyPropertyButton.style.display === 'none' && 
+                                                  developPropertyButton.style.display === 'none');
+
+                if (modalsClosed && noOptionalActionsAvailable && endTurnButton.style.display === 'block' && detentionActionsDiv.innerHTML.trim() === '') {
+                    logEvent(`Auto-ending turn for ${player.name} as no other actions are available.`);
+                    if(endTurnButton) endTurnButton.disabled = true;
+                    
+                    const currentToken = document.getElementById(`player${player.id}-token`);
+                    if (currentToken) currentToken.classList.remove('token-flash');
+
+                    setTimeout(() => {
+                        if (gameActive && currentPlayerIndex === player.id && players[currentPlayerIndex].playerActionTakenThisTurn && !players[currentPlayerIndex].isAI) {
+                            nextTurn();
+                        } else {
+                           if(endTurnButton && players[player.id] && !players[player.id].isBankrupt) endTurnButton.disabled = false;
+                        }
+                    }, 1200);
+                }
+            }
         }
 
 
@@ -2305,16 +2395,22 @@
                 logEvent("Next Turn: Game not active.");
                 return;
             }
+
+            const previousPlayer = players[currentPlayerIndex];
+            if (previousPlayer) { // Ensure previousPlayer exists
+                 logEvent(`Ending turn for ${previousPlayer.name}.`);
+                previousPlayer.doublesRolledInTurn = 0; 
+                lastRollWasDoublesGlobal = false; 
+                const prevToken = document.getElementById(`player${previousPlayer.id}-token`);
+                if(prevToken) prevToken.classList.remove('token-flash');
+            }
+
+
             if (checkWinConditions()) { 
                 logEvent("Next Turn: Win condition met. Game should have ended.");
                 return;
             }
 
-            const previousPlayer = players[currentPlayerIndex];
-            logEvent(`Ending turn for ${previousPlayer.name}.`);
-
-            previousPlayer.doublesRolledInTurn = 0; 
-            lastRollWasDoublesGlobal = false; 
 
             let nextPlayerFound = false;
             let attempts = 0;
@@ -2395,7 +2491,7 @@
             const player = players[currentPlayerIndex];
             if (player.isAI || player.isBankrupt || player.inDetention || player.playerActionTakenThisTurn) { 
                 logEvent("RollDice: Conditions not met for human player to roll.");
-                updateUIForCurrentPlayer();
+                updateUIForCurrentPlayer(); // Re-sync UI
                 return;
             }
 
@@ -2434,14 +2530,17 @@
                 if (player.doublesRolledInTurn === 3) {
                     logEvent(`${player.name} rolled 3 consecutive doubles! Sent to Detention Center.`);
                     await goToDetention(player); 
+                     player.playerActionTakenThisTurn = true; // Crucially, going to jail ends the "action" part of this turn.
                 } else {
                     await movePlayerAnimated(player, actualTotalRoll);
                     await handleLandOnSpace(player); 
-                    if (cardDisplayContainer.style.display === 'none' && 
+                    // playerActionTakenThisTurn is set by handleLandOnSpace or if they land on card, it remains false until card is resolved
+                    // If it remains false (e.g. landed on card, or rolled doubles AND no card), they can roll again.
+                     if (cardDisplayContainer.style.display === 'none' && 
                         developPropertyContainer.style.display === 'none' &&
                         (!onBoardCardDisplayDiv || onBoardCardDisplayDiv.style.display === 'none')) {
                         if (!player.inDetention && !player.isBankrupt) { 
-                           player.playerActionTakenThisTurn = false;
+                           player.playerActionTakenThisTurn = false; // Allow another roll
                         } else { 
                            player.playerActionTakenThisTurn = true; 
                         }
@@ -2451,11 +2550,11 @@
                 player.doublesRolledInTurn = 0; 
                 await movePlayerAnimated(player, actualTotalRoll);
                 await handleLandOnSpace(player);
-                if (cardDisplayContainer.style.display === 'none' && 
+                 if (cardDisplayContainer.style.display === 'none' && 
                     developPropertyContainer.style.display === 'none' &&
                     (!onBoardCardDisplayDiv || onBoardCardDisplayDiv.style.display === 'none')) {
                     if (!player.inDetention && !player.isBankrupt) { 
-                        player.playerActionTakenThisTurn = true;
+                        player.playerActionTakenThisTurn = true; // No doubles, action phase of roll is done.
                     } else { 
                         player.playerActionTakenThisTurn = true; 
                     }
@@ -2468,11 +2567,12 @@
             if (!gameActive) return;
             const player = players[currentPlayerIndex];
             if (player.isAI) return; 
+            if (endTurnButton.disabled) return; // Prevent action if auto-end is processing
 
             logEvent(`End Turn button clicked for ${player.name}.`);
 
             if (player.inDetention && !player.playerActionTakenThisTurn) {
-                logEvent(`${player.name} ends turn in detention without taking a specified action (e.g. pay/use card/roll).`);
+                logEvent(`${player.name} ends turn in detention without taking a specified action (e.g. pay/use card/roll). Considered action taken.`);
                 player.playerActionTakenThisTurn = true; 
             }
             nextTurn();
@@ -2514,13 +2614,15 @@
 
             if (player.inDetention) {
                 await aiHandleDetention(player); 
-                if (player.inDetention && player.playerActionTakenThisTurn) { 
+                if (player.inDetention && player.playerActionTakenThisTurn) { // Still in jail after trying
                     logEvent(`AI ${player.name} ends turn in detention.`);
                     if (gameActive) await nextTurn();
                     return;
                 }
+                // If AI got out, playerActionTakenThisTurn might be false, allowing roll below.
             }
 
+            // Loop for rolling (handles doubles)
             while (!player.playerActionTakenThisTurn && !player.inDetention && !player.isBankrupt) {
                 if (diceFace1Elem) diceFace1Elem.textContent = '🎲'; 
                 if (diceFace2Elem) diceFace2Elem.textContent = '🎲';
@@ -2540,42 +2642,62 @@
                     if (player.doublesRolledInTurn === 3) {
                         logEvent(`AI ${player.name} rolled 3 consecutive doubles! Sent to Detention.`);
                         await goToDetention(player); 
+                        player.playerActionTakenThisTurn = true; // Going to jail is the action
                         break; 
                     }
-                    player.playerActionTakenThisTurn = false; 
+                    player.playerActionTakenThisTurn = false; // Doubles, can roll again if no card etc.
                 } else {
                     player.doublesRolledInTurn = 0; 
-                    player.playerActionTakenThisTurn = true; 
+                    player.playerActionTakenThisTurn = true; // No doubles, this roll sequence ends.
                 }
 
                 await movePlayerAnimated(player, totalRoll);
                 await handleLandOnSpace(player); 
 
+                // If a card was drawn, wait for it to be "clicked" (auto-clicked for AI)
+                // The card action itself might set playerActionTakenThisTurn or lead to more moves.
                 if (currentCardBeingExecuted) { 
-                    await new Promise(r => setTimeout(r, 800));
-                    if (lastRollWasDoublesGlobal && !player.inDetention && !player.isBankrupt) {
-                        player.playerActionTakenThisTurn = false; 
-                    } else if(!player.inDetention && !player.isBankrupt){
-                        player.playerActionTakenThisTurn = true;
+                    await new Promise(r => setTimeout(r, 800)); // Wait for card OK
+                    // Re-evaluate playerActionTakenThisTurn after card.
+                    // If card led to goToDetention or bankruptcy, loop will break.
+                    // If card was "Advance to Go", they moved, handleLandOnSpace ran again.
+                    // If doubles got them here, and card didn't end turn, they might roll again.
+                    if (isDoubles && !player.inDetention && !player.isBankrupt && !player.playerActionTakenThisTurn) {
+                        player.playerActionTakenThisTurn = false; // Still eligible for another roll due to prior doubles
+                    } else if (!isDoubles && !player.inDetention && !player.isBankrupt) {
+                        player.playerActionTakenThisTurn = true; // Default to action taken if not doubles.
                     }
                 }
                 
-                if (player.isBankrupt || player.inDetention) {
+                if (player.isBankrupt || player.inDetention) { // If landed in jail or bankrupted by card/rent
                     player.playerActionTakenThisTurn = true; 
-                    break;
+                    break; // Exit roll loop
                 }
 
-                if (player.playerActionTakenThisTurn) { 
+                if (player.playerActionTakenThisTurn && !isDoubles) { // If action taken and no doubles, exit roll loop
                     break; 
                 }
-                logEvent(`AI ${player.name} gets to roll again (doubles).`);
-                await new Promise(r => setTimeout(r, 300)); 
-            } 
+                if (player.playerActionTakenThisTurn && isDoubles) { // Action taken (e.g. buy prop), but was doubles, so loop if card allows.
+                     //This state is tricky; usually handleLandOnSpace sets it. If it was true, it should mean card ended things.
+                     //If they bought property after doubles, then playerActionTakenThisTurn would be true. But doubles means they roll again.
+                     //Let's ensure it is false if doubles and eligible
+                     if(isDoubles && !player.inDetention && !player.isBankrupt) player.playerActionTakenThisTurn = false;
+
+                }
+
+
+                if (!player.playerActionTakenThisTurn) { // Only log "roll again" if eligible
+                    logEvent(`AI ${player.name} gets to roll again (doubles and no turn-ending event).`);
+                    await new Promise(r => setTimeout(r, 300)); 
+                }
+            } // End of while loop for rolling
             
+            // After all rolls and movements are done for the turn
             if (!player.isBankrupt && !player.inDetention) { 
-                 await aiDecideDevelopProperty(player);
+                 await aiDecideDevelopProperty(player); // Optional development
             }
  
+            // Ensure action is marked as taken before concluding AI turn.
             player.playerActionTakenThisTurn = true; 
             logEvent(`<<< AI Turn End: ${player.name}`);
             if (gameActive) await nextTurn();
@@ -2583,14 +2705,15 @@
 
         async function aiHandleDetention(player) {
             logEvent(`AI ${player.name} handling detention. Missed: ${player.missedTurnsInDetention}, Cards: ${player.getOutOfDetentionCards}, Money: £${player.money}`);
+            player.playerActionTakenThisTurn = false; // Reset for this detention attempt.
             
             if (player.getOutOfDetentionCards > 0) {
                 player.getOutOfDetentionCards--;
                 player.inDetention = false;
                 player.missedTurnsInDetention = 0;
-                logEvent(`AI ${player.name} used Legal Aid card.`);
+                logEvent(`AI ${player.name} used Legal Aid card. Is now free.`);
                 updatePlayerInfo();
-                player.playerActionTakenThisTurn = false; 
+                // playerActionTakenThisTurn remains false, AI will proceed to roll for movement in executeAITurn
                 return; 
             }
 
@@ -2599,9 +2722,9 @@
                 if (makePayment(player, bank, fineAmount)) {
                     player.inDetention = false;
                     player.missedTurnsInDetention = 0;
-                    logEvent(`AI ${player.name} paid fine to get out of detention.`);
+                    logEvent(`AI ${player.name} paid fine to get out of detention. Is now free.`);
                     updatePlayerInfo();
-                    player.playerActionTakenThisTurn = false; 
+                    // playerActionTakenThisTurn remains false, AI will proceed to roll for movement
                     return; 
                 }
             }
@@ -2622,34 +2745,29 @@
             if (isDoubles) {
                 player.inDetention = false;
                 player.missedTurnsInDetention = 0;
-                player.doublesRolledInTurn = 1; 
+                player.doublesRolledInTurn = 1; // Got out with doubles
                 logEvent(`AI ${player.name} rolled doubles (${totalRoll}) and is free! Moves ${totalRoll}.`);
                 updatePlayerInfo();
                 
                 await movePlayerAnimated(player, totalRoll);
-                await handleLandOnSpace(player);
-                if (currentCardBeingExecuted) { 
-                    await new Promise(r => setTimeout(r, 800));
-                    if (lastRollWasDoublesGlobal && !player.inDetention && !player.isBankrupt) {
-                        player.playerActionTakenThisTurn = false;
-                    } else if(!player.inDetention && !player.isBankrupt){
-                        player.playerActionTakenThisTurn = true;
-                    }
-                } else { 
-                    if(lastRollWasDoublesGlobal && !player.inDetention && !player.isBankrupt) {
-                         player.playerActionTakenThisTurn = false; 
-                    } else if (!player.inDetention && !player.isBankrupt){ 
-                         player.playerActionTakenThisTurn = true; 
-                    }
-                }
+                await handleLandOnSpace(player); // This will set playerActionTakenThisTurn based on landing
+                // If doubles were rolled again on this move, playerActionTakenThisTurn will be false (AI rolls again)
+                // Otherwise, it'll be true (AI's move action is done)
+                 if (isDoubles && lastRollWasDoublesGlobal && !player.inDetention && !player.isBankrupt && cardDisplayContainer.style.display === 'none') { // Rolled doubles to get out, then rolled doubles again on move
+                    player.playerActionTakenThisTurn = false; 
+                } else if (!player.inDetention && !player.isBankrupt && cardDisplayContainer.style.display === 'none') {
+                    player.playerActionTakenThisTurn = true;
+                } // If card, card logic will handle playerActionTakenThisTurn
+
             } else {
-                logEvent(`AI ${player.name} rolled ${totalRoll} (not doubles). Stays in Detention. Turn ends.`);
-                player.playerActionTakenThisTurn = true; 
+                logEvent(`AI ${player.name} rolled ${totalRoll} (not doubles). Stays in Detention. Turn ends for detention actions.`);
+                player.playerActionTakenThisTurn = true; // Failed to get out by rolling, this turn's jail action is done.
             }
         }
 
         async function aiDecideBuyProperty(player, propDetailsData, priceOnBoard) {
             if (player.isBankrupt || propDetailsData.owner !== null) {
+                player.playerActionTakenThisTurn = true; // Nothing to buy or already owned
                 return;
             }
 
@@ -2662,14 +2780,23 @@
 
             if (player.money >= actualPrice && (player.money > actualPrice * 2 || actualPrice < 150) ) {
                 logEvent(`AI ${player.name} decides to buy ${propDetailsData.name} for £${actualPrice}.`);
-                const originalPlayerIndex = currentPlayerIndex;
-                currentPlayerIndex = player.id; 
-                await buyCurrentProperty(); 
+                const originalPlayerIndex = currentPlayerIndex; // Temporarily set for buyCurrentProperty context
+                currentPlayerIndex = players.findIndex(p => p.id === player.id);
+                await buyCurrentProperty(); // buyCurrentProperty sets playerActionTakenThisTurn based on lastRollWasDoublesGlobal
                 currentPlayerIndex = originalPlayerIndex; 
+                 // If AI bought property after rolling doubles, its turn is not over.
+                if (lastRollWasDoublesGlobal && !player.inDetention && !player.isBankrupt) {
+                    player.playerActionTakenThisTurn = false;
+                } else {
+                    player.playerActionTakenThisTurn = true;
+                }
+
             } else {
                 logEvent(`AI ${player.name} decides NOT to buy ${propDetailsData.name} (Price: £${actualPrice}, Money: £${player.money}).`);
-                if (!lastRollWasDoublesGlobal) { 
-                    player.playerActionTakenThisTurn = true;
+                 if (lastRollWasDoublesGlobal && !player.inDetention && !player.isBankrupt) {
+                    player.playerActionTakenThisTurn = false; // Still gets another roll from doubles
+                } else {
+                    player.playerActionTakenThisTurn = true; // No buy, action taken unless doubles
                 }
             }
         }
@@ -2679,7 +2806,7 @@
             logEvent(`AI ${player.name} considering property development.`);
             await new Promise(r => setTimeout(r, 200)); 
 
-            for (const propId of player.properties) {
+            for (const propId of player.properties) { // Make a copy for iteration if modifying player.properties
                 const propData = propertyData.find(p => p.id === propId);
                 const propLayout = boardLayout.find(s => s.id === propId);
 
@@ -2689,28 +2816,25 @@
 
                     if (ownsAllInGroup) {
                         const originalPlayerIndex = currentPlayerIndex; 
-                        currentPlayerIndex = player.id; 
+                        currentPlayerIndex = players.findIndex(p => p.id === player.id); 
 
-                        if (propData.tenancies < MAX_TENANCIES && player.money >= TENANCY_COST) {
+                        if (propData.tenancies < MAX_TENANCIES && player.money >= TENANCY_COST * 2) { // Be more conservative with spending
                             logEvent(`AI ${player.name} decides to build a tenancy on ${propLayout.name}.`);
-                            if(buyTenancy(propId)) { 
-                                currentPlayerIndex = originalPlayerIndex; 
-                                await new Promise(r => setTimeout(r, 100));
-                                return; 
+                            if(buyTenancy(propId)) { // buyTenancy returns true on success
+                                await new Promise(r => setTimeout(r, 100)); // Small delay
+                                // Potentially develop more if it has a lot of money
                             }
-                        } else if (propData.tenancies === MAX_TENANCIES && player.money >= PR_COST) {
+                        } else if (propData.tenancies === MAX_TENANCIES && player.money >= PR_COST * 2) {
                             logEvent(`AI ${player.name} decides to build PR on ${propLayout.name}.`);
                             if(buyPermanentResidence(propId)) { 
-                                 currentPlayerIndex = originalPlayerIndex; 
                                  await new Promise(r => setTimeout(r, 100));
-                                 return; 
                             }
                         }
                         currentPlayerIndex = originalPlayerIndex; 
                     }
                 }
             }
-            logEvent(`AI ${player.name} found no suitable properties to develop or lacked funds.`);
+            logEvent(`AI ${player.name} finished considering property development.`);
         }
 
 
