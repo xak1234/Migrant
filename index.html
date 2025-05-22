@@ -11,25 +11,23 @@
             color: #ecf0f1; /* Light grey text */
             position: relative;
             overflow-x: hidden;
-        
-      font-family: 'Inter', Arial, sans-serif;
-      min-height: 100vh;
-      min-width: 100vw;
-      /* Placeholder background as original images are not accessible */
-      background: #2c3e50; /* Fallback background color */
-      position: relative;
-      z-index: 1;
-    }
+            font-family: 'Inter', Arial, sans-serif;
+            min-height: 100vh;
+            /* min-width: 100vw; */ /* Can cause horizontal scrollbar if not careful */
+            background: #2c3e50; /* Fallback background color */
+            z-index: 1;
+            display: flex; /* For centering main-content */
+            align-items: center; /* For centering main-content */
+            justify-content: center; /* For centering main-content */
+        }
         body::before {
             content: '';
             position: fixed;
             top: 50%;
             left: 50%;
-            width: 1200px; 
-            height: 700px; 
+            width: 1200px;
+            height: 700px;
             transform: translate(-50%, -50%);
-            /* Placeholder for background image */
-            /* background-image: url('migrant3.jpg'); */
             background-color: rgba(255,255,255,0.05); /* Subtle placeholder */
             background-size: contain;
             background-repeat: no-repeat;
@@ -39,34 +37,112 @@
             z-index: 0;
             mix-blend-mode: lighten;
         }
-        #game-container, #game-info-area, #board-container { /* Removed h1 from here */
+
+        .main-content {
+          position: relative;
+          z-index: 3;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center; /* Center player setup screen initially */
+          min-height: 100vh; /* Ensure it takes full viewport height */
+          width: 100%;
+          padding-top: 20px; /* Reduced padding */
+          padding-bottom: 20px; /* Reduced padding */
+        }
+
+        #player-setup-screen {
+            display: flex; /* Use flex to show it initially */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #2c3e50;
+            padding: 30px 40px;
+            border-radius: 12px;
+            border: 2px solid #7f8c8d;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+            color: #ecf0f1;
+            text-align: center;
+            width: auto;
+            max-width: 400px;
+            /* Removed margin-top as main-content will center it */
+        }
+        #player-setup-screen h2 {
+            color: #1abc9c;
+            margin-top: 0;
+            margin-bottom: 25px;
+            font-size: 1.8em;
+        }
+        .setup-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 18px;
+        }
+        #player-setup-screen label {
+            font-size: 1em;
+            margin-right: 15px;
+            flex-basis: 40%; /* Adjust if necessary */
+            text-align: left;
+        }
+        #player-setup-screen select {
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #7f8c8d;
+            background-color: #34495e;
+            color: #ecf0f1;
+            font-size: 1em;
+            flex-grow: 1;
+        }
+        #player-setup-screen button#confirm-players-button {
+            background-color: #27ae60;
+            color: white;
+            padding: 12px 25px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 15px;
+        }
+        #player-setup-screen button#confirm-players-button:hover {
+            background-color: #2ecc71;
+        }
+        #player-setup-message {
+            color: #f1c40f;
+            font-size: 0.9em;
+            margin-top: 15px;
+            min-height: 1.2em;
+        }
+
+
+        #game-container, #game-info-area, #board-container {
             position: relative;
             z-index: 1;
         }
 
-        /* Removed h1 style as the element is removed */
-
         #game-container {
-            display: flex;
+            display: flex; /* Will be changed from none by JS */
             flex-wrap: wrap;
             justify-content: center;
             gap: 25px;
-            padding-top: 20px; /* Added padding to compensate for removed h1 */
+            padding-top: 0px; /* Adjusted as main-content has padding */
         }
 
         #board-container {
             display: grid;
-            grid-template-columns: 100px repeat(8, 70px) 100px; 
-            grid-template-rows: 100px repeat(8, 70px) 100px;    
-            border: 3px solid #7f8c8d; 
-            width: 760px;  
-            height: 760px; 
+            grid-template-columns: 100px repeat(8, 70px) 100px;
+            grid-template-rows: 100px repeat(8, 70px) 100px;
+            border: 3px solid #7f8c8d;
+            width: 760px;
+            height: 760px;
             position: relative;
-            background-color: rgba(52, 73, 94, 0.68); 
+            background-color: rgba(52, 73, 94, 0.68);
             border-radius: 10px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
             overflow: visible;
-            margin-top: 38px;
+            margin-top: 20px; /* Adjusted from 38px */
         }
 
         #card-decks-center {
@@ -78,7 +154,7 @@
             flex-direction: column;
             align-items: center;
             gap: 18px;
-            z-index: 2; 
+            z-index: 2;
         }
         .card-deck {
             width: 110px;
@@ -114,36 +190,36 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 280px; 
-            height: 190px; 
-            background-color: #fdf5e6; 
-            border: 3px solid #c0392b; 
-            border-radius: 15px; 
+            width: 280px;
+            height: 190px;
+            background-color: #fdf5e6;
+            border: 3px solid #c0392b;
+            border-radius: 15px;
             box-shadow: 0 6px 22px rgba(0,0,0,0.35);
-            z-index: 5; 
-            display: flex; 
+            z-index: 5;
+            display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: space-around; 
+            justify-content: space-around;
             padding: 15px;
             box-sizing: border-box;
             text-align: center;
-            color: #2c3e50; 
+            color: #2c3e50;
         }
 
-        #on-board-card-display h4 { 
+        #on-board-card-display h4 {
             margin: 5px 0;
             font-size: 1.4em;
-            color: #c0392b; 
+            color: #c0392b;
             font-weight: bold;
         }
 
-        #on-board-card-display p { 
+        #on-board-card-display p {
             margin: 5px 0;
-            font-size: 1em; 
+            font-size: 1em;
             line-height: 1.45;
-            overflow-y: auto; 
-            max-height: 100px; 
+            overflow-y: auto;
+            max-height: 100px;
             width: 100%;
             color: #34495e;
         }
@@ -160,19 +236,19 @@
             position: relative;
             padding: 3px;
             box-sizing: border-box;
-            background-color: #4a6378; 
-            color: #ecf0f1; 
+            background-color: #4a6378;
+            color: #ecf0f1;
             border-radius: 5px;
         }
         .space .name {
             font-weight: bold;
-            font-size: 10px; 
+            font-size: 10px;
             margin-bottom: 2px;
             line-height: 1.2;
         }
         .space .price {
             font-size: 9px;
-            color: #bdc3c7; 
+            color: #bdc3c7;
             font-weight: normal;
         }
         .space .owner-indicator {
@@ -189,7 +265,7 @@
             font-size: 12px; /* Adjusted for emojis potentially */
             color: #fff; /* Make icons stand out */
             position: absolute;
-            top: 15px; 
+            top: 15px;
             width: 100%;
             text-align: center;
             line-height: 1;
@@ -215,15 +291,14 @@
             font-weight: bold !important;
             margin-top: 0;
         }
-        /* Specific style for Detention Center name */
         .corner .name.detention-center-name {
-            margin-top: 35px; /* Adjust this value as needed */
-            position: relative; /* If more precise control needed */
-            z-index: 1; /* Ensure it's above bars if they overlap due to box model */
+            margin-top: 35px;
+            position: relative;
+            z-index: 1;
         }
 
 
-        .property .color-bar { 
+        .property .color-bar {
             width: 100%;
             height: 12px;
             border-bottom: 1px solid #7f8c8d;
@@ -233,19 +308,19 @@
             border-top-left-radius: 4px;
             border-top-right-radius: 4px;
         }
-        .space.property .name { margin-top: 14px; } 
+        .space.property .name { margin-top: 14px; }
 
         .welfare .name, .opportunity .name, .tax .name, .payout .name, .neutral:not(.corner) .name {
             margin-top: 0;
         }
         
-        .set-property { 
-            background-color: #303F4D; 
+        .set-property {
+            background-color: #303F4D;
         }
         .set-property .name {
             margin-top: 0;
-            font-size: 11px; 
-            font-weight: bold; 
+            font-size: 11px;
+            font-weight: bold;
         }
 
 
@@ -267,7 +342,7 @@
             line-height: 28px;
             text-align: center;
             background: none;
-            z-index: 10; 
+            z-index: 10;
             user-select: none;
             pointer-events: none;
         }
@@ -286,11 +361,11 @@
 
         #player-info, #controls, #card-display-container, #game-status-message-container, #develop-property-container {
             padding: 15px;
-            background-color: #34495e; 
+            background-color: #34495e;
             border: 1px solid #7f8c8d;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            color: #ecf0f1; 
+            color: #ecf0f1;
         }
         #player-info div { margin-bottom: 8px; font-size: 14px; }
         #card-message { margin-bottom: 10px; font-size: 14px; }
@@ -299,7 +374,7 @@
             padding: 10px 15px;
             font-size: 14px;
             cursor: pointer;
-            background-color: #e74c3c; 
+            background-color: #e74c3c;
             color: white;
             border: none;
             border-radius: 6px;
@@ -309,7 +384,7 @@
         }
         button:last-child { margin-right: 0; }
         button:hover {
-            background-color: #c0392b; 
+            background-color: #c0392b;
         }
         button:disabled {
             background-color: #7f8c8d;
@@ -318,33 +393,33 @@
         }
         
         .main-action-button {
-            display: block !important; 
-            margin: 8px auto !important; 
+            display: block !important;
+            margin: 8px auto !important;
         }
 
-        #end-turn-button { 
-            background-color: #d35400; 
-        } 
-        #end-turn-button:hover { 
-            background-color: #e67e22; 
+        #end-turn-button {
+            background-color: #d35400;
         }
-        #develop-property-button { 
-            background-color: #2980b9; 
-        } 
-        #develop-property-button:hover { 
-            background-color: #3498db; 
+        #end-turn-button:hover {
+            background-color: #e67e22;
+        }
+        #develop-property-button {
+            background-color: #2980b9;
+        }
+        #develop-property-button:hover {
+            background-color: #3498db;
         }
 
 
-        #card-display-container, #develop-property-container { 
+        #card-display-container, #develop-property-container {
             display: none;
         }
         #card-display-container h3, #develop-property-container h3 {
-             margin-top: 0; color: #1abc9c; 
+             margin-top: 0; color: #1abc9c;
         }
 
         #detention-actions button {
-            background-color: #f39c12; 
+            background-color: #f39c12;
             margin-right: 5px;
         }
         #detention-actions button:hover {
@@ -355,9 +430,9 @@
             color: #e74c3c;
             min-height: 20px;
         }
-        #pre-game-roll-area button {
-            background-color: #f1c40f; 
-            color: #2c3e50; 
+        #pre-game-roll-area button { /* Though this area is for pre-game rolls, it's part of #controls */
+            background-color: #f1c40f;
+            color: #2c3e50;
         }
         #pre-game-roll-area button:hover {
             background-color: #f39c12;
@@ -365,22 +440,22 @@
         #pre-game-roll-results { margin-top: 10px; font-size: 13px; }
         #develop-property-options button {
             display: block;
-            width: calc(100% - 10px);
+            width: calc(100% - 10px); /* Account for padding/margin */
             margin-bottom: 8px;
-            background-color: #2980b9; 
+            background-color: #2980b9;
         }
         #develop-property-options button:hover {
             background-color: #3498db;
         }
 
         .space.dole-space .name {
-            font-size: 26px !important; /* Increased font size */
+            font-size: 26px !important;
             font-weight: bold;
             letter-spacing: 0.08em;
             color: #fff !important;
             text-transform: uppercase;
             position: absolute;
-            top: 15px; /* Adjusted for larger font */
+            top: 15px;
             left: 0;
             width: 100%;
             text-align: center;
@@ -389,23 +464,22 @@
             white-space: nowrap;
             pointer-events: none;
         }
-        .dole-sign { /* Style for the $ sign */
+        .dole-sign {
             position: absolute;
             bottom: 8px;
             right: 8px;
             font-size: 28px;
-            color: #f1c40f; /* Gold color */
+            color: #f1c40f;
             font-weight: bold;
-            z-index: 3; /* Above other elements if needed */
+            z-index: 3;
         }
 
-        /* Name styling for specific board spaces */
         .space.red-boardname .name {
-            color: #e74c3c !important; /* Red */
+            color: #e74c3c !important;
             font-weight: bold;
         }
-        .space.yellow-boardname .name { 
-            color: #f1c40f !important; /* Yellow */
+        .space.yellow-boardname .name {
+            color: #f1c40f !important;
             font-weight: bold;
         }
 
@@ -432,7 +506,7 @@
             font-weight: bold;
             opacity: 0;
             pointer-events: none;
-            z-index: 1000; 
+            z-index: 1000;
             text-shadow: 2px 2px 16px #000, 0 0 32px #fff;
             transition: opacity 0.2s;
         }
@@ -481,16 +555,27 @@
         #current-turn-display {
             text-align: center;
             width: 100%;
-            color: #ecf0f1; 
-            font-weight: bold; 
-            padding-bottom: 5px; 
+            color: #ecf0f1;
+            font-weight: bold;
+            padding-bottom: 5px;
         }
         #game-status-message-container {
             text-align: center;
         }
-        #uk-gov-status {
-            text-align: center;
+        #uk-gov-status { /* This is inside uk-gov-status-container */
+            padding: 12px;
+            background: #222d3a;
+            border: 1px solid #7f8c8d;
+            border-radius: 8px;
+            color: #f7ca18;
+            font-weight: bold;
+            text-align: center; /* Ensure text is centered */
         }
+         #uk-gov-status-container { /* Ensure this container doesn't cause overflow if not full width */
+            width: 100%; /* Takes width of its parent in game-info-area */
+            box-sizing: border-box; /* Include padding and border in the element's total width and height */
+        }
+
 
         #pre-game-roll-area {
             display: flex;
@@ -499,26 +584,16 @@
             width: 100%;
         }
 
-        .overlay {
+        .overlay { /* This overlay might not be strictly necessary if main-content handles bg */
           position: fixed;
           top: 0; left: 0; right: 0; bottom: 0;
-          background: rgba(24,28,36,0.48);
-          z-index: 2;
-          pointer-events: none;
-        }
-        .main-content {
-          position: relative;
-          z-index: 3;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: flex-start;
-          min-height: 100vh;
-          padding-top: 34px;
-          padding-bottom: 34px;
+          background: rgba(24,28,36,0.48); /* Semi-transparent dark overlay */
+          z-index: 2; /* Ensure it's above body::before but below main-content if main-content needs to be above it */
+          pointer-events: none; /* Allow clicks through to content unless specifically blocked */
         }
 
-        .die { 
+
+        .die {
             width: 30px;
             height: 30px;
             border: 1px solid #ecf0f1;
@@ -534,12 +609,12 @@
         }
 
         .token-hop {
-            animation: hop-animation 0.3s ease-out; /* Adjusted speed */
+            animation: hop-animation 0.3s ease-out;
         }
         @keyframes hop-animation {
             0% { transform: translateY(0) scale(1); opacity: 1; }
             30% { transform: translateY(-35px) scale(1.25); opacity: 0.9; }
-            60% { transform: translateY(-35px) scale(1.25); opacity: 0.9; } 
+            60% { transform: translateY(-35px) scale(1.25); opacity: 0.9; }
             100% { transform: translateY(0) scale(1); opacity: 1; }
         }
 
@@ -552,12 +627,12 @@
         }
 
         #dice-display-master-container {
-            min-height: 32px; 
-            text-align: center; 
-            margin-bottom: 8px; 
+            min-height: 32px;
+            text-align: center;
+            margin-bottom: 8px;
         }
         #actual-dice-faces {
-            display: inline-flex; 
+            display: inline-flex;
             gap: 5px;
             margin-left: 5px;
             vertical-align: middle;
@@ -567,7 +642,6 @@
             font-weight: bold;
         }
 
-        /* --- Token Flashing Animations --- */
         .token-flash {
             animation: token-flash-animation 0.7s infinite alternate;
         }
@@ -588,7 +662,27 @@
 <body>
   <div class="overlay"></div>
   <div class="main-content">
-    <div id="game-container">
+    <div id="player-setup-screen">
+        <h2>Player Setup</h2>
+        <div class="setup-row">
+            <label for="total-players-select">Total Players:</label>
+            <select id="total-players-select">
+                <option value="2" selected>2 Players</option>
+                <option value="3">3 Players</option>
+                <option value="4">4 Players</option>
+                <option value="1">1 Player (vs AI)</option>
+            </select>
+        </div>
+        <div class="setup-row">
+            <label for="human-players-select">Human Players:</label>
+            <select id="human-players-select">
+                </select>
+        </div>
+        <button id="confirm-players-button">Start Game</button>
+        <p id="player-setup-message"></p>
+    </div>
+
+    <div id="game-container" style="display: none;">
         <div id="board-container">
             </div>
 
@@ -613,8 +707,8 @@
                     <span id="dice-total-display-text"></span>
                 </div>
                 <button id="roll-dice-button" style="display:none;">Roll Dice</button>
-                <button id="end-turn-button" style="display:none;">End Turn</button> 
-                
+                <button id="end-turn-button" style="display:none;">End Turn</button>
+
                 <div id="other-actions-container" style="text-align: center; margin-top: 5px;">
                     <button id="develop-property-button" style="display:none;">Develop Property</button>
                     <button id="buy-property-button" style="display:none;">Buy Property (£<span id="buy-property-price"></span>)</button>
@@ -642,24 +736,25 @@
                 <p id="game-status-message">Game in progress...</p>
             </div>
 
-            <div id="uk-gov-status-container" style="width: 320px; margin-top: 10px;">
-                <div id="uk-gov-status" style="padding: 12px; background: #222d3a; border: 1px solid #7f8c8d; border-radius: 8px; color: #f7ca18; font-weight: bold;">
+            <div id="uk-gov-status-container">
+                <div id="uk-gov-status">
                     UK Gov: £<span id="uk-gov-cash">20000</span> </div>
             </div>
         </div>
     </div>
 
     <div id="money-flash"></div>
+  </div>
 
     <script>
         // --- Game Data ---
-        let initialBoardLayout = [ 
+        let initialBoardLayout = [
             { id: 0, name: "Dole", type: "go" },
             { id: 1, name: "Tent in Field 1", type: "property", price: 60, rent: [4, 10, 20, 40, 80], color: "brown", groupId: "brown" },
             { id: 2, name: "Welfare Card", type: "welfare" },
             { id: 3, name: "Tent in Field 2", type: "property", price: 80, rent: [8, 10, 20, 40, 80], color: "brown", groupId: "brown" },
             { id: 4, name: "Black Market Sales", type: "set_property", price: 200, rent_base: 200, groupId: "special_set" },
-            { id: 5, name: "Fake PIP declined", type: "tax", amount: 100 }, 
+            { id: 5, name: "Fake PIP declined", type: "tax", amount: 100 },
             { id: 6, name: "Tesco Cardboard Skip 1", type: "property", price: 100, rent: [6, 15, 30, 60, 120], color: "light-blue", groupId: "lightblue" },
             { id: 7, name: "Tesco Cardboard Skip 2", type: "property", price: 120, rent: [8, 15, 30, 60, 120], color: "light-blue", groupId: "lightblue" },
             { id: 8, name: "Detention Center", type: "detention_visiting" },
@@ -688,9 +783,9 @@
             { id: 31, name: "Luxury Flat 2", type: "property", price: 400, rent: [35, 60, 120, 240, 480], color: "green", groupId: "green" },
         ];
 
-        let boardLayout = []; 
+        let boardLayout = [];
 
-function reformatBoardLayout() {
+        function reformatBoardLayout() {
             const newBoardLocations = [
                 { name: "Boat Sank After Renting", type: "set_property", price: 100, rent_base: 100, groupId: "special_set" },
                 { name: "People Trafficking", type: "set_property", price: 100, rent_base: 100, groupId: "special_set" },
@@ -700,16 +795,16 @@ function reformatBoardLayout() {
 
             let tempBoard = [];
             // Go
-            tempBoard.push(initialBoardLayout.find(s => s.id === 0)); //0
+            tempBoard.push(initialBoardLayout.find(s => s.id === 0));
 
             // --- Side 1 (Swap: Boat Sank After Renting with Welfare Card id:2) ---
             const welfareCardOriginalSide1 = initialBoardLayout.find(s => s.id === 2);
             const boatSankProperty = newBoardLocations[0];
             tempBoard.push(initialBoardLayout.find(s => s.id === 1));
-            tempBoard.push(boatSankProperty); // Swapped item
+            tempBoard.push(boatSankProperty);
             tempBoard.push(initialBoardLayout.find(s => s.id === 3));
             tempBoard.push(initialBoardLayout.find(s => s.id === 4));
-            tempBoard.push(welfareCardOriginalSide1); // Swapped item
+            tempBoard.push(welfareCardOriginalSide1);
             tempBoard.push(...initialBoardLayout.filter(s => s.id >= 5 && s.id <= 7));
             // Corner 1
             tempBoard.push(initialBoardLayout.find(s => s.id === 8));
@@ -717,22 +812,22 @@ function reformatBoardLayout() {
             // --- Side 2 (Swap: People Trafficking with Payout: Job Seeker's id:9) ---
             const peopleTraffickingProperty = newBoardLocations[1];
             const payoutJobSeekersOriginal = initialBoardLayout.find(s => s.id === 9);
-            tempBoard.push(peopleTraffickingProperty); // Swapped item
+            tempBoard.push(peopleTraffickingProperty);
             tempBoard.push(...initialBoardLayout.filter(s => s.id >= 10 && s.id <= 12));
-            tempBoard.push(payoutJobSeekersOriginal); // Swapped item
+            tempBoard.push(payoutJobSeekersOriginal);
             tempBoard.push(...initialBoardLayout.filter(s => s.id >= 13 && s.id <= 15));
             // Corner 2
             tempBoard.push(initialBoardLayout.find(s => s.id === 16));
 
-            // --- Side 3 (NEW SWAP: More than 15 children with Opportunity Card id:18) ---
+            // --- Side 3 (Swap: More than 15 children with Opportunity Card id:18) ---
             const moreThan15ChildrenProperty = newBoardLocations[2];
             const opportunityCardSide3Original = initialBoardLayout.find(s => s.id === 18);
-            tempBoard.push(initialBoardLayout.find(s => s.id === 17)); // Gypsy Estate 1
-            tempBoard.push(moreThan15ChildrenProperty);                 // Swapped: More than 15 children takes Opportunity Card's original relative slot
-            tempBoard.push(initialBoardLayout.find(s => s.id === 19)); // Gypsy Estate 2
-            tempBoard.push(initialBoardLayout.find(s => s.id === 20)); // Child Wives
-            tempBoard.push(opportunityCardSide3Original);               // Swapped: Opportunity Card takes More than 15 children's original relative slot
-            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 21 && s.id <= 23)); // Fake ID, Gypsy Estate 3, Holiday Inn 1
+            tempBoard.push(initialBoardLayout.find(s => s.id === 17));
+            tempBoard.push(moreThan15ChildrenProperty);
+            tempBoard.push(initialBoardLayout.find(s => s.id === 19));
+            tempBoard.push(initialBoardLayout.find(s => s.id === 20));
+            tempBoard.push(opportunityCardSide3Original);
+            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 21 && s.id <= 23));
             // Corner 3
             tempBoard.push(initialBoardLayout.find(s => s.id === 24));
 
@@ -740,22 +835,19 @@ function reformatBoardLayout() {
             const cryptoScamProperty = newBoardLocations[3];
             const opportunityCardSide4Original = initialBoardLayout.find(s => s.id === 30);
             tempBoard.push(...initialBoardLayout.filter(s => s.id >= 25 && s.id <= 28));
-            tempBoard.push(opportunityCardSide4Original); // Swapped item
+            tempBoard.push(opportunityCardSide4Original);
             tempBoard.push(initialBoardLayout.find(s => s.id === 29));
-            tempBoard.push(cryptoScamProperty); // Swapped item
+            tempBoard.push(cryptoScamProperty);
             tempBoard.push(initialBoardLayout.find(s => s.id === 31));
 
             boardLayout = tempBoard.map((space, index) => ({ ...space, id: index }));
         }
+        reformatBoardLayout(); // Call it once to set up the initial board definition
 
-        reformatBoardLayout();
-
-
-        let detentionCenterSpaceId = boardLayout.find(s => s.name === "Detention Center").id; 
+        let detentionCenterSpaceId = boardLayout.find(s => s.name === "Detention Center")?.id || 8; // Fallback
         const TENANCY_COST = 50;
         const PR_COST = 150;
         const MAX_TENANCIES = 3;
-
 
         const welfareCards = [
             { text: "Child Benefit: Collect £100.", action: "collect", amount: 100 },
@@ -766,7 +858,7 @@ function reformatBoardLayout() {
             { text: "Education Grant: Collect £120.", action: "collect", amount: 120 },
             { text: "Housing Inspection: Pay £20 per tenancy owned.", action: "payPerTenancy", amountPer: 20 },
             { text: "Utility Subsidy: Collect £80.", action: "collect", amount: 80 },
-            { text: "Legal Aid: Get out of Detention Center free.", action: "getOutOfDetentionFree" }, 
+            { text: "Legal Aid: Get out of Detention Center free.", action: "getOutOfDetentionFree" },
             { text: "Emergency bowels: Collect £100.", action: "collect", amount: 100 },
             { text: "Tax Audit: Pay £60.", action: "pay", amount: 60 },
             { text: "Welfare Review: Move to nearest Payout Space.", action: "moveToNearestPayout" }
@@ -777,7 +869,7 @@ function reformatBoardLayout() {
             { text: "Language Subsidy: Collect £50.", action: "collect", amount: 50 },
             { text: "Community Grant: Collect £100.", action: "collect", amount: 100 },
             { text: "Deportation Threat: Go to Detention Center.", action: "goToDetentionDirect" },
-            { text: "Legal Homosexuals: Get out of Detention Center free.", action: "getOutOfDetentionFree" }, 
+            { text: "Legal Homosexuals: Get out of Detention Center free.", action: "getOutOfDetentionFree" },
             { text: "Job Offer: Collect £120.", action: "collect", amount: 120 },
             { text: "Housing Voucher: Next estate purchase is 25% off.", action: "housingVoucher" },
             { text: "Free Health Service: Gain a health service (worth £100).", action: "gainHealthService" },
@@ -789,29 +881,36 @@ function reformatBoardLayout() {
 
         let players = [];
         let currentPlayerIndex = 0;
-        let numPlayers = 2; 
-        let numberOfHumanPlayers = 1; 
+        let numPlayers = 2; // Default, will be set by UI
+        let numberOfHumanPlayers = 1; // Default, will be set by UI
         const playerEmojis = ['🐕‍🦺', '🐈', '🐘', '🐅'];
         const playerColors = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f'];
 
 
         let bank = { money: 15000 };
-        let ukGov = { money: 20000 }; 
+        let ukGov = { money: 20000 };
         let playerGovReceived = [];
-        let propertyData; 
+        let propertyData;
 
         let shuffledWelfareCards = [];
         let shuffledOpportunityCards = [];
-        let gameActive = false; 
+        let gameActive = false;
         let preGameRolls = [];
         let preGamePlayerIndex = 0;
         let toneSynth;
         let audioContextStarted = false;
-        let currentCardBeingExecuted = null; 
-        let lastRollWasDoublesGlobal = false; 
+        let currentCardBeingExecuted = null;
+        let lastRollWasDoublesGlobal = false;
 
 
         // --- DOM Elements ---
+        const playerSetupScreen = document.getElementById('player-setup-screen');
+        const totalPlayersSelect = document.getElementById('total-players-select');
+        const humanPlayersSelect = document.getElementById('human-players-select');
+        const confirmPlayersButton = document.getElementById('confirm-players-button');
+        const playerSetupMessage = document.getElementById('player-setup-message');
+        const gameContainer = document.getElementById('game-container');
+
         const boardContainer = document.getElementById('board-container');
         const playerInfoDiv = document.getElementById('player-info');
         const rollDiceButton = document.getElementById('roll-dice-button');
@@ -819,13 +918,13 @@ function reformatBoardLayout() {
         const buyPropertyButton = document.getElementById('buy-property-button');
         const buyPropertyPriceSpan = document.getElementById('buy-property-price');
         const developPropertyButton = document.getElementById('develop-property-button');
-        
+
         const diceFace1Elem = document.getElementById('die-face-1');
         const diceFace2Elem = document.getElementById('die-face-2');
-        const diceTotalDisplayText = document.getElementById('dice-total-display-text'); 
-        
+        const diceTotalDisplayText = document.getElementById('dice-total-display-text');
+
         const currentTurnDisplay = document.getElementById('current-turn-display');
-        const cardDisplayContainer = document.getElementById('card-display-container'); 
+        const cardDisplayContainer = document.getElementById('card-display-container');
         const cardTypeTitle = document.getElementById('card-type-title');
         const cardMessageP = document.getElementById('card-message');
         const cardOkButton = document.getElementById('card-ok-button');
@@ -840,18 +939,45 @@ function reformatBoardLayout() {
         const closeDevelopButton = document.getElementById('close-develop-button');
         const otherActionsContainer = document.getElementById('other-actions-container');
 
-
         let onBoardCardDisplayDiv, onBoardCardTypeH4, onBoardCardTextP;
 
 
         // --- Game Logic Functions ---
+        function populateHumanPlayersOptions() {
+            const totalP = parseInt(totalPlayersSelect.value);
+            humanPlayersSelect.innerHTML = '';
+            playerSetupMessage.textContent = '';
+
+            if (totalP === 1) {
+                const option = document.createElement('option');
+                option.value = "1";
+                option.textContent = "1 Human";
+                humanPlayersSelect.appendChild(option);
+                humanPlayersSelect.value = "1";
+                playerSetupMessage.textContent = "Game will be 1 Human vs 1 AI.";
+            } else {
+                for (let i = 0; i <= totalP; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = `${i} Human${i === 1 ? '' : 's'}`;
+                    humanPlayersSelect.appendChild(option);
+                }
+                let defaultHuman = Math.min(1, totalP);
+                if (totalP === 0) defaultHuman = 0; // Should be unreachable with current totalP options
+                 humanPlayersSelect.value = (humanPlayersSelect.options.length > 0) ? ( totalP >=1 ? "1" : "0") : "";
+
+            }
+        }
+
         function shuffleDeck(deck) {
             return deck.sort(() => Math.random() - 0.5);
         }
 
         function setupBoard() {
-            boardContainer.innerHTML = ''; 
-            detentionCenterSpaceId = boardLayout.find(s => s.name === "Detention Center").id;
+            boardContainer.innerHTML = '';
+            const dcSpace = boardLayout.find(s => s.name === "Detention Center");
+            detentionCenterSpaceId = dcSpace ? dcSpace.id : (boardLayout.find(s => s.type === "detention_visiting")?.id || 8) ;
+
 
             const cardDecksCenter = document.createElement('div');
             cardDecksCenter.id = 'card-decks-center';
@@ -863,7 +989,7 @@ function reformatBoardLayout() {
 
             const onBoardCardDiv = document.createElement('div');
             onBoardCardDiv.id = 'on-board-card-display';
-            onBoardCardDiv.style.display = 'none'; 
+            onBoardCardDiv.style.display = 'none';
             onBoardCardDiv.innerHTML = `
                 <h4 id="on-board-card-type"></h4>
                 <p id="on-board-card-text"></p>
@@ -871,38 +997,33 @@ function reformatBoardLayout() {
             boardContainer.appendChild(onBoardCardDiv);
 
 
-            boardLayout.forEach((s, i) => { 
+            boardLayout.forEach((s, i) => {
                 const spaceDiv = document.createElement('div');
-                spaceDiv.id = `space-${s.id}`; 
+                spaceDiv.id = `space-${s.id}`;
                 spaceDiv.classList.add('space');
 
                 if (s.type === 'go' || s.type === 'detention_visiting' || s.type === 'go_to_detention' || s.type === 'crime_spree') {
                     spaceDiv.classList.add('corner');
                 }
-                
-                // MODIFIED: Payout: Job Seeker's to yellow
-                if (['Fake PIP declined', 'Fake ID Cards', "Payout: Job Seeker's"].includes(s.name)) { 
+
+                if (['Fake PIP declined', 'Fake ID Cards', "Payout: Job Seeker's"].includes(s.name)) {
                     spaceDiv.classList.add('yellow-boardname');
                 }
-                // Original red-boardname for Payout: Job Seeker's removed.
-                // else if (["Payout: Job Seeker's"].includes(s.name)) { 
-                //    spaceDiv.classList.add('red-boardname'); // This was the old one
-                // }
 
 
-                if (s.name === "Dole" && s.type === "go"){ 
-                     spaceDiv.classList.add('dole-space'); 
-                     const doleSign = document.createElement('div'); 
+                if (s.name === "Dole" && s.type === "go"){
+                     spaceDiv.classList.add('dole-space');
+                     const doleSign = document.createElement('div');
                      doleSign.classList.add('dole-sign');
                      doleSign.textContent = '$';
-                     spaceDiv.appendChild(doleSign); 
+                     spaceDiv.appendChild(doleSign);
                 }
 
 
                 if (s.name === 'Detention Center') {
                     const bars = document.createElement('div');
                     bars.className = 'detention-bars';
-                    for (let b = 0; b < 6; b++) { 
+                    for (let b = 0; b < 6; b++) {
                         const bar = document.createElement('div');
                         bar.className = 'detention-bar';
                         bars.appendChild(bar);
@@ -916,7 +1037,7 @@ function reformatBoardLayout() {
                     spaceDiv.appendChild(arrow);
                     const subLabel = document.createElement('div');
                     subLabel.className = 'sub-label';
-                    subLabel.textContent = 'DO NOT PASS GO'; 
+                    subLabel.textContent = 'DO NOT PASS GO';
                     spaceDiv.appendChild(subLabel);
                 }
 
@@ -926,19 +1047,19 @@ function reformatBoardLayout() {
                     colorBar.classList.add('color-bar');
                     spaceDiv.appendChild(colorBar);
                 } else if (s.type === 'set_property') {
-                    spaceDiv.classList.add('set-property'); 
+                    spaceDiv.classList.add('set-property');
                 }
 
 
                 const nameDiv = document.createElement('div');
                 nameDiv.classList.add('name');
-                if (s.name === 'Detention Center') { // Add specific class for styling detention center name
+                if (s.name === 'Detention Center') {
                     nameDiv.classList.add('detention-center-name');
                 }
                 nameDiv.textContent = s.name;
                 spaceDiv.appendChild(nameDiv);
 
-                if (s.type === 'property' && s.rent) { 
+                if (s.type === 'property' && s.rent) {
                     const devIndicator = document.createElement('div');
                     devIndicator.classList.add('development-indicator');
                     devIndicator.id = `dev-indicator-${s.id}`;
@@ -959,14 +1080,14 @@ function reformatBoardLayout() {
                 }
 
                 const currentId = s.id;
-                if (currentId === 0) { spaceDiv.style.gridArea = `1 / 1`; } 
-                else if (currentId >= 1 && currentId <= 8) { spaceDiv.style.gridArea = `1 / ${currentId + 1}`; } 
-                else if (currentId === 9) { spaceDiv.style.gridArea = `1 / 10`; }            
-                else if (currentId >= 10 && currentId <= 17) { spaceDiv.style.gridArea = `${(currentId - 9) + 1} / 10`; } 
-                else if (currentId === 18) { spaceDiv.style.gridArea = `10 / 10`; }            
-                else if (currentId >= 19 && currentId <= 26) { spaceDiv.style.gridArea = `10 / ${10 - (currentId - 18)}`; } 
-                else if (currentId === 27) { spaceDiv.style.gridArea = `10 / 1`; }           
-                else if (currentId >= 28 && currentId <= 35) { spaceDiv.style.gridArea = `${10 - (currentId - 27)} / 1`; } 
+                if (currentId === 0) { spaceDiv.style.gridArea = `1 / 1`; }
+                else if (currentId >= 1 && currentId <= 8) { spaceDiv.style.gridArea = `1 / ${currentId + 1}`; }
+                else if (currentId === 9) { spaceDiv.style.gridArea = `1 / 10`; }
+                else if (currentId >= 10 && currentId <= 17) { spaceDiv.style.gridArea = `${(currentId - 9) + 1} / 10`; }
+                else if (currentId === 18) { spaceDiv.style.gridArea = `10 / 10`; }
+                else if (currentId >= 19 && currentId <= 26) { spaceDiv.style.gridArea = `10 / ${10 - (currentId - 18)}`; }
+                else if (currentId === 27) { spaceDiv.style.gridArea = `10 / 1`; }
+                else if (currentId >= 28 && currentId <= 35) { spaceDiv.style.gridArea = `${10 - (currentId - 27)} / 1`; }
 
 
                 boardContainer.appendChild(spaceDiv);
@@ -987,41 +1108,13 @@ function reformatBoardLayout() {
             updateAllDevelopmentIndicators();
         }
 
-        function getPlayerSetup() {
-            let totalP = parseInt(prompt("Enter total number of players (1-4):", "2"));
-            if (isNaN(totalP) || totalP < 1 || totalP > 4) {
-                totalP = 2;
-            }
-            numPlayers = totalP;
-
-            if (numPlayers === 1) {
-                numberOfHumanPlayers = 1; 
-                numPlayers = 2; 
-                alert("Playing solo! Adding 1 AI player to make it a 2-player game.");
-            } else {
-                let humanP = parseInt(prompt(`Enter number of human players (0-${numPlayers}):`, "1"));
-                if (isNaN(humanP) || humanP < 0 || humanP > numPlayers) { 
-                    humanP = (numPlayers > 1) ? 0 : 1; 
-                }
-                 if (humanP === 0 && numPlayers < 2 && numPlayers > 0) { 
-                    humanP = 1;
-                    alert("Cannot have 0 human players and only 1 total player. Setting to 1 human, 1 AI.");
-                    numPlayers = 2; 
-                } else if (numPlayers === 0) { 
-                    numPlayers = 2;
-                    humanP = 1;
-                    alert("No players specified. Defaulting to 1 Human, 1 AI.");
-                }
-                numberOfHumanPlayers = humanP;
-            }
-        }
-
 
         function initializeGame() {
-            detentionCenterSpaceId = boardLayout.find(s => s.name === "Detention Center").id;
-            getPlayerSetup(); 
+            const dcSpace = boardLayout.find(s => s.name === "Detention Center");
+            detentionCenterSpaceId = dcSpace ? dcSpace.id : (boardLayout.find(s => s.type === "detention_visiting")?.id || 8) ;
 
-            gameActive = true; 
+
+            gameActive = true;
             players = [];
             playerGovReceived = [];
             lastRollWasDoublesGlobal = false;
@@ -1030,12 +1123,12 @@ function reformatBoardLayout() {
                 players.push({
                     id: i,
                     name: `Player ${i + 1}${isAIPlayer ? ' (AI)' : ''}`,
-                    money: 2000, 
+                    money: 2000,
                     position: 0, properties: [], healthServices: 0,
-                    getOutOfDetentionCards: 0, 
+                    getOutOfDetentionCards: 0,
                     inDetention: false, missedTurnsInDetention: 0,
                     hasHousingVoucher: false, isBankrupt: false,
-                    playerActionTakenThisTurn: false, 
+                    playerActionTakenThisTurn: false,
                     doublesRolledInTurn: 0,
                     isAI: isAIPlayer
                 });
@@ -1049,8 +1142,8 @@ function reformatBoardLayout() {
             });
 
             bank.money = 15000;
-            ukGov.money = 20000; 
-            
+            ukGov.money = 20000;
+
             shuffledWelfareCards = shuffleDeck([...welfareCards]);
             shuffledOpportunityCards = shuffleDeck([...opportunityCards]);
 
@@ -1061,38 +1154,38 @@ function reformatBoardLayout() {
                 }).toDestination();
             }
 
-            setupBoard(); 
+            setupBoard();
 
             onBoardCardDisplayDiv = document.getElementById('on-board-card-display');
             onBoardCardTypeH4 = document.getElementById('on-board-card-type');
             onBoardCardTextP = document.getElementById('on-board-card-text');
-            
+
             if (diceFace1Elem) diceFace1Elem.textContent = '--';
             if (diceFace2Elem) diceFace2Elem.textContent = '--';
             if (diceTotalDisplayText) diceTotalDisplayText.textContent = '';
 
-            updateUkGovDisplay(); 
-            updatePlayerInfo(); 
-            updateBoardDisplay(); 
+            updateUkGovDisplay();
+            updatePlayerInfo();
+            updateBoardDisplay();
             gameStatusMessageP.textContent = "Determining starting player...";
             currentTurnDisplay.textContent = "Pre-Game Roll";
-            currentTurnDisplay.style.color = '#ecf0f1'; 
+            currentTurnDisplay.style.color = '#ecf0f1';
 
             preGameRollArea.style.display = 'block';
             preGameRollResultsDiv.innerHTML = '';
             preGameRolls = [];
             preGamePlayerIndex = 0;
-            if (players.length > 0 && players[preGamePlayerIndex]) { 
+            if (players.length > 0 && players[preGamePlayerIndex]) {
                  preGameRollButton.textContent = `${players[preGamePlayerIndex].name}, Roll to Start`;
                  preGameRollButton.disabled = false;
             } else {
                 logEvent("Error: Cannot set pre-game roll button text, players not initialized correctly.");
-                preGameRollButton.disabled = true;
+                if(preGameRollButton) preGameRollButton.disabled = true;
             }
-           
-            updateUIForCurrentPlayer(); 
+
+            updateUIForCurrentPlayer();
         }
-        
+
         function rollDiceInternal() {
             const die1 = Math.floor(Math.random() * 6) + 1;
             const die2 = Math.floor(Math.random() * 6) + 1;
@@ -1101,14 +1194,14 @@ function reformatBoardLayout() {
         }
 
         function handlePreGameRoll() {
-            if (preGamePlayerIndex >= numPlayers || !players[preGamePlayerIndex]) { 
+            if (preGamePlayerIndex >= numPlayers || !players[preGamePlayerIndex]) {
                 logEvent(`handlePreGameRoll called with invalid preGamePlayerIndex: ${preGamePlayerIndex} or player object is missing.`);
-                if(preGameRollButton) preGameRollButton.disabled = true; 
-                return; 
+                if(preGameRollButton) preGameRollButton.disabled = true;
+                return;
             }
-            const player = players[preGamePlayerIndex]; 
+            const player = players[preGamePlayerIndex];
 
-            const { totalRoll, die1, die2 } = rollDiceInternal(); 
+            const { totalRoll, die1, die2 } = rollDiceInternal();
 
             if (diceFace1Elem) diceFace1Elem.textContent = die1;
             if (diceFace2Elem) diceFace2Elem.textContent = die2;
@@ -1120,12 +1213,12 @@ function reformatBoardLayout() {
 
             preGamePlayerIndex++;
             if (preGamePlayerIndex < numPlayers) {
-                 if (players[preGamePlayerIndex]) { 
+                 if (players[preGamePlayerIndex]) {
                     preGameRollButton.textContent = `${players[preGamePlayerIndex].name}, Roll to Start`;
                 } else {
                     logEvent("Error: Next player in pre-game roll is undefined.");
                     preGameRollButton.disabled = true;
-                    determineStartingPlayer(); 
+                    determineStartingPlayer();
                 }
             } else {
                 preGameRollButton.disabled = true;
@@ -1136,8 +1229,8 @@ function reformatBoardLayout() {
 
         function determineStartingPlayer() {
             preGameRolls.sort((a,b) => b.roll - a.roll);
-            
-            if (preGameRolls.length === 0 && numPlayers > 0) { 
+
+            if (preGameRolls.length === 0 && numPlayers > 0) {
                 logEvent("Error in determineStartingPlayer: No pre-game rolls found. Restarting pre-game roll process.");
                 preGameRollArea.style.display = 'block';
                 preGameRollResultsDiv.innerHTML = 'Error during rolls. Please roll again.<br>';
@@ -1146,7 +1239,7 @@ function reformatBoardLayout() {
                 if (players.length > 0 && players[preGamePlayerIndex]) {
                      preGameRollButton.textContent = `${players[preGamePlayerIndex].name}, Roll to Start`;
                      preGameRollButton.disabled = false;
-                     preGameRollButton.onclick = handlePreGameRoll; 
+                     preGameRollButton.onclick = handlePreGameRoll;
                 } else {
                     logEvent("Cannot restart pre-game roll, players array issue.");
                 }
@@ -1159,27 +1252,27 @@ function reformatBoardLayout() {
             if (tiedPlayers.length > 1) {
                 logEvent(`Tie for highest roll (${topRoll}). Re-rolling tied players: ${tiedPlayers.map(p=>players.find(pl=>pl.id===p.playerId)?.name).join(', ')}.`);
                 preGameRollResultsDiv.innerHTML += `<b>Tie! Re-rolling players: ${tiedPlayers.map(p=>players.find(pl=>pl.id===p.playerId)?.name).join(', ')}</b><br>`;
-                
-                preGameRolls = []; 
-                const playersToReRoll = tiedPlayers.map(tp => players.find(p => p.id === tp.playerId)).filter(p => p); 
+
+                preGameRolls = [];
+                const playersToReRoll = tiedPlayers.map(tp => players.find(p => p.id === tp.playerId)).filter(p => p);
 
                 if (playersToReRoll.length === 0) {
                     logEvent("Error: No valid players to re-roll for tie-breaker. Attempting to restart pre-game roll.");
                     return;
                 }
 
-                function setupReRoll(reRollPlayerIndex) { 
+                function setupReRoll(reRollPlayerIndex) {
                     if (reRollPlayerIndex < playersToReRoll.length) {
-                        const playerToRoll = playersToReRoll[reRollPlayerIndex]; 
-                        if (!playerToRoll) { 
+                        const playerToRoll = playersToReRoll[reRollPlayerIndex];
+                        if (!playerToRoll) {
                             logEvent(`Error in setupReRoll: playerToRoll is undefined for index ${reRollPlayerIndex}. Skipping.`);
                             setupReRoll(reRollPlayerIndex + 1);
                             return;
                         }
                         preGameRollButton.textContent = `${playerToRoll.name} (Tie-breaker), Roll`;
                         preGameRollButton.disabled = false;
-                        preGameRollButton.onclick = () => { 
-                            const { totalRoll: tieBreakRoll, die1, die2 } = rollDiceInternal(); 
+                        preGameRollButton.onclick = () => {
+                            const { totalRoll: tieBreakRoll, die1, die2 } = rollDiceInternal();
                             if (diceFace1Elem) diceFace1Elem.textContent = die1;
                             if (diceFace2Elem) diceFace2Elem.textContent = die2;
                             if (diceTotalDisplayText) diceTotalDisplayText.textContent = `= ${tieBreakRoll}`;
@@ -1187,31 +1280,31 @@ function reformatBoardLayout() {
                             preGameRolls.push({ playerId: playerToRoll.id, roll: tieBreakRoll });
                             preGameRollResultsDiv.innerHTML += `${playerToRoll.name} (Tie-breaker) rolled: ${tieBreakRoll}<br>`;
                             logEvent(`${playerToRoll.name} (Tie-breaker) rolled: ${tieBreakRoll}`);
-                            setupReRoll(reRollPlayerIndex + 1); 
+                            setupReRoll(reRollPlayerIndex + 1);
                         };
                     } else {
                         preGameRollButton.disabled = true;
                         preGameRollButton.textContent = "Tie-breaker rolls complete!";
-                        determineStartingPlayer(); 
+                        determineStartingPlayer();
                     }
                 }
-                setupReRoll(0); 
+                setupReRoll(0);
                 return;
             }
 
             const startingPlayerId = preGameRolls[0].playerId;
             currentPlayerIndex = players.findIndex(p => p.id === startingPlayerId);
-            if (currentPlayerIndex === -1) { 
+            if (currentPlayerIndex === -1) {
                 logEvent(`Error: Starting player ID ${startingPlayerId} not found in players array. Defaulting to player 0.`);
-                currentPlayerIndex = 0; 
+                currentPlayerIndex = 0;
             }
 
             logEvent(`${players[currentPlayerIndex].name} starts the game!`);
             gameStatusMessageP.textContent = `${players[currentPlayerIndex].name} starts! Game in progress...`;
-            preGameRollArea.style.display = 'none'; 
+            preGameRollArea.style.display = 'none';
             players[currentPlayerIndex].playerActionTakenThisTurn = false;
             players[currentPlayerIndex].doublesRolledInTurn = 0;
-            updatePlayerInfo(); 
+            updatePlayerInfo();
             updateUIForCurrentPlayer();
         }
 
@@ -1223,13 +1316,13 @@ function reformatBoardLayout() {
                 if (p.isBankrupt) {
                     const pDiv = document.createElement('div');
                     pDiv.innerHTML = `<b style="color:${playerColor};">${p.name}</b>: BANKRUPT`;
-                    pDiv.style.color = 'grey'; 
+                    pDiv.style.color = 'grey';
                     playerInfoDiv.appendChild(pDiv);
                 } else {
                     const pDiv = document.createElement('div');
                     pDiv.innerHTML = `<b style="color:${playerColor};">${p.name}</b>: <span style='color:${playerColor};font-weight:bold;'>£${p.money}</span> | HS: ${p.healthServices} | LegalAids: ${p.getOutOfDetentionCards}`;
                     if (p.inDetention) pDiv.innerHTML += ` (In Detention - ${p.missedTurnsInDetention} turns missed)`;
-                    pDiv.innerHTML += `<br><span style='font-size:12px;color:#f7ca18;'>From UK Gov: £${playerGovReceived[p.id]}</span>`;
+                    pDiv.innerHTML += `<br><span style='font-size:12px;color:#f7ca18;'>From UK Gov: £${playerGovReceived[p.id] || 0}</span>`;
                     playerInfoDiv.appendChild(pDiv);
                 }
             });
@@ -1237,8 +1330,8 @@ function reformatBoardLayout() {
                 currentTurnDisplay.textContent = `Current Turn: ${players[currentPlayerIndex].name}`;
                 currentTurnDisplay.style.color = playerColors[players[currentPlayerIndex].id % playerColors.length];
             } else if (gameActive) {
-                 currentTurnDisplay.textContent = "Turn Over"; 
-                 currentTurnDisplay.style.color = '#ecf0f1'; 
+                 currentTurnDisplay.textContent = "Turn Over";
+                 currentTurnDisplay.style.color = '#ecf0f1';
             }
             updateUkGovDisplay();
         }
@@ -1253,7 +1346,7 @@ function reformatBoardLayout() {
                 }
             });
 
-            propertyData.forEach(propInPropertyData => { 
+            propertyData.forEach(propInPropertyData => {
                 const indicator = document.getElementById(`owner-indicator-${propInPropertyData.id}`);
                 if (indicator) {
                     if (propInPropertyData.owner !== null && players[propInPropertyData.owner] && !players[propInPropertyData.owner].isBankrupt) {
@@ -1274,28 +1367,28 @@ function reformatBoardLayout() {
         function updateAllDevelopmentIndicators() {
             propertyData.forEach(prop => {
                 const boardSpaceDetails = boardLayout.find(s => s.id === prop.id);
-                if (boardSpaceDetails && boardSpaceDetails.type === 'property') { 
+                if (boardSpaceDetails && boardSpaceDetails.type === 'property') {
                     updateDevelopmentIndicator(prop.id);
                 }
             });
         }
 
         function updateDevelopmentIndicator(propertyId) {
-            const prop = propertyData.find(p => p.id === propertyId); 
-            const boardSpace = boardLayout.find(s => s.id === propertyId); 
+            const prop = propertyData.find(p => p.id === propertyId);
+            const boardSpace = boardLayout.find(s => s.id === propertyId);
             const devIndicator = document.getElementById(`dev-indicator-${propertyId}`);
 
-            if (prop && devIndicator && boardSpace && boardSpace.type === 'property') { 
+            if (prop && devIndicator && boardSpace && boardSpace.type === 'property') {
                 if (prop.permanentResidence) {
-                    devIndicator.textContent = "🏢"; // PR Icon
+                    devIndicator.textContent = "🏢";
                 } else if (prop.tenancies > 0) {
                     let icons = "";
                     for(let i=0; i < prop.tenancies; i++) { icons += "🏠"; }
-                    devIndicator.textContent = icons; // Tenancy Icons
+                    devIndicator.textContent = icons;
                 } else {
                     devIndicator.textContent = "";
                 }
-            } else if (devIndicator) { 
+            } else if (devIndicator) {
                 devIndicator.textContent = "";
             }
         }
@@ -1310,7 +1403,7 @@ function reformatBoardLayout() {
             const tokenElement = document.getElementById(`player${player.id}-token`);
             if (!tokenElement) return;
 
-            tokenElement.classList.add('token-move-flash'); // Start move flash
+            tokenElement.classList.add('token-move-flash');
 
             let currentAnimatedPosition = player.position;
             for (let i = 0; i < steps; i++) {
@@ -1320,27 +1413,27 @@ function reformatBoardLayout() {
                 if (nextSpaceElement) {
                     nextSpaceElement.appendChild(tokenElement);
 
-                    tokenElement.classList.remove('token-arrive-step'); 
-                    void tokenElement.offsetWidth; 
+                    tokenElement.classList.remove('token-arrive-step');
+                    void tokenElement.offsetWidth;
                     tokenElement.classList.add('token-arrive-step');
-                    
+
                     setTimeout(() => {
                         if (tokenElement) tokenElement.classList.remove('token-arrive-step');
-                    }, 250); 
+                    }, 250);
 
                     playPingSound();
                 }
-                await new Promise(resolve => setTimeout(resolve, 150)); 
+                await new Promise(resolve => setTimeout(resolve, 150));
 
                 if (currentAnimatedPosition === 0 && prevPositionForGoPassCheck !== 0 && !player.inDetention) {
-                    govPayout(player, 200); 
-                    govPayout(player, 200); 
-                    logEvent(`${player.name} passed Dole and collected £400.`); 
-                    updatePlayerInfo(); 
+                    govPayout(player, 200);
+                    govPayout(player, 200);
+                    logEvent(`${player.name} passed Dole and collected £400.`);
+                    updatePlayerInfo();
                 }
             }
             player.position = currentAnimatedPosition;
-            tokenElement.classList.remove('token-move-flash'); // End move flash
+            tokenElement.classList.remove('token-move-flash');
         }
 
 
@@ -1349,15 +1442,15 @@ function reformatBoardLayout() {
                 payer.money -= amount;
                 if (recipient && recipient !== bank) {
                     recipient.money += amount;
-                    if (!isRent) showMoneyFlash('gain', amount); 
-                } else { 
+                    if (!isRent) showMoneyFlash('gain', amount);
+                } else {
                     bank.money += amount;
                 }
                 showMoneyFlash('lose', amount);
                 logEvent(`${payer.name} paid £${amount} to ${recipient === bank ? "the Bank" : (recipient ? recipient.name : "N/A")}.`);
-                updatePlayerInfo(); 
+                updatePlayerInfo();
                 return true;
-            } else { 
+            } else {
                 let amountPaid = payer.money;
                 if (recipient && recipient !== bank) {
                     recipient.money += amountPaid;
@@ -1368,26 +1461,26 @@ function reformatBoardLayout() {
                 payer.money = 0;
                 showMoneyFlash('lose', amountPaid);
                 logEvent(`${payer.name} paid their remaining £${amountPaid} to ${recipient === bank ? "the Bank" : (recipient ? recipient.name : "N/A")} and cannot afford the full £${amount}.`);
-                updatePlayerInfo(); 
-                handleBankruptcy(payer, recipient); 
+                updatePlayerInfo();
+                handleBankruptcy(payer, recipient);
                 return false;
             }
         }
 
 
-        async function handleLandOnSpace(player) { 
+        async function handleLandOnSpace(player) {
             if (player.isBankrupt) return;
 
             const currentSpace = boardLayout[player.position];
             logEvent(`${player.name} landed on ${currentSpace.name}.`);
-            let actionCompletedByLanding = false; 
+            let actionCompletedByLanding = false;
 
             if ( (currentSpace.name === 'Dole' && currentSpace.type === 'go') ) {
                 govPayout(player, 100);
                 logEvent(`${player.name} landed on Dole, receives +£100 from UK Gov.`);
                 updatePlayerInfo();
             } else if (currentSpace.name === 'Crime Spree !!! Arrest' && currentSpace.type === 'crime_spree') {
-                govPayout(player, 100); 
+                govPayout(player, 100);
                 logEvent(`${player.name} landed on Crime Spree, receives +£100 from UK Gov (penalty also applies).`);
                 updatePlayerInfo();
             } else if (currentSpace.name === 'Go to Detention Center' || (currentSpace.name === 'Detention Center' && currentSpace.type === 'detention_visiting')) {
@@ -1403,51 +1496,51 @@ function reformatBoardLayout() {
                 case "property":
                 case "set_property":
                     const propDetails = propertyData.find(p => p.id === currentSpace.id);
-                    const boardPropDetails = boardLayout.find(b => b.id === currentSpace.id); 
+                    const boardPropDetails = boardLayout.find(b => b.id === currentSpace.id);
 
-                    if (boardPropDetails.type === 'property') { 
-                         if (propDetails && propDetails.owner !== null && propDetails.owner !== player.id && !players[propDetails.owner]?.isBankrupt) {
+                    if (boardPropDetails.type === 'property') {
+                         if (propDetails && propDetails.owner !== null && propDetails.owner !== player.id && players[propDetails.owner] && !players[propDetails.owner].isBankrupt) {
                             const tenancies = propDetails.tenancies || 0;
-                            const legalAidFee = 150 * (tenancies > 0 ? tenancies : 1); 
+                            const legalAidFee = 150 * (tenancies > 0 ? tenancies : 1);
                             logEvent(`${player.name} pays +£${legalAidFee} LegalAid fee to the bank for landing on another player's property (${propDetails.name}) with ${tenancies} house(s).`);
-                            makePayment(player, bank, legalAidFee); 
+                            makePayment(player, bank, legalAidFee);
                             updatePlayerInfo();
                         }
                     }
 
-                    if (propDetails.owner === null) {
+                    if (propDetails && propDetails.owner === null) {
                         logEvent(`${currentSpace.name} is unowned.`);
                         if (player.isAI) {
                             await aiDecideBuyProperty(player, propDetails, currentSpace.price);
-                            actionCompletedByLanding = player.playerActionTakenThisTurn; 
+                            actionCompletedByLanding = player.playerActionTakenThisTurn;
                         } else {
-                            actionCompletedByLanding = false; 
+                            actionCompletedByLanding = false;
                         }
-                    } else if (propDetails.owner !== player.id && !players[propDetails.owner]?.isBankrupt) {
-                        payRent(player, propDetails); 
+                    } else if (propDetails && propDetails.owner !== player.id && players[propDetails.owner] && !players[propDetails.owner].isBankrupt) {
+                        payRent(player, propDetails);
                         actionCompletedByLanding = true;
-                    } else if (players[propDetails.owner]?.isBankrupt) {
+                    } else if (propDetails && players[propDetails.owner] && players[propDetails.owner].isBankrupt) {
                         logEvent(`${currentSpace.name} is owned by a bankrupt player. No rent.`);
                         actionCompletedByLanding = true;
-                    } else { 
+                    } else {
                         logEvent(`${player.name} owns ${currentSpace.name}.`);
                         actionCompletedByLanding = true;
                     }
                     break;
                 case "welfare":
                     drawCard("welfare", player);
-                    actionCompletedByLanding = false; 
+                    actionCompletedByLanding = false;
                     break;
                 case "opportunity":
                     drawCard("opportunity", player);
-                    actionCompletedByLanding = false; 
+                    actionCompletedByLanding = false;
                     break;
-                case "tax": 
+                case "tax":
                     logEvent(`${player.name} landed on ${currentSpace.name}. Paying £${currentSpace.amount}.`);
                     makePayment(player, bank, currentSpace.amount);
                     actionCompletedByLanding = true;
                     break;
-                case "payout": 
+                case "payout":
                     logEvent(`${player.name} landed on ${currentSpace.name} and collects £${currentSpace.amount}.`);
                     if (bank.money >= currentSpace.amount) {
                         player.money += currentSpace.amount;
@@ -1463,22 +1556,22 @@ function reformatBoardLayout() {
                     updatePlayerInfo();
                     actionCompletedByLanding = true;
                     break;
-                case "crime_spree": 
+                case "crime_spree":
                     logEvent(`${player.name} landed on ${currentSpace.name}!`);
-                    if (currentSpace.amount && currentSpace.amount > 0) { 
-                         logEvent(`Paying fine of £${currentSpace.amount}.`); 
-                         makePayment(player, bank, currentSpace.amount); 
+                    if (currentSpace.amount && currentSpace.amount > 0) {
+                         logEvent(`Paying fine of £${currentSpace.amount}.`);
+                         makePayment(player, bank, currentSpace.amount);
                     }
                     actionCompletedByLanding = true;
                     break;
-                case "go_to_detention": 
-                    logEvent(`${player.name} must pay £100 fine for going to Detention Center.`); 
-                    makePayment(player, bank, 100); 
-                    await goToDetention(player); 
-                    actionCompletedByLanding = true; 
+                case "go_to_detention":
+                    logEvent(`${player.name} must pay £100 fine for going to Detention Center.`);
+                    makePayment(player, bank, 100);
+                    await goToDetention(player);
+                    actionCompletedByLanding = true;
                     break;
-                case "detention_visiting": 
-                    logEvent(`${player.name} is just visiting Detention Center.`); 
+                case "detention_visiting":
+                    logEvent(`${player.name} is just visiting Detention Center.`);
                     actionCompletedByLanding = true;
                     break;
                 default:
@@ -1487,67 +1580,67 @@ function reformatBoardLayout() {
             }
 
             if (actionCompletedByLanding && !player.isAI &&
-                !player.inDetention && 
+                !player.inDetention &&
                 cardDisplayContainer.style.display === 'none' &&
                 developPropertyContainer.style.display === 'none' &&
                 (!onBoardCardDisplayDiv || onBoardCardDisplayDiv.style.display === 'none')) {
-                if (!lastRollWasDoublesGlobal) { 
+                if (!lastRollWasDoublesGlobal) {
                     player.playerActionTakenThisTurn = true;
-                } else { 
+                } else {
                     player.playerActionTakenThisTurn = false;
                 }
             }
         }
 
 
-        async function buyCurrentProperty() { 
+        async function buyCurrentProperty() {
             const player = players[currentPlayerIndex];
             if (player.isBankrupt) return;
             const currentSpace = boardLayout[player.position];
 
             if (currentSpace.type !== 'property' && currentSpace.type !== 'set_property') return;
 
-            const propToBuyLayout = currentSpace; 
-            const propToBuyData = propertyData.find(p => p.id === currentSpace.id); 
+            const propToBuyLayout = currentSpace;
+            const propToBuyData = propertyData.find(p => p.id === currentSpace.id);
 
             let price = propToBuyLayout.price;
-            if (player.hasHousingVoucher && propToBuyLayout.type === 'property') { 
+            if (player.hasHousingVoucher && propToBuyLayout.type === 'property') {
                 price = Math.round(price * 0.75);
                 logEvent(`${player.name} uses Housing Voucher! New price for ${propToBuyLayout.name}: £${price}`);
             }
 
             if (propToBuyData && propToBuyData.owner === null) {
-                if (makePayment(player, bank, price)) { 
+                if (makePayment(player, bank, price)) {
                     propToBuyData.owner = player.id;
                     player.properties.push(propToBuyData.id);
                     logEvent(`${player.name} bought ${propToBuyLayout.name} for £${price}.`);
                     if (player.hasHousingVoucher && price === Math.round(propToBuyLayout.price * 0.75) && propToBuyLayout.type === 'property') {
-                        player.hasHousingVoucher = false; 
+                        player.hasHousingVoucher = false;
                     }
-                    updateBoardDisplay(); 
+                    updateBoardDisplay();
                 } else {
                     logEvent(`${player.name} failed to buy ${propToBuyLayout.name} due to insufficient funds.`);
                 }
             } else {
                 logEvent(`Cannot buy ${propToBuyLayout.name} or it's already owned.`);
             }
-            
-            if (!lastRollWasDoublesGlobal) { 
-                player.playerActionTakenThisTurn = true; 
-            } 
-            
-            if (!player.isAI) updateUIForCurrentPlayer(); 
+
+            if (!lastRollWasDoublesGlobal) {
+                player.playerActionTakenThisTurn = true;
+            }
+
+            if (!player.isAI) updateUIForCurrentPlayer();
         }
 
 
-        function payRent(player, propertyFromData) { 
+        function payRent(player, propertyFromData) {
             if (player.isBankrupt) return;
 
-            const owner = players[propertyFromData.owner];
-            const propertyLayoutDetails = boardLayout.find(s => s.id === propertyFromData.id); 
+            const owner = players.find(p => p.id === propertyFromData.owner); // Correct way to find owner
+            const propertyLayoutDetails = boardLayout.find(s => s.id === propertyFromData.id);
 
             if (!owner || owner.isBankrupt || !propertyLayoutDetails) {
-                logEvent(`Owner ${owner ? owner.name : 'N/A'} is bankrupt or not found, or property details missing. No rent for ${propertyLayoutDetails ? propertyLayoutDetails.name : 'unknown property'}.`);
+                logEvent(`Owner ${owner ? owner.name : `ID ${propertyFromData.owner}`} is bankrupt or not found, or property details missing. No rent for ${propertyLayoutDetails ? propertyLayoutDetails.name : 'unknown property'}.`);
                 return;
             }
 
@@ -1555,9 +1648,9 @@ function reformatBoardLayout() {
 
             if (propertyLayoutDetails.type === "set_property") {
                 const ownedSetProperties = propertyData.filter(pData =>
-                    pData.owner === propertyFromData.owner && 
-                    boardLayout.find(s => s.id === pData.id)?.type === "set_property" && 
-                    boardLayout.find(s => s.id === pData.id)?.groupId === propertyLayoutDetails.groupId 
+                    pData.owner === propertyFromData.owner &&
+                    boardLayout.find(s => s.id === pData.id)?.type === "set_property" &&
+                    boardLayout.find(s => s.id === pData.id)?.groupId === propertyLayoutDetails.groupId
                 );
                 ownedSetProperties.forEach(ownedPropData => {
                     const detail = boardLayout.find(s => s.id === ownedPropData.id);
@@ -1566,7 +1659,7 @@ function reformatBoardLayout() {
                     }
                 });
                 logEvent(`${player.name} owes £${rentAmount} rent to ${owner.name} for ${propertyLayoutDetails.name} (part of "${propertyLayoutDetails.groupId}" set).`);
-            } else if (propertyLayoutDetails.type === "property") { 
+            } else if (propertyLayoutDetails.type === "property") {
                 if (propertyFromData.tenancies === 0 && !propertyFromData.permanentResidence) {
                     const propertyPrice = propertyLayoutDetails.price;
                     const groupId = propertyLayoutDetails.groupId;
@@ -1575,22 +1668,22 @@ function reformatBoardLayout() {
                         const layout = boardLayout.find(bl => bl.id === p.id);
                         return layout && layout.groupId === groupId && p.owner === ownerId;
                     }).length;
-                    
+
                     rentAmount = Math.floor(propertyPrice / 2) * numOwnedInGroup;
                     logEvent(`Rent for unimproved ${propertyLayoutDetails.name}: (£${propertyPrice}/2) * ${numOwnedInGroup} (owned in group) = £${rentAmount}`);
 
-                } else { 
-                    let rentLevel = 0; 
+                } else {
+                    let rentLevel = 0;
                     if (propertyFromData.permanentResidence) {
-                        rentLevel = MAX_TENANCIES + 1; 
+                        rentLevel = MAX_TENANCIES + 1;
                     } else if (propertyFromData.tenancies > 0) {
-                        rentLevel = propertyFromData.tenancies; 
+                        rentLevel = propertyFromData.tenancies;
                     }
 
                     if (propertyLayoutDetails.rent && rentLevel < propertyLayoutDetails.rent.length) {
                         rentAmount = propertyLayoutDetails.rent[rentLevel];
-                    } else if (propertyLayoutDetails.rent && propertyLayoutDetails.rent.length > 0) { 
-                        rentAmount = propertyLayoutDetails.rent[propertyLayoutDetails.rent.length -1]; 
+                    } else if (propertyLayoutDetails.rent && propertyLayoutDetails.rent.length > 0) {
+                        rentAmount = propertyLayoutDetails.rent[propertyLayoutDetails.rent.length -1];
                         logEvent(`Warning: Rent level ${rentLevel} adjusted for ${propertyLayoutDetails.name}. Using highest available rent tier.`);
                     } else {
                         logEvent(`Error: Missing rent tiers for developed property ${propertyLayoutDetails.name}. Defaulting rent to 0.`);
@@ -1600,11 +1693,11 @@ function reformatBoardLayout() {
                 }
             } else {
                 logEvent(`Cannot calculate rent for ${propertyLayoutDetails.name} - unknown type or configuration.`);
-                return; 
+                return;
             }
 
             if (rentAmount > 0) {
-                makePayment(player, owner, rentAmount, true); 
+                makePayment(player, owner, rentAmount, true);
             } else {
                 logEvent(`Calculated rent is £0 for ${propertyLayoutDetails.name}. No payment made.`);
             }
@@ -1624,33 +1717,33 @@ function reformatBoardLayout() {
 
             if (targetDiv) {
                 targetDiv.classList.remove('player-highlight');
-                void targetDiv.offsetWidth; 
+                void targetDiv.offsetWidth;
                 targetDiv.classList.add('player-highlight');
                 setTimeout(() => {
                     if (targetDiv) targetDiv.classList.remove('player-highlight');
-                }, 1000); 
+                }, 1000);
             }
         }
 
         function handleBankruptcy(player, creditor) {
-            if (!player.isBankrupt) { 
+            if (!player.isBankrupt) {
                 logEvent(`${player.name} is officially bankrupt!`);
                 player.isBankrupt = true;
-                
+
                 player.properties.forEach(propId => {
                     const prop = propertyData.find(p => p.id === propId);
                     const boardProp = boardLayout.find(b => b.id === propId);
                     if (prop && boardProp) {
                         logEvent(`${boardProp.name} (owned by ${player.name}) returns to the bank.`);
                         prop.owner = null;
-                        if (boardProp.type === 'property') { 
+                        if (boardProp.type === 'property') {
                             prop.tenancies = 0;
                             prop.permanentResidence = false;
                             updateDevelopmentIndicator(prop.id);
                         }
                     }
                 });
-                player.properties = []; 
+                player.properties = [];
 
                 if (creditor && creditor !== bank && !creditor.isBankrupt) {
                     logEvent(`Transferring remaining assets from ${player.name} to ${creditor.name}.`);
@@ -1665,13 +1758,13 @@ function reformatBoardLayout() {
 
                 const token = document.getElementById(`player${player.id}-token`);
                 if (token) {
-                    token.style.display = 'none'; 
+                    token.style.display = 'none';
                     token.classList.remove('token-flash', 'token-move-flash');
                 }
 
-                updatePlayerInfo(); 
-                updateBoardDisplay(); 
-                checkWinConditions(); 
+                updatePlayerInfo();
+                updateBoardDisplay();
+                checkWinConditions();
             }
         }
 
@@ -1685,79 +1778,79 @@ function reformatBoardLayout() {
             endTurnButton.style.display = 'none';
             developPropertyButton.style.display = 'none';
             buyPropertyButton.style.display = 'none';
-            otherActionsContainer.style.display = 'none'; 
+            otherActionsContainer.style.display = 'none';
 
             const currentToken = document.getElementById(`player${player.id}-token`);
             if (currentToken) currentToken.classList.remove('token-flash');
 
-            if (onBoardCardDisplayDiv) { 
-                onBoardCardDisplayDiv.style.display = 'flex'; 
+            if (onBoardCardDisplayDiv) {
+                onBoardCardDisplayDiv.style.display = 'flex';
             }
 
             if (type === "welfare") {
                 if (shuffledWelfareCards.length === 0) shuffledWelfareCards = shuffleDeck([...welfareCards]);
                 card = shuffledWelfareCards.pop();
-                currentCardBeingExecuted = card; 
-                cardTypeTitle.textContent = "Welfare Card"; 
-                if (onBoardCardTypeH4) onBoardCardTypeH4.textContent = "Welfare Card"; 
+                currentCardBeingExecuted = card;
+                cardTypeTitle.textContent = "Welfare Card";
+                if (onBoardCardTypeH4) onBoardCardTypeH4.textContent = "Welfare Card";
             } else { // opportunity
                 if (shuffledOpportunityCards.length === 0) shuffledOpportunityCards = shuffleDeck([...opportunityCards]);
                 card = shuffledOpportunityCards.pop();
-                currentCardBeingExecuted = card; 
-                cardTypeTitle.textContent = "Opportunity Card"; 
-                if (onBoardCardTypeH4) onBoardCardTypeH4.textContent = "Opportunity Card"; 
+                currentCardBeingExecuted = card;
+                cardTypeTitle.textContent = "Opportunity Card";
+                if (onBoardCardTypeH4) onBoardCardTypeH4.textContent = "Opportunity Card";
             }
-            cardMessageP.textContent = card.text; 
-            if (onBoardCardTextP) onBoardCardTextP.textContent = card.text; 
+            cardMessageP.textContent = card.text;
+            if (onBoardCardTextP) onBoardCardTextP.textContent = card.text;
 
             logEvent(`${player.name} drew ${type} card: ${card.text}. Displaying on board and modal.`);
 
             if (player.isAI) {
                 setTimeout(() => {
-                    if (cardDisplayContainer.style.display === 'block') { 
+                    if (cardDisplayContainer.style.display === 'block') {
                          cardOkButton.click();
                     }
-                }, 1500); 
+                }, 1500);
             }
         }
-        
-        cardOkButton.onclick = async () => { 
-            const player = players[currentPlayerIndex]; 
-            cardDisplayContainer.style.display = 'none'; 
+
+        cardOkButton.onclick = async () => {
+            const player = players[currentPlayerIndex];
+            cardDisplayContainer.style.display = 'none';
             if (onBoardCardDisplayDiv) {
-                onBoardCardDisplayDiv.style.display = 'none'; 
+                onBoardCardDisplayDiv.style.display = 'none';
             }
 
-            if (currentCardBeingExecuted && player) { 
-                await executeCardAction(player, currentCardBeingExecuted); 
-                
-                if (player.isBankrupt || player.inDetention) { 
+            if (currentCardBeingExecuted && player) {
+                await executeCardAction(player, currentCardBeingExecuted);
+
+                if (player.isBankrupt || player.inDetention) {
                     player.playerActionTakenThisTurn = true;
                 } else if (['moveToNearestPayout', 'advanceToGo'].includes(currentCardBeingExecuted.action)) {
-                  // Landing on these new spaces will determine playerActionTakenThisTurn
+                  // playerActionTakenThisTurn will be determined by handleLandOnSpace after moving
                 } else if (!['goToDetentionDirect'].includes(currentCardBeingExecuted.action)) {
                     if (lastRollWasDoublesGlobal && !player.inDetention && !player.isBankrupt) {
-                        player.playerActionTakenThisTurn = false; 
+                        player.playerActionTakenThisTurn = false;
                     } else if (!player.inDetention && !player.isBankrupt) {
-                        player.playerActionTakenThisTurn = true; 
+                        player.playerActionTakenThisTurn = true;
                     }
                 }
             }
-            currentCardBeingExecuted = null; 
+            currentCardBeingExecuted = null;
 
             if (!player.isAI) {
-                 updateUIForCurrentPlayer(); 
-            } 
+                 updateUIForCurrentPlayer();
+            }
         };
 
 
-        async function executeCardAction(player, card) { 
+        async function executeCardAction(player, card) {
             if (player.isBankrupt) return;
             logEvent(`Executing card action: ${card.action} for ${player.name}`);
 
             switch (card.action) {
                 case "collect":
-                    govPayout(player, card.amount); 
+                    govPayout(player, card.amount);
                     break;
                 case "pay":
                     logEvent(`${player.name} needs to pay £${card.amount} due to a card (to the Bank).`);
@@ -1772,7 +1865,7 @@ function reformatBoardLayout() {
                     player.properties.forEach(propId => {
                         const prop = propertyData.find(p => p.id === propId);
                         const boardProp = boardLayout.find(b => b.id === propId);
-                        if (prop && boardProp && boardProp.type === 'property') { 
+                        if (prop && boardProp && boardProp.type === 'property') {
                             totalPayment += (prop.tenancies * card.amountPer);
                         }
                     });
@@ -1792,30 +1885,30 @@ function reformatBoardLayout() {
                     let nearestDist = boardLayout.length;
                     let nearestPos = -1;
 
-                    for(let i = 0; i < boardLayout.length; i++){ 
+                    for(let i = 0; i < boardLayout.length; i++){
                         const testPosIndex = (currentPos + i) % boardLayout.length;
                         if(boardLayout[testPosIndex].type === 'payout'){
-                            if (i < nearestDist) { 
+                            if (i < nearestDist) {
                                 nearestDist = i;
                                 nearestPos = testPosIndex;
                             }
                         }
                     }
                     if (nearestPos !== -1) {
-                        const stepsToMove = nearestDist; 
-                        player.doublesRolledInTurn = 0; 
-                        lastRollWasDoublesGlobal = false; 
-                        await movePlayerAnimated(player, stepsToMove); 
+                        const stepsToMove = nearestDist;
+                        player.doublesRolledInTurn = 0;
+                        lastRollWasDoublesGlobal = false;
+                        await movePlayerAnimated(player, stepsToMove);
                         logEvent(`${player.name} moved to ${boardLayout[player.position].name}.`);
-                        await handleLandOnSpace(player); 
+                        await handleLandOnSpace(player);
                     } else {
                          logEvent("No Payout space found to move to.");
-                         player.playerActionTakenThisTurn = true; 
+                         player.playerActionTakenThisTurn = true;
                     }
-                    break; 
+                    break;
                 case "goToDetentionDirect":
                     logEvent(`${player.name} sent to Detention by card. No direct fine from card action itself.`);
-                    await goToDetention(player); 
+                    await goToDetention(player);
                     break;
                 case "housingVoucher":
                     player.hasHousingVoucher = true;
@@ -1825,24 +1918,24 @@ function reformatBoardLayout() {
                     players.forEach(p => {
                         if (p.id !== player.id && !p.isBankrupt) {
                             logEvent(`${p.name} needs to pay £${card.amount} to ${player.name}.`);
-                            makePayment(p, player, card.amount); 
+                            makePayment(p, player, card.amount);
                         }
                     });
                     break;
                 case "advanceToGo":
                     const stepsToGo = (boardLayout.length - player.position) % boardLayout.length;
-                    player.doublesRolledInTurn = 0; 
-                    lastRollWasDoublesGlobal = false; 
-                    await movePlayerAnimated(player, stepsToGo); 
+                    player.doublesRolledInTurn = 0;
+                    lastRollWasDoublesGlobal = false;
+                    await movePlayerAnimated(player, stepsToGo);
                     logEvent(`${player.name} advances to Dole (Go).`);
-                    await handleLandOnSpace(player); 
-                    break; 
+                    await handleLandOnSpace(player);
+                    break;
             }
-            updatePlayerInfo(); 
+            updatePlayerInfo();
             if (gameActive) checkWinConditions();
         }
 
-        async function goToDetention(player) { 
+        async function goToDetention(player) {
             if (player.isBankrupt) return;
             logEvent(`${player.name} is being sent to Detention Center.`);
             const tokenElement = document.getElementById(`player${player.id}-token`);
@@ -1856,7 +1949,7 @@ function reformatBoardLayout() {
                     };
                     if (tokenElement) {
                          tokenElement.addEventListener('animationend', onAnimationEnd);
-                         setTimeout(resolve, 325); 
+                         setTimeout(resolve, 325);
                     } else {
                         resolve();
                     }
@@ -1866,32 +1959,32 @@ function reformatBoardLayout() {
 
             player.position = detentionCenterSpaceId;
             player.inDetention = true;
-            player.missedTurnsInDetention = 0; 
-            player.doublesRolledInTurn = 0; 
+            player.missedTurnsInDetention = 0;
+            player.doublesRolledInTurn = 0;
             lastRollWasDoublesGlobal = false;
-            player.playerActionTakenThisTurn = true; 
-            logEvent(`${player.name} is now in Detention Center.`); 
-            updateBoardDisplay(); 
+            player.playerActionTakenThisTurn = true;
+            logEvent(`${player.name} is now in Detention Center.`);
+            updateBoardDisplay();
         }
 
 
-        function handleDetentionTurn(player) { 
+        function handleDetentionTurn(player) {
             logEvent(`Detention Turn: ${player.name}. Missed: ${player.missedTurnsInDetention}. Legal Aids: ${player.getOutOfDetentionCards}. Money: £${player.money}`);
-            detentionActionsDiv.innerHTML = ''; 
-            otherActionsContainer.style.display = 'none'; 
+            detentionActionsDiv.innerHTML = '';
+            otherActionsContainer.style.display = 'none';
 
-            player.playerActionTakenThisTurn = false; 
+            player.playerActionTakenThisTurn = false;
 
             if (player.getOutOfDetentionCards > 0) {
                 const useCardBtn = document.createElement('button');
                 useCardBtn.textContent = "Use Legal Aid Card";
                 useCardBtn.onclick = () => {
-                    detentionActionsDiv.innerHTML = ''; 
+                    detentionActionsDiv.innerHTML = '';
                     player.getOutOfDetentionCards--;
                     player.inDetention = false;
                     player.missedTurnsInDetention = 0;
                     logEvent(`${player.name} used Legal Aid card and is free from Detention.`);
-                    player.playerActionTakenThisTurn = false; // Player is free, turn continues with roll if applicable
+                    player.playerActionTakenThisTurn = false;
                     updateUIForCurrentPlayer();
                 };
                 detentionActionsDiv.appendChild(useCardBtn);
@@ -1902,15 +1995,15 @@ function reformatBoardLayout() {
                 const payFineBtn = document.createElement('button');
                 payFineBtn.textContent = `Pay £${fineAmount} Fine`;
                 payFineBtn.onclick = () => {
-                    detentionActionsDiv.innerHTML = ''; 
+                    detentionActionsDiv.innerHTML = '';
                     if (makePayment(player, bank, fineAmount)) {
                         player.inDetention = false;
                         player.missedTurnsInDetention = 0;
                         logEvent(`${player.name} paid £${fineAmount} fine and is free from Detention.`);
-                        player.playerActionTakenThisTurn = false;  // Player is free, turn continues
+                        player.playerActionTakenThisTurn = false;
                     } else {
                         logEvent(`${player.name} attempted to pay fine but failed.`);
-                        player.playerActionTakenThisTurn = true; // Failed to pay, action taken
+                        player.playerActionTakenThisTurn = true;
                     }
                     updateUIForCurrentPlayer();
                 };
@@ -1919,11 +2012,11 @@ function reformatBoardLayout() {
 
             const rollDoublesBtn = document.createElement('button');
             rollDoublesBtn.textContent = "Roll for Doubles (1 Chance)";
-            rollDoublesBtn.onclick = async () => { 
-                detentionActionsDiv.innerHTML = ''; // This action commits the turn's attempt
-                const { totalRoll, die1, die2, isDoubles } = rollDiceInternal(); 
-                lastRollWasDoublesGlobal = isDoubles; 
-                
+            rollDoublesBtn.onclick = async () => {
+                detentionActionsDiv.innerHTML = '';
+                const { totalRoll, die1, die2, isDoubles } = rollDiceInternal();
+                lastRollWasDoublesGlobal = isDoubles;
+
                 if (diceFace1Elem) diceFace1Elem.textContent = die1;
                 if (diceFace2Elem) diceFace2Elem.textContent = die2;
                 if (diceTotalDisplayText) diceTotalDisplayText.textContent = `= ${totalRoll}`;
@@ -1931,16 +2024,15 @@ function reformatBoardLayout() {
                 if (isDoubles) {
                     player.inDetention = false;
                     player.missedTurnsInDetention = 0;
-                    player.doublesRolledInTurn = 1; 
+                    player.doublesRolledInTurn = 1;
                     logEvent(`${player.name} rolled doubles (${totalRoll}) and is free from Detention! Moves ${totalRoll}.`);
-                    await movePlayerAnimated(player, totalRoll); 
-                    await handleLandOnSpace(player); 
-                    // playerActionTakenThisTurn will be determined by handleLandOnSpace and subsequent doubles logic
+                    await movePlayerAnimated(player, totalRoll);
+                    await handleLandOnSpace(player);
                 } else {
                     logEvent(`${player.name} rolled ${totalRoll} (not doubles). Stays in Detention.`);
-                    player.playerActionTakenThisTurn = true; // Failed roll, action for this turn regarding getting out is done.
+                    player.playerActionTakenThisTurn = true;
                 }
-                updateUIForCurrentPlayer(); 
+                updateUIForCurrentPlayer();
             };
             detentionActionsDiv.appendChild(rollDoublesBtn);
         }
@@ -1949,11 +2041,11 @@ function reformatBoardLayout() {
         function canDevelopAnyProperty(player) {
             if (player.isBankrupt) return false;
             return player.properties.some(propId => {
-                const propData = propertyData.find(p => p.id === propId); 
-                const propLayout = boardLayout.find(s => s.id === propId); 
+                const propData = propertyData.find(p => p.id === propId);
+                const propLayout = boardLayout.find(s => s.id === propId);
 
-                if (!propData || !propLayout || propLayout.type !== 'property') return false; 
-                if (propData.owner !== player.id || propData.permanentResidence) return false; 
+                if (!propData || !propLayout || propLayout.type !== 'property') return false;
+                if (propData.owner !== player.id || propData.permanentResidence) return false;
 
                 const groupPropertiesLayout = boardLayout.filter(s => s.groupId === propLayout.groupId && s.type === 'property');
                 const ownsAllInGroup = groupPropertiesLayout.every(gpLayout => {
@@ -1967,7 +2059,7 @@ function reformatBoardLayout() {
         }
 
 
-        function showDevelopmentOptions() { 
+        function showDevelopmentOptions() {
             const player = players[currentPlayerIndex];
             if (player.isBankrupt) return;
 
@@ -1989,7 +2081,7 @@ function reformatBoardLayout() {
                         return gpData && gpData.owner === player.id;
                     });
 
-                    if (ownsAllInGroup && !propData.permanentResidence) { 
+                    if (ownsAllInGroup && !propData.permanentResidence) {
                         propertiesToList.push({ data: propData, layout: propLayout });
                     }
                 }
@@ -2000,14 +2092,14 @@ function reformatBoardLayout() {
                  developPropertyOptionsDiv.innerHTML = "<p>You do not own any full color sets, or all your sets are fully developed, or they are not developable.</p>";
             } else {
                 propertiesToList.forEach(propEntry => {
-                    const { data: prop, layout } = propEntry; 
+                    const { data: prop, layout } = propEntry;
                     const propDiv = document.createElement('div');
                     propDiv.style.marginBottom = '10px';
                     let currentDevStatus = prop.permanentResidence ? '🏢' : (prop.tenancies > 0 ? '🏠'.repeat(prop.tenancies) : 'None');
                     propDiv.innerHTML = `<b>${layout.name}</b> (Currently: ${currentDevStatus})`;
 
-                    if (!prop.permanentResidence) { 
-                        if (prop.tenancies < MAX_TENANCIES) { 
+                    if (!prop.permanentResidence) {
+                        if (prop.tenancies < MAX_TENANCIES) {
                             if (player.money >= TENANCY_COST) {
                                 const buyTenancyBtn = document.createElement('button');
                                 buyTenancyBtn.textContent = `Buy Tenancy (£${TENANCY_COST})`;
@@ -2017,7 +2109,7 @@ function reformatBoardLayout() {
                             } else {
                                 propDiv.innerHTML += ` <small>(Need £${TENANCY_COST} for Tenancy)</small>`;
                             }
-                        } else if (prop.tenancies === MAX_TENANCIES) { 
+                        } else if (prop.tenancies === MAX_TENANCIES) {
                             if (player.money >= PR_COST) {
                                 const buyPRBtn = document.createElement('button');
                                 buyPRBtn.textContent = `Buy Permanent Residence (£${PR_COST})`;
@@ -2028,12 +2120,12 @@ function reformatBoardLayout() {
                                  propDiv.innerHTML += ` <small>(Need £${PR_COST} for PR)</small>`;
                             }
                         }
-                    } else { 
+                    } else {
                         propDiv.innerHTML += ` <small>(Fully Developed with PR)</small>`;
                     }
                     developPropertyOptionsDiv.appendChild(propDiv);
                 });
-                 if (!canDevelopSomething && propertiesToList.length > 0) { 
+                 if (!canDevelopSomething && propertiesToList.length > 0) {
                     developPropertyOptionsDiv.innerHTML += "<p>You own developable sets but lack funds for further development at this time.</p>";
                 }
             }
@@ -2047,8 +2139,8 @@ function reformatBoardLayout() {
 
         function buyTenancy(propertyId) {
             const player = players[currentPlayerIndex];
-            const prop = propertyData.find(p => p.id === propertyId); 
-            const propLayout = boardLayout.find(s => s.id === propertyId); 
+            const prop = propertyData.find(p => p.id === propertyId);
+            const propLayout = boardLayout.find(s => s.id === propertyId);
 
             if (player.isBankrupt || !prop || !propLayout || propLayout.type !== 'property') return false;
 
@@ -2060,7 +2152,7 @@ function reformatBoardLayout() {
 
             if (!ownsAllInGroup) {
                 logEvent(`Error: Cannot buy tenancy for ${propLayout.name}, player doesn't own all estates in the color set.`);
-                if (!player.isAI) showDevelopmentOptions(); 
+                if (!player.isAI) showDevelopmentOptions();
                 return false;
             }
 
@@ -2069,16 +2161,16 @@ function reformatBoardLayout() {
                     prop.tenancies++;
                     logEvent(`${player.name} bought a tenancy for ${propLayout.name}. Now has ${prop.tenancies}.`);
                     updateDevelopmentIndicator(prop.id);
-                    if (!player.isAI) showDevelopmentOptions(); 
+                    if (!player.isAI) showDevelopmentOptions();
                     updatePlayerInfo();
                     return true;
                 } else {
                      logEvent(`${player.name} failed to buy tenancy for ${propLayout.name} due to insufficient funds.`);
-                     if (!player.isAI) showDevelopmentOptions(); 
+                     if (!player.isAI) showDevelopmentOptions();
                      return false;
                 }
             }
-            updatePlayerInfo(); 
+            updatePlayerInfo();
             if (gameActive) checkWinConditions();
             return false;
         }
@@ -2123,73 +2215,91 @@ function reformatBoardLayout() {
 
 
         function checkWinConditions() {
-            if (!gameActive) return false; 
+            if (!gameActive) return false;
 
             let activePlayersList = players.filter(p => !p.isBankrupt);
 
             if (bank.money < 0) {
+                logEvent("Bank is out of money! Game ends.");
+                gameStatusMessageP.textContent = "Bank is bankrupt! Richest player wins (or other tie-breaker)."; // Or specific win logic
                 endGame(); return true;
             }
 
-            if (activePlayersList.length === 1 && players.length > 1) { 
+            if (activePlayersList.length === 1 && players.length > 1) {
                 const winMsg = `${activePlayersList[0].name} is the last player standing and wins!`;
                 logEvent(winMsg); gameStatusMessageP.textContent = winMsg;
                 endGame(); return true;
             }
 
-            if (activePlayersList.length === 0 && players.length > 0) { 
+            if (activePlayersList.length === 0 && players.length > 0) {
                  logEvent("All players are bankrupt! The UK Gov (or Bank) effectively wins.");
                  gameStatusMessageP.textContent = "All players are bankrupt! No player wins.";
                  endGame(); return true;
             }
 
             if (ukGov.money <= 0) {
+                logEvent("UK Gov has run out of money! Game ends.");
+                gameStatusMessageP.textContent = "UK Gov is bankrupt! Determine winner by wealth."; // Or specific win logic
                 endGame(); return true;
             }
-            return false; 
+            return false;
         }
 
         function endGame() {
-            if (!gameActive) return; 
+            if (!gameActive) return;
             gameActive = false;
             logEvent("--- GAME OVER ---");
             currentTurnDisplay.textContent = "Game Over!";
-            currentTurnDisplay.style.color = '#ecf0f1'; 
+            currentTurnDisplay.style.color = '#ecf0f1';
 
-            players.forEach(p => { // Remove flash from all tokens
+            players.forEach(p => {
                 const token = document.getElementById(`player${p.id}-token`);
                 if (token) token.classList.remove('token-flash', 'token-move-flash');
             });
 
             rollDiceButton.style.display = 'none';
-            rollDiceButton.disabled = true;
+            if(rollDiceButton) rollDiceButton.disabled = true;
             endTurnButton.style.display = 'none';
             buyPropertyButton.style.display = 'none';
             developPropertyButton.style.display = 'none';
-            otherActionsContainer.style.display = 'block'; 
+            otherActionsContainer.style.display = 'block';
             detentionActionsDiv.innerHTML = '';
             cardDisplayContainer.style.display = 'none';
             developPropertyContainer.style.display = 'none';
             preGameRollArea.style.display = 'none';
 
-            if (onBoardCardDisplayDiv) { 
+            if (onBoardCardDisplayDiv) {
                 onBoardCardDisplayDiv.style.display = 'none';
             }
 
             const newGameButton = document.createElement('button');
             newGameButton.textContent = "Start New Game";
             newGameButton.id = "new-game-button";
-            newGameButton.style.backgroundColor = "#27ae60"; 
-            newGameButton.classList.add('main-action-button'); 
+            newGameButton.style.backgroundColor = "#27ae60";
+            newGameButton.classList.add('main-action-button');
             newGameButton.onclick = () => {
                 const existingNewGameBtn = document.getElementById("new-game-button");
                 if (existingNewGameBtn) existingNewGameBtn.remove();
-                initializeGame(); 
+
+                gameContainer.style.display = 'none';
+                playerSetupScreen.style.display = 'flex';
+
+                if(diceFace1Elem) diceFace1Elem.textContent = '--';
+                if(diceFace2Elem) diceFace2Elem.textContent = '--';
+                if(diceTotalDisplayText) diceTotalDisplayText.textContent = '';
+                if(gameStatusMessageP) gameStatusMessageP.textContent = "Game Over. Set up new game below.";
+                currentTurnDisplay.textContent = "Setup New Game";
+                currentTurnDisplay.style.color = '#ecf0f1';
+                if(preGameRollArea) preGameRollArea.style.display = 'none';
+                if(playerInfoDiv) playerInfoDiv.innerHTML = '';
+                if(boardContainer) boardContainer.innerHTML = ''; // Clear old board for fresh setup
+
+                populateHumanPlayersOptions();
             };
-            otherActionsContainer.innerHTML = ''; 
+            otherActionsContainer.innerHTML = '';
             otherActionsContainer.appendChild(newGameButton);
 
-            updatePlayerInfo(); 
+            updatePlayerInfo();
         }
 
 
@@ -2198,7 +2308,7 @@ function reformatBoardLayout() {
         }
 
         function updateUIForCurrentPlayer() {
-            if (!gameActive && players.length > 0 && !preGameRollArea.style.display.includes('block')) { 
+            if (!gameActive && players.length > 0 && (!preGameRollArea || preGameRollArea.style.display === 'none')) {
                 rollDiceButton.style.display = 'none';
                 endTurnButton.style.display = 'none';
                 buyPropertyButton.style.display = 'none';
@@ -2220,8 +2330,7 @@ function reformatBoardLayout() {
 
             const player = players[currentPlayerIndex];
 
-            // Manage token flashing
-            players.forEach(p => { 
+            players.forEach(p => {
                 const token = document.getElementById(`player${p.id}-token`);
                 if (token) token.classList.remove('token-flash');
             });
@@ -2229,7 +2338,7 @@ function reformatBoardLayout() {
             if (gameActive && player && !player.isBankrupt && !player.isAI) {
                 const currentToken = document.getElementById(`player${player.id}-token`);
                 if (currentToken) {
-                    if (cardDisplayContainer.style.display === 'none' && 
+                    if (cardDisplayContainer.style.display === 'none' &&
                         developPropertyContainer.style.display === 'none' &&
                         (!onBoardCardDisplayDiv || onBoardCardDisplayDiv.style.display === 'none')) {
                         currentToken.classList.add('token-flash');
@@ -2242,42 +2351,41 @@ function reformatBoardLayout() {
             rollDiceButton.classList.remove('main-action-button');
             endTurnButton.style.display = 'none';
             endTurnButton.classList.remove('main-action-button');
-            if (endTurnButton) endTurnButton.disabled = false; // Re-enable end turn button initially
+            if (endTurnButton) endTurnButton.disabled = false;
             buyPropertyButton.style.display = 'none';
             developPropertyButton.style.display = 'none';
-            otherActionsContainer.style.display = 'block'; 
-            detentionActionsDiv.innerHTML = ''; 
+            otherActionsContainer.style.display = 'block';
+            detentionActionsDiv.innerHTML = '';
 
             if (player.isBankrupt) {
                 logEvent(`UI Update: ${player.name} is bankrupt. No actions available.`);
-                endTurnButton.style.display = 'block'; 
+                endTurnButton.style.display = 'block';
                 endTurnButton.classList.add('main-action-button');
-                otherActionsContainer.style.display = 'none'; 
+                otherActionsContainer.style.display = 'none';
                 const playerToken = document.getElementById(`player${player.id}-token`);
                 if (playerToken) playerToken.classList.remove('token-flash');
-                updatePlayerInfo(); 
+                updatePlayerInfo();
                 if (gameActive && player.isAI) { setTimeout(nextTurn, 1000); }
                 return;
             }
 
             if (player.isAI) {
-                otherActionsContainer.style.display = 'none'; 
+                otherActionsContainer.style.display = 'none';
                 const aiToken = document.getElementById(`player${player.id}-token`);
-                if(aiToken) aiToken.classList.remove('token-flash'); // AI token doesn't need to flash for UI indication
+                if(aiToken) aiToken.classList.remove('token-flash');
                 updatePlayerInfo();
-                if (gameActive && !player.isBankrupt) { 
-                    setTimeout(() => executeAITurn(player), 500); 
+                if (gameActive && !player.isBankrupt) {
+                    setTimeout(() => executeAITurn(player), 500);
                 }
                 return;
             }
 
-            // Human player UI logic
-            if (cardDisplayContainer.style.display === 'block' || 
+            if (cardDisplayContainer.style.display === 'block' ||
                 developPropertyContainer.style.display === 'block' ||
-                (onBoardCardDisplayDiv && onBoardCardDisplayDiv.style.display !== 'none') ) { 
-                logEvent("UI Update: Modal (card, develop, or on-board card) is active for human.");
-                otherActionsContainer.style.display = 'none'; 
-                const playerToken = document.getElementById(`player${player.id}-token`); // Token shouldn't flash if modal is up
+                (onBoardCardDisplayDiv && onBoardCardDisplayDiv.style.display !== 'none') ) {
+                logEvent("UI Update: Modal is active for human.");
+                otherActionsContainer.style.display = 'none';
+                const playerToken = document.getElementById(`player${player.id}-token`);
                 if (playerToken) playerToken.classList.remove('token-flash');
                 updatePlayerInfo();
                 return;
@@ -2285,32 +2393,27 @@ function reformatBoardLayout() {
 
             if (player.inDetention) {
                 logEvent(`UI Update: ${player.name} is in Detention. Setting up detention actions.`);
-                handleDetentionTurn(player); // This will populate detentionActionsDiv
-                // If playerActionTakenThisTurn became true inside handleDetentionTurn (e.g. failed roll)
-                // and they are still in detention, then End Turn should be the only option.
-                if (player.playerActionTakenThisTurn && player.inDetention) { 
+                handleDetentionTurn(player);
+                if (player.playerActionTakenThisTurn && player.inDetention) {
                     endTurnButton.style.display = 'block';
                     endTurnButton.classList.add('main-action-button');
-                    otherActionsContainer.style.display = 'none'; 
-                    detentionActionsDiv.innerHTML = ''; // Clear again to ensure no lingering buttons if state is tricky
-                } else if (!player.inDetention) { 
-                    // Got out of detention this turn, proceed as normal (roll dice etc.)
-                    // This case should mean playerActionTakenThisTurn is false, and roll dice button is shown.
+                    otherActionsContainer.style.display = 'none';
+                    detentionActionsDiv.innerHTML = '';
+                } else if (!player.inDetention) {
                     rollDiceButton.style.display = 'block';
                     rollDiceButton.classList.add('main-action-button');
-                    rollDiceButton.disabled = false;
-                    otherActionsContainer.style.display = 'none'; // No buy/develop yet
+                    if(rollDiceButton) rollDiceButton.disabled = false;
+                    otherActionsContainer.style.display = 'none';
                 }
-                // If playerActionTakenThisTurn is false AND player still in detention, detentionActionsDiv has buttons.
-            } else if (!player.playerActionTakenThisTurn) { 
+            } else if (!player.playerActionTakenThisTurn) {
                 logEvent(`UI Update: ${player.name} must roll dice.`);
                 rollDiceButton.style.display = 'block';
                 rollDiceButton.classList.add('main-action-button');
-                rollDiceButton.disabled = false;
-                
+                if(rollDiceButton) rollDiceButton.disabled = false;
+
                 const currentSpaceForBuy = boardLayout[player.position];
                 let canBuyCurrent = false;
-                if ((currentSpaceForBuy.type === 'property' || currentSpaceForBuy.type === 'set_property')) {
+                if (currentSpaceForBuy && (currentSpaceForBuy.type === 'property' || currentSpaceForBuy.type === 'set_property')) {
                     const propDetails = propertyData.find(p => p.id === currentSpaceForBuy.id);
                     if (propDetails && propDetails.owner === null) {
                         let price = currentSpaceForBuy.price;
@@ -2327,25 +2430,25 @@ function reformatBoardLayout() {
                 if (!canBuyCurrent) {
                     buyPropertyButton.style.display = 'none';
                 }
-                developPropertyButton.style.display = 'none'; // Can't develop before rolling and landing
+                developPropertyButton.style.display = 'none';
 
-                if (canBuyCurrent) { // Only show other actions if buy is an option *before* roll (e.g. landed previously, didn't buy, rolled doubles)
+                if (canBuyCurrent) {
                     otherActionsContainer.style.display = 'block';
                 } else {
-                    otherActionsContainer.style.display = 'none'; 
+                    otherActionsContainer.style.display = 'none';
                 }
 
-            } else { // playerActionTakenThisTurn is TRUE, not in detention
+            } else {
                 logEvent(`UI Update: ${player.name} can take optional actions or end turn.`);
                 endTurnButton.style.display = 'block';
                 endTurnButton.classList.add('main-action-button');
 
                 const currentSpace = boardLayout[player.position];
-                if ((currentSpace.type === 'property' || currentSpace.type === 'set_property') ) { 
+                if (currentSpace && (currentSpace.type === 'property' || currentSpace.type === 'set_property') ) {
                     const propDetails = propertyData.find(p => p.id === currentSpace.id);
                     if (propDetails && propDetails.owner === null) {
                         let price = currentSpace.price;
-                        if (player.hasHousingVoucher && currentSpace.type === 'property') { 
+                        if (player.hasHousingVoucher && currentSpace.type === 'property') {
                              price = Math.round(price * 0.75);
                         }
                         buyPropertyPriceSpan.textContent = price;
@@ -2361,32 +2464,30 @@ function reformatBoardLayout() {
                 if (buyPropertyButton.style.display === 'none' && developPropertyButton.style.display === 'none') {
                     otherActionsContainer.style.display = 'none';
                 } else {
-                     otherActionsContainer.style.display = 'block'; 
+                     otherActionsContainer.style.display = 'block';
                 }
             }
-            updatePlayerInfo(); 
+            updatePlayerInfo();
 
-            // Auto End Turn Logic
             if (gameActive && !player.isAI && !player.isBankrupt && !player.inDetention && player.playerActionTakenThisTurn) {
                 const modalsClosed = cardDisplayContainer.style.display === 'none' &&
                                      developPropertyContainer.style.display === 'none' &&
                                      (!onBoardCardDisplayDiv || onBoardCardDisplayDiv.style.display === 'none');
-                
-                // Check if 'otherActionsContainer' is hidden (meaning no buy/develop shown) OR if it's shown but both buttons inside are hidden
+
                 const noOptionalActionsAvailable = (otherActionsContainer.style.display === 'none') ||
-                                                 (otherActionsContainer.style.display === 'block' && 
-                                                  buyPropertyButton.style.display === 'none' && 
+                                                 (otherActionsContainer.style.display === 'block' &&
+                                                  buyPropertyButton.style.display === 'none' &&
                                                   developPropertyButton.style.display === 'none');
 
                 if (modalsClosed && noOptionalActionsAvailable && endTurnButton.style.display === 'block' && detentionActionsDiv.innerHTML.trim() === '') {
                     logEvent(`Auto-ending turn for ${player.name} as no other actions are available.`);
                     if(endTurnButton) endTurnButton.disabled = true;
-                    
+
                     const currentToken = document.getElementById(`player${player.id}-token`);
                     if (currentToken) currentToken.classList.remove('token-flash');
 
                     setTimeout(() => {
-                        if (gameActive && currentPlayerIndex === player.id && players[currentPlayerIndex].playerActionTakenThisTurn && !players[currentPlayerIndex].isAI) {
+                        if (gameActive && players[currentPlayerIndex] && currentPlayerIndex === player.id && players[currentPlayerIndex].playerActionTakenThisTurn && !players[currentPlayerIndex].isAI) {
                             nextTurn();
                         } else {
                            if(endTurnButton && players[player.id] && !players[player.id].isBankrupt) endTurnButton.disabled = false;
@@ -2397,23 +2498,23 @@ function reformatBoardLayout() {
         }
 
 
-        async function nextTurn() { 
+        async function nextTurn() {
             if (!gameActive) {
                 logEvent("Next Turn: Game not active.");
                 return;
             }
 
             const previousPlayer = players[currentPlayerIndex];
-            if (previousPlayer) { // Ensure previousPlayer exists
+            if (previousPlayer) {
                  logEvent(`Ending turn for ${previousPlayer.name}.`);
-                previousPlayer.doublesRolledInTurn = 0; 
-                lastRollWasDoublesGlobal = false; 
+                previousPlayer.doublesRolledInTurn = 0;
+                lastRollWasDoublesGlobal = false;
                 const prevToken = document.getElementById(`player${previousPlayer.id}-token`);
                 if(prevToken) prevToken.classList.remove('token-flash');
             }
 
 
-            if (checkWinConditions()) { 
+            if (checkWinConditions()) {
                 logEvent("Next Turn: Win condition met. Game should have ended.");
                 return;
             }
@@ -2423,9 +2524,9 @@ function reformatBoardLayout() {
             let attempts = 0;
             let potentialNextPlayerIndex = currentPlayerIndex;
 
-            while (!nextPlayerFound && attempts <= numPlayers * 2) { 
+            while (!nextPlayerFound && attempts <= numPlayers * 2) {
                 potentialNextPlayerIndex = (potentialNextPlayerIndex + 1) % numPlayers;
-                if (!players[potentialNextPlayerIndex].isBankrupt) {
+                if (players[potentialNextPlayerIndex] && !players[potentialNextPlayerIndex].isBankrupt) {
                     currentPlayerIndex = potentialNextPlayerIndex;
                     nextPlayerFound = true;
                 }
@@ -2434,43 +2535,43 @@ function reformatBoardLayout() {
 
             if (!nextPlayerFound) {
                 logEvent("No active players left for next turn. This should be a win/loss condition.");
-                if (gameActive) endGame(); 
+                if (gameActive) endGame();
                 return;
             }
 
             const nextPlayer = players[currentPlayerIndex];
             logEvent(`--- ${nextPlayer.name}'s turn (ID: ${nextPlayer.id}) ---`);
 
-            nextPlayer.playerActionTakenThisTurn = false; 
-            
+            nextPlayer.playerActionTakenThisTurn = false;
+
             if (nextPlayer.inDetention) {
                 logEvent(`${nextPlayer.name} is starting their turn in Detention.`);
-                nextPlayer.missedTurnsInDetention++; 
-                 if (nextPlayer.missedTurnsInDetention > 3 && !nextPlayer.isAI) { 
+                nextPlayer.missedTurnsInDetention++;
+                 if (nextPlayer.missedTurnsInDetention > 3 && !nextPlayer.isAI) {
                     logEvent(`${nextPlayer.name} has been in detention for ${nextPlayer.missedTurnsInDetention-1} turns. Must attempt to get out or pay.`);
                 }
             }
-            
-            updateUIForCurrentPlayer(); 
+
+            updateUIForCurrentPlayer();
         }
 
 
         function updateUkGovDisplay() {
             const ukGovCashSpan = document.getElementById('uk-gov-cash');
-            if (ukGovCashSpan) { 
+            if (ukGovCashSpan) {
                  ukGovCashSpan.textContent = ukGov.money;
             }
         }
 
         function govPayout(player, amount) {
-            if (player.isBankrupt) return; 
+            if (player.isBankrupt) return;
 
             if (ukGov.money <= 0) {
                 logEvent(`UK Gov has no money to pay £${amount} to ${player.name}.`);
-                checkWinConditions(); 
+                checkWinConditions();
                 return;
             }
-            const payout = Math.min(amount, ukGov.money); 
+            const payout = Math.min(amount, ukGov.money);
             player.money += payout;
             ukGov.money -= payout;
             playerGovReceived[player.id] = (playerGovReceived[player.id] || 0) + payout;
@@ -2478,14 +2579,14 @@ function reformatBoardLayout() {
             logEvent(`${player.name} receives £${payout} from UK Gov. UK Gov balance: £${ukGov.money}.`);
             if (payout > 0) showMoneyFlash('gain', payout);
             updateUkGovDisplay();
-            updatePlayerInfo(); 
-            checkWinConditions(); 
+            updatePlayerInfo();
+            checkWinConditions();
         }
 
         // --- Event Listeners ---
-        preGameRollButton.onclick = handlePreGameRoll; 
+        if(preGameRollButton) preGameRollButton.onclick = handlePreGameRoll;
 
-        rollDiceButton.addEventListener('click', async () => {
+        if(rollDiceButton) rollDiceButton.addEventListener('click', async () => {
             if (!audioContextStarted && typeof Tone !== 'undefined') {
                 try {
                     await Tone.start();
@@ -2496,24 +2597,24 @@ function reformatBoardLayout() {
 
             if (!gameActive) return;
             const player = players[currentPlayerIndex];
-            if (player.isAI || player.isBankrupt || player.inDetention || player.playerActionTakenThisTurn) { 
+            if (!player || player.isAI || player.isBankrupt || player.inDetention || player.playerActionTakenThisTurn) {
                 logEvent("RollDice: Conditions not met for human player to roll.");
-                updateUIForCurrentPlayer(); // Re-sync UI
+                updateUIForCurrentPlayer();
                 return;
             }
 
             rollDiceButton.disabled = true;
 
-            if (diceFace1Elem) diceFace1Elem.textContent = '🎲'; 
+            if (diceFace1Elem) diceFace1Elem.textContent = '🎲';
             if (diceFace2Elem) diceFace2Elem.textContent = '🎲';
             if (diceTotalDisplayText) diceTotalDisplayText.textContent = "Rolling...";
 
             const { totalRoll: actualTotalRoll, die1: actualDie1, die2: actualDie2, isDoubles: actualIsDoubles } = rollDiceInternal();
-            lastRollWasDoublesGlobal = actualIsDoubles; 
+            lastRollWasDoublesGlobal = actualIsDoubles;
 
             await new Promise(resolveAnimation => {
-                let animationDuration = 350; 
-                let intervalTime = 50;       
+                let animationDuration = 350;
+                let intervalTime = 50;
                 let elapsed = 0;
                 const rollAnimationInterval = setInterval(() => {
                     if (diceFace1Elem) diceFace1Elem.textContent = Math.floor(Math.random() * 6) + 1;
@@ -2536,250 +2637,229 @@ function reformatBoardLayout() {
                 logEvent(`Consecutive doubles for ${player.name}: ${player.doublesRolledInTurn}`);
                 if (player.doublesRolledInTurn === 3) {
                     logEvent(`${player.name} rolled 3 consecutive doubles! Sent to Detention Center.`);
-                    await goToDetention(player); 
-                     player.playerActionTakenThisTurn = true; // Crucially, going to jail ends the "action" part of this turn.
+                    await goToDetention(player);
+                     player.playerActionTakenThisTurn = true;
                 } else {
                     await movePlayerAnimated(player, actualTotalRoll);
-                    await handleLandOnSpace(player); 
-                    // playerActionTakenThisTurn is set by handleLandOnSpace or if they land on card, it remains false until card is resolved
-                    // If it remains false (e.g. landed on card, or rolled doubles AND no card), they can roll again.
-                     if (cardDisplayContainer.style.display === 'none' && 
+                    await handleLandOnSpace(player);
+                     if (cardDisplayContainer.style.display === 'none' &&
                         developPropertyContainer.style.display === 'none' &&
                         (!onBoardCardDisplayDiv || onBoardCardDisplayDiv.style.display === 'none')) {
-                        if (!player.inDetention && !player.isBankrupt) { 
-                           player.playerActionTakenThisTurn = false; // Allow another roll
-                        } else { 
-                           player.playerActionTakenThisTurn = true; 
+                        if (!player.inDetention && !player.isBankrupt) {
+                           player.playerActionTakenThisTurn = false;
+                        } else {
+                           player.playerActionTakenThisTurn = true;
                         }
                     }
                 }
-            } else { 
-                player.doublesRolledInTurn = 0; 
+            } else {
+                player.doublesRolledInTurn = 0;
                 await movePlayerAnimated(player, actualTotalRoll);
                 await handleLandOnSpace(player);
-                 if (cardDisplayContainer.style.display === 'none' && 
+                 if (cardDisplayContainer.style.display === 'none' &&
                     developPropertyContainer.style.display === 'none' &&
                     (!onBoardCardDisplayDiv || onBoardCardDisplayDiv.style.display === 'none')) {
-                    if (!player.inDetention && !player.isBankrupt) { 
-                        player.playerActionTakenThisTurn = true; // No doubles, action phase of roll is done.
-                    } else { 
-                        player.playerActionTakenThisTurn = true; 
+                    if (!player.inDetention && !player.isBankrupt) {
+                        player.playerActionTakenThisTurn = true;
+                    } else {
+                        player.playerActionTakenThisTurn = true;
                     }
                 }
             }
-            updateUIForCurrentPlayer(); 
+            updateUIForCurrentPlayer();
         });
 
-        endTurnButton.addEventListener('click', () => {
+        if(endTurnButton) endTurnButton.addEventListener('click', () => {
             if (!gameActive) return;
             const player = players[currentPlayerIndex];
-            if (player.isAI) return; 
-            if (endTurnButton.disabled) return; // Prevent action if auto-end is processing
+            if (!player || player.isAI) return;
+            if (endTurnButton.disabled) return;
 
             logEvent(`End Turn button clicked for ${player.name}.`);
 
             if (player.inDetention && !player.playerActionTakenThisTurn) {
-                logEvent(`${player.name} ends turn in detention without taking a specified action (e.g. pay/use card/roll). Considered action taken.`);
-                player.playerActionTakenThisTurn = true; 
+                logEvent(`${player.name} ends turn in detention without taking a specified action. Considered action taken.`);
+                player.playerActionTakenThisTurn = true;
             }
             nextTurn();
         });
 
-        buyPropertyButton.addEventListener('click', () => {
+        if(buyPropertyButton) buyPropertyButton.addEventListener('click', () => {
             if (!gameActive) return;
             const player = players[currentPlayerIndex];
-            if (player.isAI) return; 
-            buyCurrentProperty(); 
+            if (!player || player.isAI) return;
+            buyCurrentProperty();
         });
 
-        developPropertyButton.addEventListener('click', () => {
+        if(developPropertyButton) developPropertyButton.addEventListener('click', () => {
             if (!gameActive) return;
             const player = players[currentPlayerIndex];
-            if (player.isAI) return; 
-            showDevelopmentOptions(); 
+            if (!player || player.isAI) return;
+            showDevelopmentOptions();
         });
 
-        closeDevelopButton.addEventListener('click', () => {
+        if(closeDevelopButton) closeDevelopButton.addEventListener('click', () => {
             developPropertyContainer.style.display = 'none';
-            updateUIForCurrentPlayer(); 
+            updateUIForCurrentPlayer();
         });
-
-        // --- Start Game ---
-        initializeGame(); 
-
 
         // --- AI Logic ---
         async function executeAITurn(player) {
             if (!gameActive || player.isBankrupt || !player.isAI) {
-                if (gameActive && player.isBankrupt && player.isAI) await nextTurn(); 
+                if (gameActive && player.isBankrupt && player.isAI) await nextTurn();
                 return;
             }
             logEvent(`>>> AI Turn Start: ${player.name}`);
-            player.playerActionTakenThisTurn = false; 
+            player.playerActionTakenThisTurn = false;
 
-            await new Promise(r => setTimeout(r, 200)); 
+            await new Promise(r => setTimeout(r, 200));
 
             if (player.inDetention) {
-                await aiHandleDetention(player); 
-                if (player.inDetention && player.playerActionTakenThisTurn) { // Still in jail after trying
+                await aiHandleDetention(player);
+                if (player.inDetention && player.playerActionTakenThisTurn) {
                     logEvent(`AI ${player.name} ends turn in detention.`);
                     if (gameActive) await nextTurn();
                     return;
                 }
-                // If AI got out, playerActionTakenThisTurn might be false, allowing roll below.
             }
 
-            // Loop for rolling (handles doubles)
             while (!player.playerActionTakenThisTurn && !player.inDetention && !player.isBankrupt) {
-                if (diceFace1Elem) diceFace1Elem.textContent = '🎲'; 
+                if (diceFace1Elem) diceFace1Elem.textContent = '🎲';
                 if (diceFace2Elem) diceFace2Elem.textContent = '🎲';
                 if (diceTotalDisplayText) diceTotalDisplayText.textContent = "AI Rolling...";
-                await new Promise(r => setTimeout(r, 300)); 
+                await new Promise(r => setTimeout(r, 300));
 
                 const { totalRoll, die1, die2, isDoubles } = rollDiceInternal();
-                lastRollWasDoublesGlobal = isDoubles; 
+                lastRollWasDoublesGlobal = isDoubles;
 
-                diceFace1Elem.textContent = die1;
-                diceFace2Elem.textContent = die2;
-                diceTotalDisplayText.textContent = `= ${totalRoll}`;
+                if(diceFace1Elem) diceFace1Elem.textContent = die1;
+                if(diceFace2Elem) diceFace2Elem.textContent = die2;
+                if(diceTotalDisplayText) diceTotalDisplayText.textContent = `= ${totalRoll}`;
                 logEvent(`AI ${player.name} rolled: ${totalRoll}${isDoubles ? " (Doubles!)" : ""}`);
 
                 if (isDoubles) {
                     player.doublesRolledInTurn++;
                     if (player.doublesRolledInTurn === 3) {
                         logEvent(`AI ${player.name} rolled 3 consecutive doubles! Sent to Detention.`);
-                        await goToDetention(player); 
-                        player.playerActionTakenThisTurn = true; // Going to jail is the action
-                        break; 
+                        await goToDetention(player);
+                        player.playerActionTakenThisTurn = true;
+                        break;
                     }
-                    player.playerActionTakenThisTurn = false; // Doubles, can roll again if no card etc.
+                    player.playerActionTakenThisTurn = false;
                 } else {
-                    player.doublesRolledInTurn = 0; 
-                    player.playerActionTakenThisTurn = true; // No doubles, this roll sequence ends.
+                    player.doublesRolledInTurn = 0;
+                    player.playerActionTakenThisTurn = true;
                 }
 
                 await movePlayerAnimated(player, totalRoll);
-                await handleLandOnSpace(player); 
+                await handleLandOnSpace(player);
 
-                // If a card was drawn, wait for it to be "clicked" (auto-clicked for AI)
-                // The card action itself might set playerActionTakenThisTurn or lead to more moves.
-                if (currentCardBeingExecuted) { 
-                    await new Promise(r => setTimeout(r, 800)); // Wait for card OK
-                    // Re-evaluate playerActionTakenThisTurn after card.
-                    // If card led to goToDetention or bankruptcy, loop will break.
-                    // If card was "Advance to Go", they moved, handleLandOnSpace ran again.
-                    // If doubles got them here, and card didn't end turn, they might roll again.
+                if (currentCardBeingExecuted) {
+                    await new Promise(r => setTimeout(r, 800));
                     if (isDoubles && !player.inDetention && !player.isBankrupt && !player.playerActionTakenThisTurn) {
-                        player.playerActionTakenThisTurn = false; // Still eligible for another roll due to prior doubles
+                        player.playerActionTakenThisTurn = false;
                     } else if (!isDoubles && !player.inDetention && !player.isBankrupt) {
-                        player.playerActionTakenThisTurn = true; // Default to action taken if not doubles.
+                         // If card didn't set it to false and no doubles, it should be true
+                        if(cardDisplayContainer.style.display === 'none') player.playerActionTakenThisTurn = true;
                     }
                 }
-                
-                if (player.isBankrupt || player.inDetention) { // If landed in jail or bankrupted by card/rent
-                    player.playerActionTakenThisTurn = true; 
-                    break; // Exit roll loop
+
+                if (player.isBankrupt || player.inDetention) {
+                    player.playerActionTakenThisTurn = true;
+                    break;
                 }
 
-                if (player.playerActionTakenThisTurn && !isDoubles) { // If action taken and no doubles, exit roll loop
-                    break; 
+                if (player.playerActionTakenThisTurn && !isDoubles) {
+                    break;
                 }
-                if (player.playerActionTakenThisTurn && isDoubles) { // Action taken (e.g. buy prop), but was doubles, so loop if card allows.
-                     //This state is tricky; usually handleLandOnSpace sets it. If it was true, it should mean card ended things.
-                     //If they bought property after doubles, then playerActionTakenThisTurn would be true. But doubles means they roll again.
-                     //Let's ensure it is false if doubles and eligible
-                     if(isDoubles && !player.inDetention && !player.isBankrupt) player.playerActionTakenThisTurn = false;
-
-                }
-
-
-                if (!player.playerActionTakenThisTurn) { // Only log "roll again" if eligible
+                 if (isDoubles && !player.playerActionTakenThisTurn) { // Only log if eligible for another roll
                     logEvent(`AI ${player.name} gets to roll again (doubles and no turn-ending event).`);
-                    await new Promise(r => setTimeout(r, 300)); 
+                    await new Promise(r => setTimeout(r, 300));
+                } else if (isDoubles && player.playerActionTakenThisTurn){ // Action taken (e.g. bought prop), but was doubles.
+                    player.playerActionTakenThisTurn = false; // Override to allow another roll.
+                     logEvent(`AI ${player.name} gets to roll again (doubles after action).`);
+                    await new Promise(r => setTimeout(r, 300));
                 }
-            } // End of while loop for rolling
-            
-            // After all rolls and movements are done for the turn
-            if (!player.isBankrupt && !player.inDetention) { 
-                 await aiDecideDevelopProperty(player); // Optional development
+
+
             }
- 
-            // Ensure action is marked as taken before concluding AI turn.
-            player.playerActionTakenThisTurn = true; 
+
+            if (!player.isBankrupt && !player.inDetention) {
+                 await aiDecideDevelopProperty(player);
+            }
+
+            player.playerActionTakenThisTurn = true;
             logEvent(`<<< AI Turn End: ${player.name}`);
             if (gameActive) await nextTurn();
         }
 
         async function aiHandleDetention(player) {
             logEvent(`AI ${player.name} handling detention. Missed: ${player.missedTurnsInDetention}, Cards: ${player.getOutOfDetentionCards}, Money: £${player.money}`);
-            player.playerActionTakenThisTurn = false; // Reset for this detention attempt.
-            
+            player.playerActionTakenThisTurn = false;
+
             if (player.getOutOfDetentionCards > 0) {
                 player.getOutOfDetentionCards--;
                 player.inDetention = false;
                 player.missedTurnsInDetention = 0;
                 logEvent(`AI ${player.name} used Legal Aid card. Is now free.`);
                 updatePlayerInfo();
-                // playerActionTakenThisTurn remains false, AI will proceed to roll for movement in executeAITurn
-                return; 
+                return;
             }
 
             const fineAmount = 50;
-            if (player.missedTurnsInDetention >= 2 && player.money >= fineAmount * 3) { 
+            if (player.missedTurnsInDetention >= 2 && player.money >= fineAmount * 3) {
                 if (makePayment(player, bank, fineAmount)) {
                     player.inDetention = false;
                     player.missedTurnsInDetention = 0;
                     logEvent(`AI ${player.name} paid fine to get out of detention. Is now free.`);
                     updatePlayerInfo();
-                    // playerActionTakenThisTurn remains false, AI will proceed to roll for movement
-                    return; 
+                    return;
                 }
             }
 
             logEvent(`AI ${player.name} rolling for doubles in detention (1 chance).`);
-            if (diceFace1Elem) diceFace1Elem.textContent = '🎲'; 
+            if (diceFace1Elem) diceFace1Elem.textContent = '🎲';
             if (diceFace2Elem) diceFace2Elem.textContent = '🎲';
             if (diceTotalDisplayText) diceTotalDisplayText.textContent = "AI Rolling (Detention)...";
-            await new Promise(r => setTimeout(r, 300)); 
+            await new Promise(r => setTimeout(r, 300));
 
             const { totalRoll, die1, die2, isDoubles } = rollDiceInternal();
-            lastRollWasDoublesGlobal = isDoubles; 
+            lastRollWasDoublesGlobal = isDoubles;
 
-            diceFace1Elem.textContent = die1;
-            diceFace2Elem.textContent = die2;
-            diceTotalDisplayText.textContent = `= ${totalRoll}`;
+            if(diceFace1Elem) diceFace1Elem.textContent = die1;
+            if(diceFace2Elem) diceFace2Elem.textContent = die2;
+            if(diceTotalDisplayText) diceTotalDisplayText.textContent = `= ${totalRoll}`;
 
             if (isDoubles) {
                 player.inDetention = false;
                 player.missedTurnsInDetention = 0;
-                player.doublesRolledInTurn = 1; // Got out with doubles
+                player.doublesRolledInTurn = 1;
                 logEvent(`AI ${player.name} rolled doubles (${totalRoll}) and is free! Moves ${totalRoll}.`);
                 updatePlayerInfo();
-                
-                await movePlayerAnimated(player, totalRoll);
-                await handleLandOnSpace(player); // This will set playerActionTakenThisTurn based on landing
-                // If doubles were rolled again on this move, playerActionTakenThisTurn will be false (AI rolls again)
-                // Otherwise, it'll be true (AI's move action is done)
-                 if (isDoubles && lastRollWasDoublesGlobal && !player.inDetention && !player.isBankrupt && cardDisplayContainer.style.display === 'none') { // Rolled doubles to get out, then rolled doubles again on move
-                    player.playerActionTakenThisTurn = false; 
-                } else if (!player.inDetention && !player.isBankrupt && cardDisplayContainer.style.display === 'none') {
-                    player.playerActionTakenThisTurn = true;
-                } // If card, card logic will handle playerActionTakenThisTurn
 
+                await movePlayerAnimated(player, totalRoll);
+                await handleLandOnSpace(player);
+                // If they rolled doubles to get out, and then rolled doubles again on this move
+                if (isDoubles && lastRollWasDoublesGlobal && !player.inDetention && !player.isBankrupt && cardDisplayContainer.style.display === 'none') {
+                    player.playerActionTakenThisTurn = false;
+                } else if (!player.inDetention && !player.isBankrupt && cardDisplayContainer.style.display === 'none') {
+                    player.playerActionTakenThisTurn = true; // Action (move) is done for this part.
+                }
             } else {
                 logEvent(`AI ${player.name} rolled ${totalRoll} (not doubles). Stays in Detention. Turn ends for detention actions.`);
-                player.playerActionTakenThisTurn = true; // Failed to get out by rolling, this turn's jail action is done.
+                player.playerActionTakenThisTurn = true;
             }
         }
 
         async function aiDecideBuyProperty(player, propDetailsData, priceOnBoard) {
-            if (player.isBankrupt || propDetailsData.owner !== null) {
-                player.playerActionTakenThisTurn = true; // Nothing to buy or already owned
+             if (player.isBankrupt || !propDetailsData || propDetailsData.owner !== null) {
+                if(!lastRollWasDoublesGlobal || player.isBankrupt || player.inDetention) player.playerActionTakenThisTurn = true;
+                else player.playerActionTakenThisTurn = false; // Was doubles, gets another roll
                 return;
             }
 
             let actualPrice = priceOnBoard;
-            const spaceLandedOn = boardLayout[player.position]; 
+            const spaceLandedOn = boardLayout[player.position];
             if (player.hasHousingVoucher && spaceLandedOn && spaceLandedOn.type === 'property') {
                  actualPrice = Math.round(priceOnBoard * 0.75);
                  logEvent(`AI ${player.name} has housing voucher, price for ${propDetailsData.name} is £${actualPrice}`);
@@ -2787,11 +2867,12 @@ function reformatBoardLayout() {
 
             if (player.money >= actualPrice && (player.money > actualPrice * 2 || actualPrice < 150) ) {
                 logEvent(`AI ${player.name} decides to buy ${propDetailsData.name} for £${actualPrice}.`);
-                const originalPlayerIndex = currentPlayerIndex; // Temporarily set for buyCurrentProperty context
-                currentPlayerIndex = players.findIndex(p => p.id === player.id);
-                await buyCurrentProperty(); // buyCurrentProperty sets playerActionTakenThisTurn based on lastRollWasDoublesGlobal
-                currentPlayerIndex = originalPlayerIndex; 
-                 // If AI bought property after rolling doubles, its turn is not over.
+                const originalPlayerIndex = currentPlayerIndex;
+                currentPlayerIndex = players.findIndex(p => p.id === player.id); // Ensure correct player context
+                await buyCurrentProperty(); // This sets playerActionTakenThisTurn based on lastRollWasDoublesGlobal
+                currentPlayerIndex = originalPlayerIndex;
+
+                // If AI bought property AND it was after rolling doubles, turn isn't over.
                 if (lastRollWasDoublesGlobal && !player.inDetention && !player.isBankrupt) {
                     player.playerActionTakenThisTurn = false;
                 } else {
@@ -2801,9 +2882,9 @@ function reformatBoardLayout() {
             } else {
                 logEvent(`AI ${player.name} decides NOT to buy ${propDetailsData.name} (Price: £${actualPrice}, Money: £${player.money}).`);
                  if (lastRollWasDoublesGlobal && !player.inDetention && !player.isBankrupt) {
-                    player.playerActionTakenThisTurn = false; // Still gets another roll from doubles
+                    player.playerActionTakenThisTurn = false;
                 } else {
-                    player.playerActionTakenThisTurn = true; // No buy, action taken unless doubles
+                    player.playerActionTakenThisTurn = true;
                 }
             }
         }
@@ -2811,9 +2892,9 @@ function reformatBoardLayout() {
         async function aiDecideDevelopProperty(player) {
             if (player.isBankrupt || !canDevelopAnyProperty(player)) return;
             logEvent(`AI ${player.name} considering property development.`);
-            await new Promise(r => setTimeout(r, 200)); 
+            await new Promise(r => setTimeout(r, 200));
 
-            for (const propId of player.properties) { // Make a copy for iteration if modifying player.properties
+            for (const propId of [...player.properties]) { // Iterate over a copy
                 const propData = propertyData.find(p => p.id === propId);
                 const propLayout = boardLayout.find(s => s.id === propId);
 
@@ -2822,22 +2903,21 @@ function reformatBoardLayout() {
                     const ownsAllInGroup = groupPropertiesLayout.every(gpLayout => propertyData.find(pd => pd.id === gpLayout.id)?.owner === player.id);
 
                     if (ownsAllInGroup) {
-                        const originalPlayerIndex = currentPlayerIndex; 
-                        currentPlayerIndex = players.findIndex(p => p.id === player.id); 
+                        const originalPlayerIndex = currentPlayerIndex;
+                        currentPlayerIndex = players.findIndex(p => p.id === player.id); // Ensure correct player context
 
-                        if (propData.tenancies < MAX_TENANCIES && player.money >= TENANCY_COST * 2) { // Be more conservative with spending
+                        if (propData.tenancies < MAX_TENANCIES && player.money >= TENANCY_COST * 2) {
                             logEvent(`AI ${player.name} decides to build a tenancy on ${propLayout.name}.`);
-                            if(buyTenancy(propId)) { // buyTenancy returns true on success
-                                await new Promise(r => setTimeout(r, 100)); // Small delay
-                                // Potentially develop more if it has a lot of money
+                            if(buyTenancy(propId)) {
+                                await new Promise(r => setTimeout(r, 100));
                             }
                         } else if (propData.tenancies === MAX_TENANCIES && player.money >= PR_COST * 2) {
                             logEvent(`AI ${player.name} decides to build PR on ${propLayout.name}.`);
-                            if(buyPermanentResidence(propId)) { 
+                            if(buyPermanentResidence(propId)) {
                                  await new Promise(r => setTimeout(r, 100));
                             }
                         }
-                        currentPlayerIndex = originalPlayerIndex; 
+                        currentPlayerIndex = originalPlayerIndex;
                     }
                 }
             }
@@ -2847,23 +2927,23 @@ function reformatBoardLayout() {
 
         // --- Money Flash and Sound ---
         function showMoneyFlash(type, amount) {
-            if (amount <= 0) return; 
+            if (amount <= 0) return;
             const flashDiv = document.getElementById('money-flash');
             if (type === 'gain') {
                 flashDiv.innerHTML = `<span style='font-size:1.2em;'>💰</span> <span style='font-size:0.7em;'>+£${amount}</span>`;
-                flashDiv.style.color = '#2ecc71'; 
+                flashDiv.style.color = '#2ecc71';
                 playCashSound();
             } else if (type === 'lose') {
                 flashDiv.innerHTML = `<span style='font-size:1.2em;'>💸</span> <span style='font-size:0.7em;'>-£${amount}</span>`;
-                flashDiv.style.color = '#e74c3c'; 
+                flashDiv.style.color = '#e74c3c';
                 playDullSound();
             }
             flashDiv.classList.remove('show');
-            void flashDiv.offsetWidth; 
+            void flashDiv.offsetWidth;
             flashDiv.classList.add('show');
             setTimeout(() => {
                 flashDiv.classList.remove('show');
-            }, 900); 
+            }, 900);
         }
 
         function playCashSound() {
@@ -2897,6 +2977,39 @@ function reformatBoardLayout() {
                 }
             }
         }, { once: true });
+
+
+        // --- Initialize Player Setup Screen and Event Listeners ---
+        totalPlayersSelect.addEventListener('change', populateHumanPlayersOptions);
+
+        confirmPlayersButton.addEventListener('click', () => {
+            let rawTotalPlayers = parseInt(totalPlayersSelect.value);
+
+            if (rawTotalPlayers === 1) {
+                numPlayers = 2;
+                numberOfHumanPlayers = 1;
+                playerSetupMessage.textContent = "Starting 1 Human vs 1 AI game...";
+            } else {
+                numPlayers = rawTotalPlayers;
+                let selectedHumanPlayers = parseInt(humanPlayersSelect.value);
+
+                if (isNaN(selectedHumanPlayers) || selectedHumanPlayers < 0 || selectedHumanPlayers > numPlayers) {
+                    playerSetupMessage.textContent = "Invalid number of human players. Please adjust.";
+                    return;
+                }
+                numberOfHumanPlayers = selectedHumanPlayers;
+            }
+
+            logEvent(`Player Setup: Total Players for Game = ${numPlayers}, Human Players = ${numberOfHumanPlayers}`);
+            playerSetupScreen.style.display = 'none';
+            gameContainer.style.display = 'flex';
+
+            initializeGame();
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            populateHumanPlayersOptions();
+        });
 
     </script>
   </div>
