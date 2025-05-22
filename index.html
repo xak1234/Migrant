@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Migrantopoly (Doubles Buy Fix)</title>
+    <title>Migrantopoly (Expanded Board)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <style>
         body { /* Dark blue-grey background */
@@ -29,7 +29,7 @@
             height: 700px; 
             transform: translate(-50%, -50%);
             /* Placeholder for background image */
-             background-image: url('migrant3.jpg'); 
+            /* background-image: url('migrant3.jpg'); */
             background-color: rgba(255,255,255,0.05); /* Subtle placeholder */
             background-size: contain;
             background-repeat: no-repeat;
@@ -56,11 +56,11 @@
 
         #board-container {
             display: grid;
-            grid-template-columns: 100px repeat(7, 70px) 100px;
-            grid-template-rows: 100px repeat(7, 70px) 100px;
+            grid-template-columns: 100px repeat(8, 70px) 100px; /* UPDATED from 7 to 8 */
+            grid-template-rows: 100px repeat(8, 70px) 100px;    /* UPDATED from 7 to 8 */
             border: 3px solid #7f8c8d; 
-            width: 690px; 
-            height: 690px;
+            width: 760px;  /* UPDATED from 690px (690 + 70) */
+            height: 760px; /* UPDATED from 690px (690 + 70) */
             position: relative;
             background-color: rgba(52, 73, 94, 0.68); 
             border-radius: 10px;
@@ -395,7 +395,7 @@
             color: #e74c3c !important; /* Red */
             font-weight: bold;
         }
-        .space.yellow-boardname .name { /* NEW CLASS */
+        .space.yellow-boardname .name { 
             color: #f1c40f !important; /* Yellow */
             font-weight: bold;
         }
@@ -628,18 +628,15 @@
 
     <script>
         // --- Game Data ---
-        let boardLayout = [
-            // Side 1 (Bottom Row)
+        let initialBoardLayout = [ // Original 32 spaces before expansion
             { id: 0, name: "Dole", type: "go" },
             { id: 1, name: "Tent in Field 1", type: "property", price: 60, rent: [4, 10, 20, 40, 80], color: "brown", groupId: "brown" },
             { id: 2, name: "Welfare Card", type: "welfare" },
             { id: 3, name: "Tent in Field 2", type: "property", price: 80, rent: [8, 10, 20, 40, 80], color: "brown", groupId: "brown" },
             { id: 4, name: "Black Market Sales", type: "set_property", price: 200, rent_base: 200, groupId: "special_set" },
-            { id: 5, name: "Fake PIP declined", type: "tax", amount: 100 }, 
+            { id: 5, name: "Fake PIP declined", type: "tax", amount: 100 },
             { id: 6, name: "Tesco Cardboard Skip 1", type: "property", price: 100, rent: [6, 15, 30, 60, 120], color: "light-blue", groupId: "lightblue" },
             { id: 7, name: "Tesco Cardboard Skip 2", type: "property", price: 120, rent: [8, 15, 30, 60, 120], color: "light-blue", groupId: "lightblue" },
-
-            // Side 2 (Right Column)
             { id: 8, name: "Detention Center", type: "detention_visiting" },
             { id: 9, name: "Payout: Job Seeker's", type: "payout", amount: 100 },
             { id: 10, name: "Tesco Cardboard Skip 3", type: "property", price: 140, rent: [10, 15, 30, 60, 120], color: "light-blue", groupId: "lightblue" },
@@ -648,18 +645,14 @@
             { id: 13, name: "Welfare Card", type: "welfare" },
             { id: 14, name: "Council Highrise 2", type: "property", price: 180, rent: [14, 25, 50, 100, 200], color: "pink", groupId: "pink" },
             { id: 15, name: "Council Highrise 3", type: "property", price: 200, rent: [16, 25, 50, 100, 200], color: "pink", groupId: "pink" },
-
-            // Side 3 (Top Row)
-            { id: 16, name: "Crime Spree !!! Arrest", type: "crime_spree", amount: 200 }, 
+            { id: 16, name: "Crime Spree !!! Arrest", type: "crime_spree", amount: 200 },
             { id: 17, name: "Gypsy Estate 1", type: "property", price: 220, rent: [18, 35, 70, 140, 280], color: "orange", groupId: "orange" },
             { id: 18, name: "Opportunity Card", type: "opportunity" },
             { id: 19, name: "Gypsy Estate 2", type: "property", price: 240, rent: [20, 35, 70, 140, 280], color: "orange", groupId: "orange" },
             { id: 20, name: "Child Wives", type: "set_property", price: 200, rent_base: 200, groupId: "special_set" },
-            { id: 21, name: "Fake ID Cards", type: "tax", amount: 100 }, 
+            { id: 21, name: "Fake ID Cards", type: "tax", amount: 100 },
             { id: 22, name: "Gypsy Estate 3", type: "property", price: 260, rent: [22, 35, 70, 140, 280], color: "orange", groupId: "orange" },
             { id: 23, name: "Holiday Inn 1", type: "property", price: 280, rent: [24, 45, 90, 180, 360], color: "red", groupId: "red" },
-
-            // Side 4 (Left Column)
             { id: 24, name: "Go to Detention Center", type: "go_to_detention" },
             { id: 25, name: "Welfare Card", type: "welfare" },
             { id: 26, name: "Holiday Inn 2", type: "property", price: 300, rent: [26, 45, 90, 180, 360], color: "red", groupId: "red" },
@@ -670,7 +663,49 @@
             { id: 31, name: "Luxury Flat 2", type: "property", price: 400, rent: [35, 60, 120, 240, 480], color: "green", groupId: "green" },
         ];
 
-        const detentionCenterSpaceId = boardLayout.find(s => s.name === "Detention Center").id;
+        let boardLayout = []; // This will be populated by reformatBoardLayout
+
+        function reformatBoardLayout() {
+            const newSpaces = [
+                { tempId: "new1", name: "Boat Sank After Renting", type: "set_property", price: 100, rent_base: 100, groupId: "special_set" },
+                { tempId: "new2", name: "People Trafficking", type: "set_property", price: 100, rent_base: 100, groupId: "special_set" },
+                { tempId: "new3", name: "More than 15 children", type: "set_property", price: 100, rent_base: 100, groupId: "special_set" },
+                { tempId: "new4", name: "Crypto Scam from Iqbhal", type: "set_property", price: 100, rent_base: 100, groupId: "special_set" }
+            ];
+
+            let tempBoard = [];
+            // Go
+            tempBoard.push(initialBoardLayout.find(s => s.id === 0));
+            // Side 1 (original IDs 1-7) - 7 spaces
+            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 1 && s.id <= 3));
+            tempBoard.push(newSpaces.find(ns => ns.tempId === "new1")); // Insert new space
+            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 4 && s.id <= 7));
+            // Corner 1 (original ID 8)
+            tempBoard.push(initialBoardLayout.find(s => s.id === 8));
+            // Side 2 (original IDs 9-15) - 7 spaces
+            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 9 && s.id <= 11));
+            tempBoard.push(newSpaces.find(ns => ns.tempId === "new2")); // Insert new space
+            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 12 && s.id <= 15));
+            // Corner 2 (original ID 16)
+            tempBoard.push(initialBoardLayout.find(s => s.id === 16));
+            // Side 3 (original IDs 17-23) - 7 spaces
+            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 17 && s.id <= 19));
+            tempBoard.push(newSpaces.find(ns => ns.tempId === "new3")); // Insert new space
+            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 20 && s.id <= 23));
+            // Corner 3 (original ID 24)
+            tempBoard.push(initialBoardLayout.find(s => s.id === 24));
+            // Side 4 (original IDs 25-31) - 7 spaces
+            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 25 && s.id <= 27));
+            tempBoard.push(newSpaces.find(ns => ns.tempId === "new4")); // Insert new space
+            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 28 && s.id <= 31));
+
+            // Re-assign sequential IDs
+            boardLayout = tempBoard.map((space, index) => ({ ...space, id: index }));
+        }
+        reformatBoardLayout(); // Call this once to set up the new boardLayout
+
+
+        let detentionCenterSpaceId = boardLayout.find(s => s.name === "Detention Center").id; // Recalculate after reformat
         const TENANCY_COST = 50;
         const PR_COST = 150;
         const MAX_TENANCIES = 3;
@@ -770,6 +805,7 @@
 
         function setupBoard() {
             boardContainer.innerHTML = ''; 
+            detentionCenterSpaceId = boardLayout.find(s => s.name === "Detention Center").id; // Ensure it's up-to-date
 
             const cardDecksCenter = document.createElement('div');
             cardDecksCenter.id = 'card-decks-center';
@@ -789,9 +825,9 @@
             boardContainer.appendChild(onBoardCardDiv);
 
 
-            boardLayout.forEach((s, i) => {
+            boardLayout.forEach((s, i) => { // i is now the correct new ID
                 const spaceDiv = document.createElement('div');
-                spaceDiv.id = `space-${s.id}`;
+                spaceDiv.id = `space-${s.id}`; // Use s.id which is the re-assigned ID
                 spaceDiv.classList.add('space');
 
                 if (s.type === 'go' || s.type === 'detention_visiting' || s.type === 'go_to_detention' || s.type === 'crime_spree') {
@@ -869,14 +905,15 @@
                     spaceDiv.appendChild(ownerIndicator);
                 }
 
-                if (i === 0) { spaceDiv.style.gridArea = `1 / 1`; }              
-                else if (i >= 1 && i <= 7) { spaceDiv.style.gridArea = `1 / ${i + 1}`; } 
-                else if (i === 8) { spaceDiv.style.gridArea = `1 / 9`; }             
-                else if (i >= 9 && i <= 15) { spaceDiv.style.gridArea = `${(i - 8) + 1} / 9`; } 
-                else if (i === 16) { spaceDiv.style.gridArea = `9 / 9`; }            
-                else if (i >= 17 && i <= 23) { spaceDiv.style.gridArea = `9 / ${9 - (i - 16)}`; } 
-                else if (i === 24) { spaceDiv.style.gridArea = `9 / 1`; }            
-                else if (i >= 25 && i <= 31) { spaceDiv.style.gridArea = `${9 - (i - 24)} / 1`; } 
+                // UPDATED Grid Positioning Logic for 10x10 effective grid (8 spaces per side)
+                if (s.id === 0) { spaceDiv.style.gridArea = `1 / 1`; } // Go
+                else if (s.id >= 1 && s.id <= 8) { spaceDiv.style.gridArea = `1 / ${s.id + 1}`; } // Bottom row
+                else if (s.id === 9) { spaceDiv.style.gridArea = `1 / 10`; } // Corner 1
+                else if (s.id >= 10 && s.id <= 17) { spaceDiv.style.gridArea = `${(s.id - 9) + 1} / 10`; } // Right column
+                else if (s.id === 18) { spaceDiv.style.gridArea = `10 / 10`; } // Corner 2
+                else if (s.id >= 19 && s.id <= 26) { spaceDiv.style.gridArea = `10 / ${10 - (s.id - 18)}`; } // Top row
+                else if (s.id === 27) { spaceDiv.style.gridArea = `10 / 1`; } // Corner 3
+                else if (s.id >= 28 && s.id <= 35) { spaceDiv.style.gridArea = `${10 - (s.id - 27)} / 1`; } // Left column
 
 
                 boardContainer.appendChild(spaceDiv);
@@ -928,6 +965,8 @@
 
 
         function initializeGame() {
+            // reformatBoardLayout(); // Called globally once at script load
+            detentionCenterSpaceId = boardLayout.find(s => s.name === "Detention Center").id; // Ensure this is correct
             getPlayerSetup(); 
 
             gameActive = true; 
@@ -950,6 +989,7 @@
                 });
                 playerGovReceived.push(0);
             }
+            // Re-initialize propertyData based on the potentially new boardLayout
             propertyData = JSON.parse(JSON.stringify(boardLayout.filter(s => s.type === 'property' || s.type === 'set_property')));
             propertyData.forEach(p => {
                 p.owner = null;
@@ -1240,7 +1280,7 @@
                 if (currentAnimatedPosition === 0 && prevPositionForGoPassCheck !== 0 && !player.inDetention) {
                     govPayout(player, 200); 
                     govPayout(player, 200); 
-                    logEvent(`${player.name} passed Dole and collected £400.`); // UPDATED LOG
+                    logEvent(`${player.name} passed Dole and collected £400.`); 
                     updatePlayerInfo(); 
                 }
             }
@@ -1286,8 +1326,6 @@
             logEvent(`${player.name} landed on ${currentSpace.name}.`);
             let actionCompletedByLanding = false; 
 
-            // Gov Payout for specific direct landings (Dole, Crime Spree)
-            // No automatic "Get Out of Detention Free" cards from landing on spaces.
             if ( (currentSpace.name === 'Dole' && currentSpace.type === 'go') ) {
                 govPayout(player, 100);
                 logEvent(`${player.name} landed on Dole, receives +£100 from UK Gov.`);
@@ -1438,13 +1476,9 @@
                 logEvent(`Cannot buy ${propToBuyLayout.name} or it's already owned.`);
             }
             
-            // If it wasn't doubles that led to this buy option, the action is now considered "taken"
-            // If it WAS doubles, playerActionTakenThisTurn should remain false to force the next roll.
-            // The buy action itself doesn't change the "must roll again" status from doubles.
-            // So, we only set playerActionTakenThisTurn to true IF it wasn't doubles.
             if (!lastRollWasDoublesGlobal) { 
                 player.playerActionTakenThisTurn = true; 
-            }
+            } 
             
             if (!player.isAI) updateUIForCurrentPlayer(); 
         }
@@ -1638,7 +1672,6 @@
                 if (player.isBankrupt || player.inDetention) { 
                     player.playerActionTakenThisTurn = true;
                 } else if (['moveToNearestPayout', 'advanceToGo'].includes(currentCardBeingExecuted.action)) {
-                    // pATT is handled by the new landing via handleLandOnSpace
                 } else if (!['goToDetentionDirect'].includes(currentCardBeingExecuted.action)) {
                     if (lastRollWasDoublesGlobal && !player.inDetention && !player.isBankrupt) {
                         player.playerActionTakenThisTurn = false; 
@@ -1648,7 +1681,6 @@
                 }
             }
             currentCardBeingExecuted = null; 
-            // lastRollWasDoublesGlobal reset handled at start of next turn or new roll sequence
 
             if (!player.isAI) {
                  updateUIForCurrentPlayer(); 
@@ -1780,7 +1812,7 @@
         }
 
 
-        function handleDetentionTurn(player) { // For Human Players
+        function handleDetentionTurn(player) { 
             logEvent(`Detention Turn: ${player.name}. Missed: ${player.missedTurnsInDetention}. Legal Aids: ${player.getOutOfDetentionCards}. Money: £${player.money}`);
             detentionActionsDiv.innerHTML = ''; 
             otherActionsContainer.style.display = 'none'; 
@@ -1791,6 +1823,7 @@
                 const useCardBtn = document.createElement('button');
                 useCardBtn.textContent = "Use Legal Aid Card";
                 useCardBtn.onclick = () => {
+                    detentionActionsDiv.innerHTML = ''; // Clear options after choice
                     player.getOutOfDetentionCards--;
                     player.inDetention = false;
                     player.missedTurnsInDetention = 0;
@@ -1806,6 +1839,7 @@
                 const payFineBtn = document.createElement('button');
                 payFineBtn.textContent = `Pay £${fineAmount} Fine`;
                 payFineBtn.onclick = () => {
+                    detentionActionsDiv.innerHTML = ''; // Clear options after choice
                     if (makePayment(player, bank, fineAmount)) {
                         player.inDetention = false;
                         player.missedTurnsInDetention = 0;
@@ -2159,12 +2193,12 @@
 
             if (player.inDetention) {
                 logEvent(`UI Update: ${player.name} is in Detention. Setting up detention actions.`);
-                handleDetentionTurn(player); // Shows detention options
-                if (player.playerActionTakenThisTurn) { // If detention action for this turn is done (e.g., failed roll, or chose not to use card/pay yet and will end turn)
+                handleDetentionTurn(player); 
+                if (player.playerActionTakenThisTurn) { 
                     endTurnButton.style.display = 'block';
                     endTurnButton.classList.add('main-action-button');
                     otherActionsContainer.style.display = 'none'; 
-                } else if (!player.inDetention) { // Got out of detention (e.g. used card/paid) and MUST roll
+                } else if (!player.inDetention) { 
                     rollDiceButton.style.display = 'block';
                     rollDiceButton.classList.add('main-action-button');
                     rollDiceButton.disabled = false;
@@ -2197,7 +2231,7 @@
                 if (!canBuyCurrent) {
                     buyPropertyButton.style.display = 'none';
                 }
-                developPropertyButton.style.display = 'none'; // No develop if must roll
+                developPropertyButton.style.display = 'none';
 
                 if (canBuyCurrent) {
                     otherActionsContainer.style.display = 'block';
@@ -2528,19 +2562,19 @@
                 player.missedTurnsInDetention = 0;
                 logEvent(`AI ${player.name} used Legal Aid card.`);
                 updatePlayerInfo();
-                player.playerActionTakenThisTurn = false; // Now free to take a normal roll this turn
-                return; // Exit, main AI loop will handle the roll
+                player.playerActionTakenThisTurn = false; 
+                return; 
             }
 
             const fineAmount = 50;
-            if (player.missedTurnsInDetention >= 2 && player.money >= fineAmount * 3) { // AI prioritizes paying if stuck long or rich
+            if (player.missedTurnsInDetention >= 2 && player.money >= fineAmount * 3) { 
                 if (makePayment(player, bank, fineAmount)) {
                     player.inDetention = false;
                     player.missedTurnsInDetention = 0;
                     logEvent(`AI ${player.name} paid fine to get out of detention.`);
                     updatePlayerInfo();
                     player.playerActionTakenThisTurn = false; 
-                    return; // Exit, main AI loop will handle the roll
+                    return; 
                 }
             }
 
@@ -2567,7 +2601,7 @@
                 
                 await movePlayerAnimated(player, totalRoll);
                 await handleLandOnSpace(player);
-                // After landing, playerActionTakenThisTurn is determined by whether this roll (isDoubles) requires another.
+                // After landing, pATT is determined by whether this roll (isDoubles) requires another.
                 if (currentCardBeingExecuted) { 
                     await new Promise(r => setTimeout(r, 1600));
                     if (lastRollWasDoublesGlobal && !player.inDetention && !player.isBankrupt) {
