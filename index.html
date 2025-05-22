@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Migrantopoly (Corrected Detention Cards)</title>
+    <title>Migrantopoly (Doubles Buy Fix)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <style>
         body { /* Dark blue-grey background */
@@ -685,7 +685,7 @@
             { text: "Education Grant: Collect £120.", action: "collect", amount: 120 },
             { text: "Housing Inspection: Pay £20 per tenancy owned.", action: "payPerTenancy", amountPer: 20 },
             { text: "Utility Subsidy: Collect £80.", action: "collect", amount: 80 },
-            { text: "Legal Aid: Get out of Detention Center free.", action: "getOutOfDetentionFree" }, // Only one
+            { text: "Legal Aid: Get out of Detention Center free.", action: "getOutOfDetentionFree" }, 
             { text: "Emergency bowels: Collect £100.", action: "collect", amount: 100 },
             { text: "Tax Audit: Pay £60.", action: "pay", amount: 60 },
             { text: "Welfare Review: Move to nearest Payout Space.", action: "moveToNearestPayout" }
@@ -696,7 +696,7 @@
             { text: "Language Subsidy: Collect £50.", action: "collect", amount: 50 },
             { text: "Community Grant: Collect £100.", action: "collect", amount: 100 },
             { text: "Deportation Threat: Go to Detention Center.", action: "goToDetentionDirect" },
-            { text: "Legal Homosexuals: Get out of Detention Center free.", action: "getOutOfDetentionFree" }, // Only one
+            { text: "Legal Homosexuals: Get out of Detention Center free.", action: "getOutOfDetentionFree" }, 
             { text: "Job Offer: Collect £120.", action: "collect", amount: 120 },
             { text: "Housing Voucher: Next estate purchase is 25% off.", action: "housingVoucher" },
             { text: "Free Health Service: Gain a health service (worth £100).", action: "gainHealthService" },
@@ -1240,8 +1240,7 @@
                 if (currentAnimatedPosition === 0 && prevPositionForGoPassCheck !== 0 && !player.inDetention) {
                     govPayout(player, 200); 
                     govPayout(player, 200); 
-                    // player.getOutOfDetentionCards = (player.getOutOfDetentionCards || 0) + 1; // REMOVED - No card for passing GO
-                    logEvent(`${player.name} passed Dole and collected £400.`); // Updated log
+                    logEvent(`${player.name} passed Dole and collected £400.`); // UPDATED LOG
                     updatePlayerInfo(); 
                 }
             }
@@ -1287,32 +1286,24 @@
             logEvent(`${player.name} landed on ${currentSpace.name}.`);
             let actionCompletedByLanding = false; 
 
-            // Gov Payout for Dole or Crime Spree, if landed on directly.
-            // This is separate from their penalties/actions defined in the switch.
-            // Also, no "Get out of Detention" cards are given here.
-            if ( (currentSpace.name === 'Dole' && currentSpace.type === 'go') ||
-                 (currentSpace.name === 'Crime Spree !!! Arrest' && currentSpace.type === 'crime_spree') ) {
-                // For Dole and Crime Spree, an additional Gov Payout if landed on.
-                // This was the behavior of the previous combined if-block for these specific cases.
-                // Note: Passing 'Go' (Dole) has its own £400 payout logic in movePlayerAnimated.
-                // This handles landing *on* Dole.
-                if (currentSpace.name === 'Dole') { // Only if landing on Dole
-                    govPayout(player, 100);
-                    logEvent(`${player.name} landed on Dole, receives +£100 from UK Gov.`);
-                    updatePlayerInfo();
-                } else if (currentSpace.name === 'Crime Spree !!! Arrest') { // For Crime Spree
-                    govPayout(player, 100);
-                     logEvent(`${player.name} landed on Crime Spree, receives +£100 from UK Gov (penalty also applies).`);
-                     updatePlayerInfo();
-                }
+            // Gov Payout for specific direct landings (Dole, Crime Spree)
+            // No automatic "Get Out of Detention Free" cards from landing on spaces.
+            if ( (currentSpace.name === 'Dole' && currentSpace.type === 'go') ) {
+                govPayout(player, 100);
+                logEvent(`${player.name} landed on Dole, receives +£100 from UK Gov.`);
+                updatePlayerInfo();
+            } else if (currentSpace.name === 'Crime Spree !!! Arrest' && currentSpace.type === 'crime_spree') {
+                govPayout(player, 100); 
+                logEvent(`${player.name} landed on Crime Spree, receives +£100 from UK Gov (penalty also applies).`);
+                updatePlayerInfo();
             } else if (currentSpace.name === 'Go to Detention Center' || (currentSpace.name === 'Detention Center' && currentSpace.type === 'detention_visiting')) {
-                logEvent(`${player.name} is on ${currentSpace.name}.`); // Just a log, no automatic card or special payout here.
+                logEvent(`${player.name} is on ${currentSpace.name}.`);
             }
 
 
             switch (currentSpace.type) {
                 case "go":
-                    logEvent(`${player.name} landed on Dole (Go).`); // Gov payout handled above if landed on
+                    logEvent(`${player.name} landed on Dole (Go).`);
                     actionCompletedByLanding = true;
                     break;
                 case "property":
@@ -1384,7 +1375,6 @@
                          logEvent(`Paying fine of £${currentSpace.amount}.`); 
                          makePayment(player, bank, currentSpace.amount); 
                     }
-                    // Gov payout handled above if landed on
                     actionCompletedByLanding = true;
                     break;
                 case "go_to_detention": 
@@ -1448,9 +1438,13 @@
                 logEvent(`Cannot buy ${propToBuyLayout.name} or it's already owned.`);
             }
             
+            // If it wasn't doubles that led to this buy option, the action is now considered "taken"
+            // If it WAS doubles, playerActionTakenThisTurn should remain false to force the next roll.
+            // The buy action itself doesn't change the "must roll again" status from doubles.
+            // So, we only set playerActionTakenThisTurn to true IF it wasn't doubles.
             if (!lastRollWasDoublesGlobal) { 
                 player.playerActionTakenThisTurn = true; 
-            } 
+            }
             
             if (!player.isAI) updateUIForCurrentPlayer(); 
         }
@@ -1482,7 +1476,7 @@
                     }
                 });
                 logEvent(`${player.name} owes £${rentAmount} rent to ${owner.name} for ${propertyLayoutDetails.name} (part of "${propertyLayoutDetails.groupId}" set).`);
-            } else if (propertyLayoutDetails.type === "property") { // Removed && propertyLayoutDetails.rent as new logic calculates base rent
+            } else if (propertyLayoutDetails.type === "property") { 
                 if (propertyFromData.tenancies === 0 && !propertyFromData.permanentResidence) {
                     const propertyPrice = propertyLayoutDetails.price;
                     const groupId = propertyLayoutDetails.groupId;
@@ -1654,6 +1648,7 @@
                 }
             }
             currentCardBeingExecuted = null; 
+            // lastRollWasDoublesGlobal reset handled at start of next turn or new roll sequence
 
             if (!player.isAI) {
                  updateUIForCurrentPlayer(); 
@@ -1785,7 +1780,7 @@
         }
 
 
-        function handleDetentionTurn(player) { 
+        function handleDetentionTurn(player) { // For Human Players
             logEvent(`Detention Turn: ${player.name}. Missed: ${player.missedTurnsInDetention}. Legal Aids: ${player.getOutOfDetentionCards}. Money: £${player.money}`);
             detentionActionsDiv.innerHTML = ''; 
             otherActionsContainer.style.display = 'none'; 
@@ -1826,7 +1821,7 @@
             }
 
             const rollDoublesBtn = document.createElement('button');
-            rollDoublesBtn.textContent = "Roll for Doubles";
+            rollDoublesBtn.textContent = "Roll for Doubles (1 Chance)";
             rollDoublesBtn.onclick = async () => { 
                 detentionActionsDiv.innerHTML = ''; 
                 const { totalRoll, die1, die2, isDoubles } = rollDiceInternal(); 
@@ -2164,26 +2159,53 @@
 
             if (player.inDetention) {
                 logEvent(`UI Update: ${player.name} is in Detention. Setting up detention actions.`);
-                handleDetentionTurn(player); 
-                if (player.playerActionTakenThisTurn) { 
+                handleDetentionTurn(player); // Shows detention options
+                if (player.playerActionTakenThisTurn) { // If detention action for this turn is done (e.g., failed roll, or chose not to use card/pay yet and will end turn)
                     endTurnButton.style.display = 'block';
                     endTurnButton.classList.add('main-action-button');
                     otherActionsContainer.style.display = 'none'; 
-                } else { 
-                     otherActionsContainer.style.display = 'none'; 
-                     if (!player.inDetention) { 
-                        rollDiceButton.style.display = 'block';
-                        rollDiceButton.classList.add('main-action-button');
-                        rollDiceButton.disabled = false;
-                     }
+                } else if (!player.inDetention) { // Got out of detention (e.g. used card/paid) and MUST roll
+                    rollDiceButton.style.display = 'block';
+                    rollDiceButton.classList.add('main-action-button');
+                    rollDiceButton.disabled = false;
+                    otherActionsContainer.style.display = 'none';
                 }
+                // If still in detention and playerActionTakenThisTurn is false, detention buttons are shown by handleDetentionTurn
             } else if (!player.playerActionTakenThisTurn) { // Must take primary action (Roll Dice)
                 logEvent(`UI Update: ${player.name} must roll dice.`);
                 rollDiceButton.style.display = 'block';
                 rollDiceButton.classList.add('main-action-button');
                 rollDiceButton.disabled = false;
-                otherActionsContainer.style.display = 'none'; 
-            } else { // playerActionTakenThisTurn is TRUE (rolled non-doubles and resolved landing/card, or resolved detention)
+                
+                // Show Buy Property if landed on unowned, EVEN IF must roll again due to doubles
+                const currentSpaceForBuy = boardLayout[player.position];
+                let canBuyCurrent = false;
+                if ((currentSpaceForBuy.type === 'property' || currentSpaceForBuy.type === 'set_property')) {
+                    const propDetails = propertyData.find(p => p.id === currentSpaceForBuy.id);
+                    if (propDetails && propDetails.owner === null) {
+                        let price = currentSpaceForBuy.price;
+                        if (player.hasHousingVoucher && currentSpaceForBuy.type === 'property') {
+                             price = Math.round(price * 0.75);
+                        }
+                        buyPropertyPriceSpan.textContent = price;
+                        if (player.money >= price) {
+                            buyPropertyButton.style.display = 'inline-block';
+                            canBuyCurrent = true;
+                        }
+                    }
+                }
+                if (!canBuyCurrent) {
+                    buyPropertyButton.style.display = 'none';
+                }
+                developPropertyButton.style.display = 'none'; // No develop if must roll
+
+                if (canBuyCurrent) {
+                    otherActionsContainer.style.display = 'block';
+                } else {
+                    otherActionsContainer.style.display = 'none'; 
+                }
+
+            } else { // playerActionTakenThisTurn is TRUE (rolled non-doubles and resolved landing/card)
                 logEvent(`UI Update: ${player.name} can take optional actions or end turn.`);
                 endTurnButton.style.display = 'block';
                 endTurnButton.classList.add('main-action-button');
@@ -2499,31 +2521,31 @@
 
         async function aiHandleDetention(player) {
             logEvent(`AI ${player.name} handling detention. Missed: ${player.missedTurnsInDetention}, Cards: ${player.getOutOfDetentionCards}, Money: £${player.money}`);
-            player.playerActionTakenThisTurn = true; 
-
+            
             if (player.getOutOfDetentionCards > 0) {
                 player.getOutOfDetentionCards--;
                 player.inDetention = false;
                 player.missedTurnsInDetention = 0;
                 logEvent(`AI ${player.name} used Legal Aid card.`);
                 updatePlayerInfo();
-                player.playerActionTakenThisTurn = false; 
-                return;
+                player.playerActionTakenThisTurn = false; // Now free to take a normal roll this turn
+                return; // Exit, main AI loop will handle the roll
             }
 
             const fineAmount = 50;
-            if (player.missedTurnsInDetention >= 2 && player.money >= fineAmount * 3) { 
+            if (player.missedTurnsInDetention >= 2 && player.money >= fineAmount * 3) { // AI prioritizes paying if stuck long or rich
                 if (makePayment(player, bank, fineAmount)) {
                     player.inDetention = false;
                     player.missedTurnsInDetention = 0;
                     logEvent(`AI ${player.name} paid fine to get out of detention.`);
                     updatePlayerInfo();
                     player.playerActionTakenThisTurn = false; 
-                    return;
+                    return; // Exit, main AI loop will handle the roll
                 }
             }
 
-            logEvent(`AI ${player.name} rolling for doubles in detention.`);
+            // AI makes one attempt to roll for doubles this turn
+            logEvent(`AI ${player.name} rolling for doubles in detention (1 chance).`);
             if (diceFace1Elem) diceFace1Elem.textContent = '🎲'; 
             if (diceFace2Elem) diceFace2Elem.textContent = '🎲';
             if (diceTotalDisplayText) diceTotalDisplayText.textContent = "AI Rolling (Detention)...";
@@ -2545,6 +2567,7 @@
                 
                 await movePlayerAnimated(player, totalRoll);
                 await handleLandOnSpace(player);
+                // After landing, playerActionTakenThisTurn is determined by whether this roll (isDoubles) requires another.
                 if (currentCardBeingExecuted) { 
                     await new Promise(r => setTimeout(r, 1600));
                     if (lastRollWasDoublesGlobal && !player.inDetention && !player.isBankrupt) {
@@ -2560,8 +2583,8 @@
                     }
                 }
             } else {
-                logEvent(`AI ${player.name} rolled ${totalRoll} (not doubles). Stays in Detention.`);
-                player.playerActionTakenThisTurn = true; 
+                logEvent(`AI ${player.name} rolled ${totalRoll} (not doubles). Stays in Detention. Turn ends.`);
+                player.playerActionTakenThisTurn = true; // Failed roll, AI's action for detention this turn is done.
             }
         }
 
@@ -2585,6 +2608,9 @@
                 currentPlayerIndex = originalPlayerIndex; 
             } else {
                 logEvent(`AI ${player.name} decides NOT to buy ${propDetailsData.name} (Price: £${actualPrice}, Money: £${player.money}).`);
+                if (!lastRollWasDoublesGlobal) { 
+                    player.playerActionTakenThisTurn = true;
+                }
             }
         }
 
