@@ -1,0 +1,1951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migrantopoly - Online Multiplayer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        body {
+            padding: 20px;
+            color: #ecf0f1;
+            position: relative;
+            overflow-x: hidden;
+            font-family: 'Inter', Arial, sans-serif;
+            min-height: 100vh;
+            background: #2c3e50;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 1200px;
+            height: 700px;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255,255,255,0.05);
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            opacity: 0.18;
+            pointer-events: none;
+            z-index: 0;
+            mix-blend-mode: lighten;
+        }
+
+        .main-content {
+          position: relative;
+          z-index: 3;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-height: 100vh;
+          width: 100%;
+          padding-top: 20px;
+          padding-bottom: 20px;
+        }
+
+        #player-setup-screen, #online-setup-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #2c3e50;
+            padding: 30px 40px;
+            border-radius: 12px;
+            border: 2px solid #7f8c8d;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+            color: #ecf0f1;
+            text-align: center;
+            width: auto;
+            max-width: 450px;
+        }
+        #player-setup-screen h2, #online-setup-screen h2 {
+            color: #1abc9c;
+            margin-top: 0;
+            margin-bottom: 25px;
+            font-size: 1.8em;
+        }
+        .setup-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 18px;
+        }
+        #player-setup-screen label, #online-setup-screen label {
+            font-size: 1em;
+            margin-right: 15px;
+            flex-basis: 40%;
+            text-align: left;
+        }
+        #player-setup-screen select, #online-setup-screen select, #online-setup-screen input {
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #7f8c8d;
+            background-color: #34495e;
+            color: #ecf0f1;
+            font-size: 1em;
+            flex-grow: 1;
+        }
+        #online-setup-screen input {
+            width: calc(100% - 22px); /* Account for padding */
+        }
+        #player-setup-screen button, #online-setup-screen button {
+            background-color: #27ae60;
+            color: white;
+            padding: 12px 25px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 15px;
+            margin-right: 10px;
+        }
+        #player-setup-screen button:last-child, #online-setup-screen button:last-child {
+            margin-right: 0;
+        }
+        #player-setup-screen button:hover, #online-setup-screen button:hover {
+            background-color: #2ecc71;
+        }
+         #online-setup-screen button.secondary {
+            background-color: #3498db;
+        }
+        #online-setup-screen button.secondary:hover {
+            background-color: #2980b9;
+        }
+        #player-setup-message, #online-setup-message {
+            color: #f1c40f;
+            font-size: 0.9em;
+            margin-top: 15px;
+            min-height: 1.2em;
+        }
+        #game-id-display {
+            margin-top: 15px;
+            font-size: 1.1em;
+            color: #1abc9c;
+        }
+        #game-id-display span {
+            font-weight: bold;
+            background-color: #34495e;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+         #user-id-display {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(0,0,0,0.5);
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            z-index: 1000;
+        }
+
+
+        #game-container, #game-info-area, #board-container {
+            position: relative;
+            z-index: 1;
+        }
+
+        #game-container {
+            display: none; /* Initially hidden */
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 25px;
+            padding-top: 0px;
+        }
+
+        #board-container {
+            display: grid;
+            grid-template-columns: 100px repeat(8, 70px) 100px;
+            grid-template-rows: 100px repeat(8, 70px) 100px;
+            border: 3px solid #7f8c8d;
+            width: 760px; /* Fixed width */
+            height: 760px; /* Fixed height */
+            position: relative;
+            background-color: rgba(52, 73, 94, 0.68);
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            overflow: visible;
+            margin-top: 20px;
+        }
+
+        #card-decks-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 18px;
+            z-index: 2;
+        }
+        .card-deck {
+            width: 110px;
+            height: 60px;
+            background: linear-gradient(135deg, #f7ca18 60%, #f1c40f 100%);
+            border: 2px solid #7f8c8d;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #2c3e50;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.1s;
+        }
+        .card-deck.opportunity {
+            background: linear-gradient(135deg, #6dd5ed 60%, #2193b0 100%);
+            color: #fff;
+        }
+        .card-deck.welfare {
+            background: linear-gradient(135deg, #f7ca18 60%, #f1c40f 100%);
+            color: #2c3e50;
+        }
+        .card-deck:active {
+            transform: scale(0.96);
+        }
+
+        #on-board-card-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 280px;
+            height: 190px;
+            background-color: #fdf5e6;
+            border: 3px solid #c0392b;
+            border-radius: 15px;
+            box-shadow: 0 6px 22px rgba(0,0,0,0.35);
+            z-index: 5;
+            display: none; /* Initially hidden */
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-around;
+            padding: 15px;
+            box-sizing: border-box;
+            text-align: center;
+            color: #2c3e50;
+        }
+
+        #on-board-card-display h4 {
+            margin: 5px 0;
+            font-size: 1.4em;
+            color: #c0392b;
+            font-weight: bold;
+        }
+
+        #on-board-card-display p {
+            margin: 5px 0;
+            font-size: 1em;
+            line-height: 1.45;
+            overflow-y: auto;
+            max-height: 100px;
+            width: 100%;
+            color: #34495e;
+        }
+
+
+        .space {
+            border: 1px solid #7f8c8d;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 10px;
+            position: relative;
+            padding: 3px;
+            box-sizing: border-box;
+            background-color: #4a6378;
+            color: #ecf0f1;
+            border-radius: 5px;
+        }
+        .space .name {
+            font-weight: bold;
+            font-size: 10px;
+            margin-bottom: 2px;
+            line-height: 1.2;
+        }
+        .space .price {
+            font-size: 9px;
+            color: #bdc3c7;
+            font-weight: normal;
+        }
+        .space .owner-indicator {
+            width: 90%;
+            height: 6px;
+            margin-top: 3px;
+            background-color: transparent;
+            border-radius: 3px;
+            position: absolute;
+            bottom: 3px;
+            left: 5%;
+        }
+         .space .development-indicator {
+            font-size: 12px;
+            color: #fff;
+            position: absolute;
+            top: 15px;
+            width: 100%;
+            text-align: center;
+            line-height: 1;
+            text-shadow: 0 0 2px #000;
+        }
+        .space .sub-label {
+            font-size: 10px;
+            color: #e74c3c;
+            font-weight: bold;
+            margin-top: 2px;
+            letter-spacing: 0.04em;
+            text-align: center;
+            line-height: 1.1;
+        }
+
+        .corner {
+            font-weight: bold;
+            background-color: #527a78;
+        }
+        .corner .name {
+            font-size: 16px !important;
+            color: #e74c3c !important;
+            font-weight: bold !important;
+            margin-top: 0;
+        }
+        .corner .name.detention-center-name {
+            margin-top: 35px;
+            position: relative;
+            z-index: 1;
+        }
+
+
+        .property .color-bar {
+            width: 100%;
+            height: 12px;
+            border-bottom: 1px solid #7f8c8d;
+            position: absolute;
+            top: 0;
+            left: 0;
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+        }
+        .space.property .name { margin-top: 14px; }
+
+        .welfare .name, .opportunity .name, .tax .name, .payout .name, .neutral:not(.corner) .name {
+            margin-top: 0;
+        }
+        
+        .set-property {
+            background-color: #303F4D;
+        }
+        .set-property .name {
+            margin-top: 0;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+
+        .brown .color-bar { background-color: #8B4513; }
+        .light-blue .color-bar { background-color: #ADD8E6; }
+        .pink .color-bar { background-color: #FFC0CB; }
+        .orange .color-bar { background-color: #FFA500; }
+        .red .color-bar { background-color: #FF0000; }
+        .green .color-bar { background-color: #008000; }
+
+
+        .player-token {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            position: absolute;
+            border: none;
+            font-size: 26px;
+            line-height: 28px;
+            text-align: center;
+            background: none;
+            z-index: 10;
+            user-select: none;
+            pointer-events: none;
+        }
+        /* Player token colors will be set dynamically via JS based on Firestore player data */
+
+
+        #game-info-area {
+            width: 320px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        #player-info, #controls, #card-display-container, #game-status-message-container, #develop-property-container {
+            padding: 15px;
+            background-color: #34495e;
+            border: 1px solid #7f8c8d;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            color: #ecf0f1;
+        }
+        #player-info div { margin-bottom: 8px; font-size: 14px; }
+        #card-message { margin-bottom: 10px; font-size: 14px; }
+
+        button {
+            padding: 10px 15px;
+            font-size: 14px;
+            cursor: pointer;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            transition: background-color 0.2s;
+            margin-top: 5px;
+            margin-right: 5px;
+        }
+        button:last-child { margin-right: 0; }
+        button:hover {
+            background-color: #c0392b;
+        }
+        button:disabled {
+            background-color: #7f8c8d;
+            color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .main-action-button {
+            display: block !important;
+            margin: 8px auto !important;
+        }
+
+        #end-turn-button {
+            background-color: #d35400;
+        }
+        #end-turn-button:hover {
+            background-color: #e67e22;
+        }
+        #develop-property-button {
+            background-color: #2980b9;
+        }
+        #develop-property-button:hover {
+            background-color: #3498db;
+        }
+
+
+        #card-display-container, #develop-property-container {
+            display: none; /* Initially hidden */
+        }
+        #card-display-container h3, #develop-property-container h3 {
+             margin-top: 0; color: #1abc9c;
+        }
+
+        #detention-actions button {
+            background-color: #f39c12;
+            margin-right: 5px;
+        }
+        #detention-actions button:hover {
+            background-color: #e67e22;
+        }
+        #game-status-message {
+            font-weight: bold;
+            color: #e74c3c;
+            min-height: 20px;
+        }
+        #pre-game-roll-area button {
+            background-color: #f1c40f;
+            color: #2c3e50;
+        }
+        #pre-game-roll-area button:hover {
+            background-color: #f39c12;
+        }
+        #pre-game-roll-results { margin-top: 10px; font-size: 13px; }
+        #develop-property-options button {
+            display: block;
+            width: calc(100% - 10px);
+            margin-bottom: 8px;
+            background-color: #2980b9;
+        }
+        #develop-property-options button:hover {
+            background-color: #3498db;
+        }
+
+        .space.dole-space .name {
+            font-size: 26px !important;
+            font-weight: bold;
+            letter-spacing: 0.08em;
+            color: #fff !important;
+            text-transform: uppercase;
+            position: absolute;
+            top: 15px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            transform: rotate(-36deg);
+            transform-origin: center center;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+        .dole-sign {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            font-size: 28px;
+            color: #f1c40f;
+            font-weight: bold;
+            z-index: 3;
+        }
+
+        .space.red-boardname .name {
+            color: #e74c3c !important;
+            font-weight: bold;
+        }
+        .space.yellow-boardname .name {
+            color: #f1c40f !important;
+            font-weight: bold;
+        }
+
+
+        .player-highlight {
+            animation: player-highlight-flash 1s;
+            background: #ffeaa7;
+            color: #222d3a !important;
+        }
+        @keyframes player-highlight-flash {
+            0% { background: #ffeaa7; }
+            60% { background: #ffeaa7; }
+            100% { background: transparent; }
+        }
+
+        #money-flash {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 7vw;
+            font-family: 'Impact', 'Arial Black', Arial, sans-serif;
+            color: #e74c3c;
+            font-weight: bold;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 1000;
+            text-shadow: 2px 2px 16px #000, 0 0 32px #fff;
+            transition: opacity 0.2s;
+        }
+        #money-flash.show {
+            opacity: 1;
+            animation: money-flash-pop 0.7s;
+        }
+        @keyframes money-flash-pop {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            60% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+        }
+
+        .detention-bars {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            right: 8px;
+            height: 32px;
+            pointer-events: none;
+            display: flex;
+            justify-content: space-between;
+            z-index: 2;
+        }
+        .detention-bar {
+            width: 4px;
+            height: 100%;
+            background: #111;
+            border-radius: 2px;
+            opacity: 0.85;
+        }
+        .detention-arrow {
+            position: absolute;
+            bottom: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2em;
+            color: #e67e22;
+            font-weight: bold;
+            z-index: 2;
+            pointer-events: none;
+            text-shadow: 1px 1px 6px #000, 0 0 8px #fff;
+        }
+
+        #current-turn-display {
+            text-align: center;
+            width: 100%;
+            color: #ecf0f1;
+            font-weight: bold;
+            padding-bottom: 5px;
+        }
+        #game-status-message-container {
+            text-align: center;
+        }
+        #uk-gov-status {
+            padding: 12px;
+            background: #222d3a;
+            border: 1px solid #7f8c8d;
+            border-radius: 8px;
+            color: #f7ca18;
+            font-weight: bold;
+            text-align: center;
+        }
+         #uk-gov-status-container {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+
+        #pre-game-roll-area {
+            display: none; /* Initially hidden */
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+
+        .overlay {
+          position: fixed;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(24,28,36,0.48);
+          z-index: 2;
+          pointer-events: none;
+        }
+
+
+        .die {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #ecf0f1;
+            background-color: #fff;
+            color: #2c3e50;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .token-hop {
+            animation: hop-animation 0.3s ease-out;
+        }
+        @keyframes hop-animation {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            30% { transform: translateY(-35px) scale(1.25); opacity: 0.9; }
+            60% { transform: translateY(-35px) scale(1.25); opacity: 0.9; }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+
+        .token-arrive-step {
+            animation: arrive-step-animation 0.25s ease-out;
+        }
+        @keyframes arrive-step-animation {
+            0% { transform: scale(0.6) translateY(5px); opacity: 0.4; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        #dice-display-master-container {
+            min-height: 32px;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        #actual-dice-faces {
+            display: inline-flex;
+            gap: 5px;
+            margin-left: 5px;
+            vertical-align: middle;
+        }
+        #dice-total-display-text {
+            margin-left: 8px;
+            font-weight: bold;
+        }
+
+        .token-flash {
+            animation: token-flash-animation 0.7s infinite alternate;
+        }
+        @keyframes token-flash-animation {
+            0% { opacity: 1; transform: scale(1.1); filter: drop-shadow(0 0 6px currentColor) drop-shadow(0 0 3px #fff); }
+            100% { opacity: 0.6; transform: scale(1); filter: drop-shadow(0 0 3px currentColor); }
+        }
+        .token-move-flash {
+            animation: token-move-flash-animation 0.2s infinite;
+        }
+        @keyframes token-move-flash-animation {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 1001; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.6); /* Black w/ opacity */
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #2c3e50;
+            margin: auto;
+            padding: 25px 35px;
+            border: 1px solid #7f8c8d;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 450px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+            text-align: center;
+        }
+        .modal-content h3 {
+            color: #1abc9c;
+            margin-top: 0;
+        }
+        .modal-content p {
+            margin-bottom: 20px;
+        }
+        .modal-content button {
+             background-color: #e74c3c;
+        }
+         .modal-content button:hover {
+             background-color: #c0392b;
+        }
+
+</style>
+</head>
+<body>
+  <div class="overlay"></div>
+  <div id="user-id-display">Your User ID: <span id="local-user-id">Not Signed In</span></div>
+  <div class="main-content">
+    <div id="online-setup-screen"> <h2>Migrantopoly Online</h2>
+        <div class="setup-row">
+            <label for="player-name-input">Your Name:</label>
+            <input type="text" id="player-name-input" placeholder="Enter your name" value="Player">
+        </div>
+        <div class="setup-row">
+            <label for="game-id-input">Game ID (for joining):</label>
+            <input type="text" id="game-id-input" placeholder="Enter Game ID to join">
+        </div>
+        <button id="join-game-button">Join Game</button>
+        <hr style="width:80%; margin: 20px 0; border-color: #7f8c8d;">
+        <div class="setup-row">
+            <label for="num-players-online-select">Total Players in Game:</label>
+            <select id="num-players-online-select">
+                <option value="2" selected>2 Players</option>
+                <option value="3">3 Players</option>
+                <option value="4">4 Players</option>
+            </select>
+        </div>
+        <button id="create-game-button">Create New Game</button>
+        <p id="online-setup-message"></p>
+        <div id="game-id-display" style="display:none;">
+            Share this Game ID: <span id="generated-game-id" title="Click to copy"></span>
+        </div>
+    </div>
+
+    <div id="player-setup-screen" style="display: none;"> <h2>Player Setup (Local)</h2>
+        </div>
+
+    <div id="game-container" style="display: none;">
+        <div id="board-container">
+            </div>
+
+        <div id="game-info-area">
+            <div id="player-info">
+                </div>
+
+            <div id="controls">
+                <h3 id="current-turn-display">Current Turn: Player 1</h3>
+                <div id="pre-game-roll-area" style="display:none;">
+                    <h4>Determine Starting Player</h4>
+                    <button id="pre-game-roll-button">Roll to Start</button>
+                    <div id="pre-game-roll-results"></div>
+                </div>
+
+                <div id="dice-display-master-container">
+                    <span>Dice: </span>
+                    <div id="actual-dice-faces">
+                        <div class="die" id="die-face-1">--</div>
+                        <div class="die" id="die-face-2">--</div>
+                    </div>
+                    <span id="dice-total-display-text"></span>
+                </div>
+                <button id="roll-dice-button" style="display:none;">Roll Dice</button>
+                <button id="end-turn-button" style="display:none;">End Turn</button>
+
+                <div id="other-actions-container" style="text-align: center; margin-top: 5px;">
+                    <button id="develop-property-button" style="display:none;">Develop Property</button>
+                    <button id="buy-property-button" style="display:none;">Buy Property (£<span id="buy-property-price"></span>)</button>
+                </div>
+                <div id="detention-actions" style="margin-top: 10px;">
+                    </div>
+            </div>
+
+            <div id="develop-property-container" style="display:none;">
+                <h3 id="develop-property-name">Develop Property</h3>
+                <div id="develop-property-options">
+                    </div>
+                <button id="close-develop-button">Close</button>
+            </div>
+
+
+            <div id="card-display-container" style="display:none;">
+                <h3 id="card-type-title">Card Drawn</h3>
+                <p id="card-message"></p>
+                <button id="card-ok-button">OK</button>
+            </div>
+
+            <div id="game-status-message-container">
+                <h4>Game Status:</h4>
+                <p id="game-status-message">Waiting for game to start...</p>
+            </div>
+
+            <div id="uk-gov-status-container">
+                <div id="uk-gov-status">
+                    UK Gov: £<span id="uk-gov-cash">20000</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="money-flash"></div>
+
+    <div id="message-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="modal-title">Notification</h3>
+            <p id="modal-message">This is a sample message.</p>
+            <button id="modal-ok-button">OK</button>
+        </div>
+    </div>
+
+  </div>
+
+    <script type="module">
+        // --- Firebase Configuration ---
+        // This will prioritize the __firebase_config from the environment if available,
+        // otherwise it will use the hardcoded configuration below.
+        const userProvidedFirebaseConfig = {
+            apiKey: "AIzaSyARzlfhH_AC0YTxJ5fKvhz_SPDq1r6mWPA", // Your provided API Key
+            authDomain: "migrantopoly.firebaseapp.com",
+            projectId: "migrantopoly",
+            storageBucket: "migrantopoly.firebasestorage.app", // Corrected from .appspot.com if it was a typo, ensure it matches your Firebase console
+            messagingSenderId: "649348280586",
+            appId: "1:649348280586:web:2bd3be4d2de84c0ea8caf3",
+            measurementId: "G-1TMRSC6KL8" // Optional, but included as you provided it
+        };
+        const firebaseConfigToUse = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : userProvidedFirebaseConfig;
+        
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        const appIdentifier = typeof __app_id !== 'undefined' ? __app_id : 'migrantopoly-default-app';
+
+        // Firebase SDK imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, serverTimestamp, arrayUnion, arrayRemove, runTransaction, writeBatch, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // Note: getAnalytics is not imported as it's not used in the current game logic. Can be added if needed.
+
+        let db, auth, currentUserId = null, localPlayerName = '';
+        let currentGameId = null; 
+        let unsubscribeGameState = null; 
+        let localGameData = {}; 
+
+        // --- DOM Elements ---
+        const onlineSetupScreen = document.getElementById('online-setup-screen');
+        const gameContainer = document.getElementById('game-container');
+        const playerNameInput = document.getElementById('player-name-input');
+        const gameIdInput = document.getElementById('game-id-input');
+        const createGameButton = document.getElementById('create-game-button');
+        const joinGameButton = document.getElementById('join-game-button');
+        const numPlayersOnlineSelect = document.getElementById('num-players-online-select');
+        const onlineSetupMessage = document.getElementById('online-setup-message');
+        const gameIdDisplayDiv = document.getElementById('game-id-display');
+        const generatedGameIdSpan = document.getElementById('generated-game-id');
+        const localUserIdSpan = document.getElementById('local-user-id');
+
+        const boardContainer = document.getElementById('board-container');
+        const playerInfoDiv = document.getElementById('player-info');
+        const rollDiceButton = document.getElementById('roll-dice-button');
+        const endTurnButton = document.getElementById('end-turn-button');
+        const buyPropertyButton = document.getElementById('buy-property-button');
+        const buyPropertyPriceSpan = document.getElementById('buy-property-price');
+        const developPropertyButton = document.getElementById('develop-property-button');
+        const diceFace1Elem = document.getElementById('die-face-1');
+        const diceFace2Elem = document.getElementById('die-face-2');
+        const diceTotalDisplayText = document.getElementById('dice-total-display-text');
+        const currentTurnDisplay = document.getElementById('current-turn-display');
+        const cardDisplayContainer = document.getElementById('card-display-container');
+        const cardTypeTitle = document.getElementById('card-type-title');
+        const cardMessageP = document.getElementById('card-message');
+        const cardOkButton = document.getElementById('card-ok-button');
+        const detentionActionsDiv = document.getElementById('detention-actions');
+        const gameStatusMessageP = document.getElementById('game-status-message');
+        const preGameRollArea = document.getElementById('pre-game-roll-area');
+        const preGameRollButton = document.getElementById('pre-game-roll-button');
+        const preGameRollResultsDiv = document.getElementById('pre-game-roll-results');
+        const developPropertyContainer = document.getElementById('develop-property-container');
+        const developPropertyNameH3 = document.getElementById('develop-property-name');
+        const developPropertyOptionsDiv = document.getElementById('develop-property-options');
+        const closeDevelopButton = document.getElementById('close-develop-button');
+        const otherActionsContainer = document.getElementById('other-actions-container');
+        const ukGovCashSpan = document.getElementById('uk-gov-cash');
+        let onBoardCardDisplayDiv, onBoardCardTypeH4, onBoardCardTextP; 
+
+        const messageModal = document.getElementById('message-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalOkButton = document.getElementById('modal-ok-button');
+
+        // --- Game Data Definitions ---
+        let initialBoardLayout = [
+            { id: 0, name: "Dole", type: "go" },
+            { id: 1, name: "Tent in Field 1", type: "property", price: 60, rent: [4, 10, 20, 40, 80], color: "brown", groupId: "brown" },
+            { id: 2, name: "Welfare Card", type: "welfare" },
+            { id: 3, name: "Tent in Field 2", type: "property", price: 80, rent: [8, 10, 20, 40, 80], color: "brown", groupId: "brown" },
+            { id: 4, name: "Black Market Sales", type: "set_property", price: 200, rent_base: 200, groupId: "special_set" },
+            { id: 5, name: "Fake PIP declined", type: "tax", amount: 100 },
+            { id: 6, name: "Tesco Cardboard Skip 1", type: "property", price: 100, rent: [6, 15, 30, 60, 120], color: "light-blue", groupId: "lightblue" },
+            { id: 7, name: "Tesco Cardboard Skip 2", type: "property", price: 120, rent: [8, 15, 30, 60, 120], color: "light-blue", groupId: "lightblue" },
+            { id: 8, name: "Detention Center", type: "detention_visiting" },
+            { id: 9, name: "Payout: Job Seeker's", type: "payout", amount: 100 },
+            { id: 10, name: "Tesco Cardboard Skip 3", type: "property", price: 140, rent: [10, 15, 30, 60, 120], color: "light-blue", groupId: "lightblue" },
+            { id: 11, name: "Council Highrise 1", type: "property", price: 160, rent: [12, 25, 50, 100, 200], color: "pink", groupId: "pink" },
+            { id: 12, name: "Forced Marriage", type: "set_property", price: 200, rent_base: 200, groupId: "special_set" },
+            { id: 13, name: "Welfare Card", type: "welfare" },
+            { id: 14, name: "Council Highrise 2", type: "property", price: 180, rent: [14, 25, 50, 100, 200], color: "pink", groupId: "pink" },
+            { id: 15, name: "Council Highrise 3", type: "property", price: 200, rent: [16, 25, 50, 100, 200], color: "pink", groupId: "pink" },
+            { id: 16, name: "Crime Spree !!! Arrest", type: "crime_spree", amount: 200 },
+            { id: 17, name: "Gypsy Estate 1", type: "property", price: 220, rent: [18, 35, 70, 140, 280], color: "orange", groupId: "orange" },
+            { id: 18, name: "Opportunity Card", type: "opportunity" },
+            { id: 19, name: "Gypsy Estate 2", type: "property", price: 240, rent: [20, 35, 70, 140, 280], color: "orange", groupId: "orange" },
+            { id: 20, name: "Child Wives", type: "set_property", price: 200, rent_base: 200, groupId: "special_set" },
+            { id: 21, name: "Fake ID Cards", type: "tax", amount: 100 },
+            { id: 22, name: "Gypsy Estate 3", type: "property", price: 260, rent: [22, 35, 70, 140, 280], color: "orange", groupId: "orange" },
+            { id: 23, name: "Holiday Inn 1", type: "property", price: 280, rent: [24, 45, 90, 180, 360], color: "red", groupId: "red" },
+            { id: 24, name: "Go to Detention Center", type: "go_to_detention" },
+            { id: 25, name: "Welfare Card", type: "welfare" },
+            { id: 26, name: "Holiday Inn 2", type: "property", price: 300, rent: [26, 45, 90, 180, 360], color: "red", groupId: "red" },
+            { id: 27, name: "Holiday Inn 3", type: "property", price: 320, rent: [28, 45, 90, 180, 360], color: "red", groupId: "red" },
+            { id: 28, name: "I Dont speak English", type: "set_property", price: 200, rent_base: 200, groupId: "special_set" },
+            { id: 29, name: "Luxury Flat 1", type: "property", price: 350, rent: [30, 60, 120, 240, 480], color: "green", groupId: "green" },
+            { id: 30, name: "Opportunity Card", type: "opportunity" },
+            { id: 31, name: "Luxury Flat 2", type: "property", price: 400, rent: [35, 60, 120, 240, 480], color: "green", groupId: "green" },
+        ];
+        let boardLayout = []; 
+        let detentionCenterSpaceId;
+        const TENANCY_COST = 50;
+        const PR_COST = 150;
+        const MAX_TENANCIES = 3;
+
+        const welfareCards = [
+            { text: "Child Benefit: Collect £100.", action: "collect", amount: 100 },
+            { text: "Free Health Service: Gain a health service (worth £100).", action: "gainHealthService" },
+            { text: "Council House Grant: Collect £150.", action: "collect", amount: 150 },
+            { text: "Social Worker Fee: Pay £50.", action: "pay", amount: 50 },
+            { text: "Food Voucher: Collect £75.", action: "collect", amount: 75 },
+            { text: "Education Grant: Collect £120.", action: "collect", amount: 120 },
+            { text: "Housing Inspection: Pay £20 per tenancy owned.", action: "payPerTenancy", amountPer: 20 },
+            { text: "Utility Subsidy: Collect £80.", action: "collect", amount: 80 },
+            { text: "Legal Aid: Get out of Detention Center free.", action: "getOutOfDetentionFree" },
+            { text: "Emergency bowels: Collect £100.", action: "collect", amount: 100 },
+            { text: "Tax Audit: Pay £60.", action: "pay", amount: 60 },
+            { text: "Welfare Review: Move to nearest Payout Space.", action: "moveToNearestPayout" }
+        ];
+        const opportunityCards = [
+            { text: "Work Permit Granted: Collect £150.", action: "collect", amount: 150 },
+            { text: "Language Subsidy: Collect £50.", action: "collect", amount: 50 },
+            { text: "Community Grant: Collect £100.", action: "collect", amount: 100 },
+            { text: "Deportation Threat: Go to Detention Center.", action: "goToDetentionDirect" },
+            { text: "Legal Homosexuals: Get out of Detention Center free.", action: "getOutOfDetentionFree" },
+            { text: "Job Offer: Collect £120.", action: "collect", amount: 120 },
+            { text: "Housing Voucher: Next estate purchase is 25% off.", action: "housingVoucher" },
+            { text: "Free Health Service: Gain a health service (worth £100).", action: "gainHealthService" },
+            { text: "Bank Manager Shat His Load: Pay £50 to the bank.", action: "pay", amount: 50 },
+            { text: "Tax Refund: Collect £75.", action: "collect", amount: 75 },
+            { text: "Dogs Had An Abortion: Collect £40 from each player.", action: "collectFromPlayers", amount: 40 },
+            { text: "Advance to Go: Collect £200.", action: "advanceToGo" }
+        ];
+        const playerEmojis = ['🐕‍🦺', '🐈', '🐘', '🐅', '🐒', '🦊']; 
+        const playerColors = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#1abc9c']; 
+
+        let toneSynth;
+        let audioContextStarted = false;
+        let currentCardBeingExecuted = null; 
+        let lastRollWasDoublesGlobal = false; 
+
+        // --- Utility Functions ---
+        function logEvent(message) {
+            console.log(`[Game Log] ${new Date().toLocaleTimeString()}: ${message}`);
+        }
+
+        function showMessageModal(title, message) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            messageModal.style.display = 'flex';
+        }
+        modalOkButton.onclick = () => {
+            messageModal.style.display = 'none';
+        };
+
+        function generateGameId() {
+            return Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+
+        function reformatBoardLayout() { 
+            const newBoardLocations = [
+                { name: "Boat Sank After Renting", type: "set_property", price: 100, rent_base: 100, groupId: "special_set" },
+                { name: "People Trafficking", type: "set_property", price: 100, rent_base: 100, groupId: "special_set" },
+                { name: "More than 15 children", type: "set_property", price: 100, rent_base: 100, groupId: "special_set" },
+                { name: "Crypto Scam from Iqbhal", type: "set_property", price: 100, rent_base: 100, groupId: "special_set" }
+            ];
+            let tempBoard = [];
+            tempBoard.push(initialBoardLayout.find(s => s.id === 0)); 
+            const welfareCardOriginalSide1 = initialBoardLayout.find(s => s.id === 2);
+            const boatSankProperty = newBoardLocations[0];
+            tempBoard.push(initialBoardLayout.find(s => s.id === 1));
+            tempBoard.push(boatSankProperty);
+            tempBoard.push(initialBoardLayout.find(s => s.id === 3));
+            tempBoard.push(initialBoardLayout.find(s => s.id === 4));
+            tempBoard.push(welfareCardOriginalSide1);
+            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 5 && s.id <= 7));
+            tempBoard.push(initialBoardLayout.find(s => s.id === 8)); 
+            const peopleTraffickingProperty = newBoardLocations[1];
+            const payoutJobSeekersOriginal = initialBoardLayout.find(s => s.id === 9);
+            tempBoard.push(peopleTraffickingProperty);
+            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 10 && s.id <= 12));
+            tempBoard.push(payoutJobSeekersOriginal);
+            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 13 && s.id <= 15));
+            tempBoard.push(initialBoardLayout.find(s => s.id === 16)); 
+            const moreThan15ChildrenProperty = newBoardLocations[2];
+            const opportunityCardSide3Original = initialBoardLayout.find(s => s.id === 18);
+            tempBoard.push(initialBoardLayout.find(s => s.id === 17));
+            tempBoard.push(moreThan15ChildrenProperty);
+            tempBoard.push(initialBoardLayout.find(s => s.id === 19));
+            tempBoard.push(initialBoardLayout.find(s => s.id === 20));
+            tempBoard.push(opportunityCardSide3Original);
+            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 21 && s.id <= 23));
+            tempBoard.push(initialBoardLayout.find(s => s.id === 24)); 
+            const cryptoScamProperty = newBoardLocations[3];
+            const opportunityCardSide4Original = initialBoardLayout.find(s => s.id === 30);
+            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 25 && s.id <= 28));
+            tempBoard.push(opportunityCardSide4Original);
+            tempBoard.push(initialBoardLayout.find(s => s.id === 29));
+            tempBoard.push(cryptoScamProperty);
+            tempBoard.push(initialBoardLayout.find(s => s.id === 31));
+            boardLayout = tempBoard.map((space, index) => ({ ...space, id: index }));
+            const dcSpace = boardLayout.find(s => s.name === "Detention Center");
+            detentionCenterSpaceId = dcSpace ? dcSpace.id : (boardLayout.find(s => s.type === "detention_visiting")?.id || 8) ;
+        }
+
+
+        // --- Firebase Setup ---
+        async function initializeFirebase() {
+            // firebaseConfigToUse is already defined at the top of the script block
+            if (!firebaseConfigToUse) { // Should ideally check firebaseConfigToUse.apiKey or projectId
+                onlineSetupMessage.textContent = "Firebase configuration is missing. Cannot connect to online services.";
+                console.error("Firebase config is not available.");
+                createGameButton.disabled = true;
+                joinGameButton.disabled = true;
+                return;
+            }
+            try {
+                const app = initializeApp(firebaseConfigToUse); // Use the resolved config
+                db = getFirestore(app);
+                auth = getAuth(app);
+                // setLogLevel('debug'); 
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        currentUserId = user.uid;
+                        localUserIdSpan.textContent = currentUserId;
+                        logEvent(`Authenticated as: ${currentUserId}`);
+                        onlineSetupMessage.textContent = "Connected. Ready to create or join a game.";
+                        createGameButton.disabled = false;
+                        joinGameButton.disabled = false;
+                    } else {
+                        currentUserId = null;
+                        localUserIdSpan.textContent = "Not Signed In";
+                        logEvent("User is signed out or authentication failed.");
+                        
+                        if (initialAuthToken) {
+                            try {
+                                await signInWithCustomToken(auth, initialAuthToken);
+                                logEvent("Signed in with custom token.");
+                            } catch (error) {
+                                console.error("Custom token sign-in error:", error);
+                                logEvent("Custom token sign-in failed, trying anonymous.");
+                                await signInAnonymously(auth);
+                            }
+                        } else {
+                            logEvent("No custom token, trying anonymous sign-in.");
+                            await signInAnonymously(auth);
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error("Firebase initialization error:", error);
+                onlineSetupMessage.textContent = "Error connecting to Firebase: " + error.message;
+                createGameButton.disabled = true;
+                joinGameButton.disabled = true;
+            }
+        }
+
+        // --- Game Management Functions (Create, Join, Sync) ---
+        async function handleCreateGame() {
+            if (!currentUserId) {
+                showMessageModal("Error", "You are not authenticated. Please wait or refresh.");
+                return;
+            }
+            localPlayerName = playerNameInput.value.trim() || `Player ${currentUserId.substring(0,4)}`;
+            if (!localPlayerName) {
+                showMessageModal("Input Needed", "Please enter your player name.");
+                return;
+            }
+
+            const newGameId = generateGameId();
+            currentGameId = newGameId; 
+            const numPlayers = parseInt(numPlayersOnlineSelect.value);
+
+            const gameDocRef = doc(db, `artifacts/${appIdentifier}/public/data/games`, newGameId);
+
+            reformatBoardLayout(); 
+
+            const initialPropertyDataForFirestore = JSON.parse(JSON.stringify(boardLayout))
+                .filter(s => s.type === 'property' || s.type === 'set_property')
+                .map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    owner: null, 
+                    tenancies: 0,
+                    permanentResidence: false,
+                }));
+
+
+            const initialPlayerData = {
+                id: currentUserId, 
+                name: localPlayerName,
+                money: 2000,
+                position: 0,
+                properties: [], 
+                healthServices: 0,
+                getOutOfDetentionCards: 0,
+                inDetention: false,
+                missedTurnsInDetention: 0,
+                hasHousingVoucher: false,
+                isBankrupt: false,
+                playerActionTakenThisTurn: false, 
+                doublesRolledInTurn: 0, 
+                order: 0, 
+                govReceived: 0,
+                isAI: false 
+            };
+
+            const initialGameState = {
+                gameId: newGameId,
+                status: "waiting", 
+                hostId: currentUserId,
+                maxPlayers: numPlayers,
+                players: { [currentUserId]: initialPlayerData }, 
+                playerOrder: [currentUserId], 
+                currentPlayerIndex: 0, 
+                boardLayout: boardLayout, 
+                propertyData: initialPropertyDataForFirestore, 
+                bankMoney: 15000,
+                ukGovMoney: 20000,
+                shuffledWelfareCards: shuffleDeck([...welfareCards]), 
+                shuffledOpportunityCards: shuffleDeck([...opportunityCards]),
+                welfareCardIndex: 0, 
+                opportunityCardIndex: 0,
+                lastDiceRoll: null, 
+                lastActionMessage: `${localPlayerName} created the game. Waiting for players...`,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+                preGameRolls: {}, 
+                preGamePlayersRolled: [], 
+                preGamePhase: true, 
+            };
+
+            try {
+                await setDoc(gameDocRef, initialGameState);
+                logEvent(`Game ${newGameId} created by ${localPlayerName}.`);
+                onlineSetupMessage.textContent = `Game created! ID: ${newGameId}. Waiting for players...`;
+                generatedGameIdSpan.textContent = newGameId;
+                gameIdDisplayDiv.style.display = 'block';
+                subscribeToGameState(newGameId);
+            } catch (error) {
+                console.error("Error creating game:", error);
+                showMessageModal("Error", "Could not create game: " + error.message);
+                onlineSetupMessage.textContent = "Failed to create game. " + error.message;
+            }
+        }
+
+        async function handleJoinGame() {
+            if (!currentUserId) {
+                showMessageModal("Error", "You are not authenticated. Please wait or refresh.");
+                return;
+            }
+            localPlayerName = playerNameInput.value.trim() || `Player ${currentUserId.substring(0,4)}`;
+            if (!localPlayerName) {
+                showMessageModal("Input Needed", "Please enter your player name.");
+                return;
+            }
+
+            const gameIdToJoin = gameIdInput.value.trim().toUpperCase();
+            if (!gameIdToJoin) {
+                showMessageModal("Input Needed", "Please enter a Game ID to join.");
+                return;
+            }
+
+            const gameDocRef = doc(db, `artifacts/${appIdentifier}/public/data/games`, gameIdToJoin);
+
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const gameDoc = await transaction.get(gameDocRef);
+                    if (!gameDoc.exists()) {
+                        throw new Error("Game not found.");
+                    }
+
+                    const gameData = gameDoc.data();
+                    if (Object.keys(gameData.players).length >= gameData.maxPlayers) {
+                        if (!gameData.players[currentUserId]) { 
+                             throw new Error("Game is full.");
+                        } else {
+                            logEvent("Already part of this game. Rejoining...");
+                        }
+                    }
+                    
+                    if (!gameData.players[currentUserId]) { 
+                        const newPlayerOrderIndex = gameData.playerOrder.length;
+                        const newPlayerData = {
+                            id: currentUserId,
+                            name: localPlayerName,
+                            money: 2000,
+                            position: 0,
+                            properties: [],
+                            healthServices: 0,
+                            getOutOfDetentionCards: 0,
+                            inDetention: false,
+                            missedTurnsInDetention: 0,
+                            hasHousingVoucher: false,
+                            isBankrupt: false,
+                            playerActionTakenThisTurn: false,
+                            doublesRolledInTurn: 0,
+                            order: newPlayerOrderIndex,
+                            govReceived: 0,
+                            isAI: false
+                        };
+
+                        const updates = {};
+                        updates[`players.${currentUserId}`] = newPlayerData;
+                        updates.playerOrder = arrayUnion(currentUserId);
+                        updates.lastActionMessage = `${localPlayerName} joined the game.`;
+                        updates.updatedAt = serverTimestamp();
+                        transaction.update(gameDocRef, updates);
+                        logEvent(`${localPlayerName} joining game ${gameIdToJoin}. Player order index: ${newPlayerOrderIndex}`);
+                    }
+                });
+
+                currentGameId = gameIdToJoin;
+                onlineSetupMessage.textContent = `Joined game ${gameIdToJoin}! Waiting for game to start...`;
+                subscribeToGameState(gameIdToJoin);
+
+            } catch (error) {
+                console.error("Error joining game:", error);
+                showMessageModal("Error", "Could not join game: " + error.message);
+                onlineSetupMessage.textContent = "Failed to join game. " + error.message;
+            }
+        }
+
+        function subscribeToGameState(gameId) {
+            if (unsubscribeGameState) {
+                unsubscribeGameState(); 
+            }
+            const gameDocRef = doc(db, `artifacts/${appIdentifier}/public/data/games`, gameId);
+            unsubscribeGameState = onSnapshot(gameDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    localGameData = docSnap.data();
+                    logEvent("Game state updated from Firestore:", localGameData.lastActionMessage);
+                    updateLocalUIFromFirestore(localGameData);
+                    if (localGameData.status === "active" && onlineSetupScreen.style.display !== 'none') {
+                        onlineSetupScreen.style.display = 'none';
+                        gameContainer.style.display = 'flex';
+                    }
+                } else {
+                    logEvent(`Game ${gameId} no longer exists or access denied.`);
+                    showMessageModal("Game Ended", "The game session has ended or is no longer available.");
+                    if (unsubscribeGameState) unsubscribeGameState();
+                    resetToSetupScreen();
+                }
+            }, (error) => {
+                console.error("Error listening to game state:", error);
+                showMessageModal("Connection Error", "Lost connection to the game: " + error.message);
+                if (unsubscribeGameState) unsubscribeGameState();
+                resetToSetupScreen();
+            });
+        }
+        
+        function resetToSetupScreen() {
+            onlineSetupScreen.style.display = 'flex';
+            gameContainer.style.display = 'none';
+            currentGameId = null;
+            localGameData = {};
+            if (unsubscribeGameState) {
+                unsubscribeGameState();
+                unsubscribeGameState = null;
+            }
+            onlineSetupMessage.textContent = "Ready to create or join a new game.";
+            gameIdDisplayDiv.style.display = 'none';
+            generatedGameIdSpan.textContent = '';
+            gameIdInput.value = '';
+        }
+
+        // --- UI Update Functions (Driven by Firestore) ---
+        function updateLocalUIFromFirestore(gameData) {
+            if (!gameData || Object.keys(gameData).length === 0) {
+                logEvent("UpdateLocalUI: No game data received.");
+                return;
+            }
+            if (gameData.boardLayout && gameData.boardLayout.length > 0 && boardLayout.length === 0) {
+                 boardLayout = gameData.boardLayout; 
+                 const dcSpace = boardLayout.find(s => s.name === "Detention Center");
+                 detentionCenterSpaceId = dcSpace ? dcSpace.id : (boardLayout.find(s => s.type === "detention_visiting")?.id || 8);
+                 setupBoardFromFirestore(gameData); 
+            } else if (boardLayout.length > 0) {
+                 updateBoardDynamicElements(gameData);
+            }
+
+
+            updatePlayerInfoPanel(gameData);
+            updateGameStatusPanel(gameData);
+            updateControlsBasedOnTurn(gameData);
+            updateUkGovDisplay(gameData.ukGovMoney);
+
+            if (gameData.status === "finished") {
+                handleGameEndUI(gameData);
+            } else if (gameData.status === "waiting" && Object.keys(gameData.players).length === gameData.maxPlayers && gameData.hostId === currentUserId && gameData.preGamePhase) {
+                if (!gameData.preGameRolls || Object.keys(gameData.preGameRolls).length === 0) {
+                    gameStatusMessageP.textContent = "All players joined! Starting pre-game rolls...";
+                }
+            }
+            if (gameData.preGamePhase) {
+                updatePreGameRollUI(gameData);
+            } else {
+                preGameRollArea.style.display = 'none';
+            }
+        }
+        
+        function setupBoardFromFirestore(gameData) {
+            boardContainer.innerHTML = ''; 
+            const dcSpace = gameData.boardLayout.find(s => s.name === "Detention Center");
+            detentionCenterSpaceId = dcSpace ? dcSpace.id : (gameData.boardLayout.find(s => s.type === "detention_visiting")?.id || 8) ;
+
+            const cardDecksCenter = document.createElement('div');
+            cardDecksCenter.id = 'card-decks-center';
+            cardDecksCenter.innerHTML = `
+                <div class="card-deck opportunity">Opportunity</div>
+                <div class="card-deck welfare">Welfare</div>
+            `;
+            boardContainer.appendChild(cardDecksCenter);
+
+            const onBoardCardDiv = document.createElement('div');
+            onBoardCardDiv.id = 'on-board-card-display'; 
+            onBoardCardDiv.style.display = 'none';
+            onBoardCardDiv.innerHTML = `
+                <h4 id="on-board-card-type"></h4>
+                <p id="on-board-card-text"></p>
+            `;
+            boardContainer.appendChild(onBoardCardDiv);
+            onBoardCardDisplayDiv = onBoardCardDiv; 
+            onBoardCardTypeH4 = document.getElementById('on-board-card-type');
+            onBoardCardTextP = document.getElementById('on-board-card-text');
+
+
+            gameData.boardLayout.forEach((s) => {
+                const spaceDiv = document.createElement('div');
+                spaceDiv.id = `space-${s.id}`;
+                spaceDiv.classList.add('space');
+                if (s.type === 'go' || s.type === 'detention_visiting' || s.type === 'go_to_detention' || s.type === 'crime_spree') {
+                    spaceDiv.classList.add('corner');
+                }
+                if (['Fake PIP declined', 'Fake ID Cards', "Payout: Job Seeker's"].includes(s.name)) {
+                    spaceDiv.classList.add('yellow-boardname');
+                }
+                if (s.name === "Dole" && s.type === "go"){
+                     spaceDiv.classList.add('dole-space');
+                     const doleSign = document.createElement('div');
+                     doleSign.classList.add('dole-sign');
+                     doleSign.textContent = '$';
+                     spaceDiv.appendChild(doleSign);
+                }
+                if (s.name === 'Detention Center') {
+                    const bars = document.createElement('div'); bars.className = 'detention-bars';
+                    for (let b = 0; b < 6; b++) { const bar = document.createElement('div'); bar.className = 'detention-bar'; bars.appendChild(bar); }
+                    spaceDiv.appendChild(bars);
+                }
+                if (s.name === 'Go to Detention Center') {
+                    const arrow = document.createElement('div'); arrow.className = 'detention-arrow'; arrow.textContent = '→'; spaceDiv.appendChild(arrow);
+                    const subLabel = document.createElement('div'); subLabel.className = 'sub-label'; subLabel.textContent = 'DO NOT PASS GO'; spaceDiv.appendChild(subLabel);
+                }
+                if (s.type === 'property') {
+                    spaceDiv.classList.add('property', s.color || s.groupId);
+                    const colorBar = document.createElement('div'); colorBar.classList.add('color-bar'); spaceDiv.appendChild(colorBar);
+                } else if (s.type === 'set_property') {
+                    spaceDiv.classList.add('set-property');
+                }
+                const nameDiv = document.createElement('div'); nameDiv.classList.add('name');
+                if (s.name === 'Detention Center') nameDiv.classList.add('detention-center-name');
+                nameDiv.textContent = s.name; spaceDiv.appendChild(nameDiv);
+
+                if (s.type === 'property' && s.rent) { 
+                    const devIndicator = document.createElement('div');
+                    devIndicator.classList.add('development-indicator');
+                    devIndicator.id = `dev-indicator-${s.id}`;
+                    spaceDiv.appendChild(devIndicator);
+                }
+                if (s.price) {
+                    const priceDiv = document.createElement('div'); priceDiv.classList.add('price');
+                    priceDiv.textContent = `£${s.price}`; spaceDiv.appendChild(priceDiv);
+                }
+                if (s.type === 'property' || s.type === 'set_property') { 
+                    const ownerIndicator = document.createElement('div');
+                    ownerIndicator.classList.add('owner-indicator');
+                    ownerIndicator.id = `owner-indicator-${s.id}`;
+                    spaceDiv.appendChild(ownerIndicator);
+                }
+                
+                const currentId = s.id;
+                if (currentId === 0) { spaceDiv.style.gridArea = `1 / 1`; }
+                else if (currentId >= 1 && currentId <= 8) { spaceDiv.style.gridArea = `1 / ${currentId + 1}`; }
+                else if (currentId === 9) { spaceDiv.style.gridArea = `1 / 10`; }
+                else if (currentId >= 10 && currentId <= 17) { spaceDiv.style.gridArea = `${(currentId - 9) + 1} / 10`; }
+                else if (currentId === 18) { spaceDiv.style.gridArea = `10 / 10`; }
+                else if (currentId >= 19 && currentId <= 26) { spaceDiv.style.gridArea = `10 / ${10 - (currentId - 18)}`; }
+                else if (currentId === 27) { spaceDiv.style.gridArea = `10 / 1`; }
+                else if (currentId >= 28 && currentId <= 35) { spaceDiv.style.gridArea = `${10 - (currentId - 27)} / 1`; } 
+                boardContainer.appendChild(spaceDiv);
+            });
+
+            Object.values(gameData.players).forEach(player => {
+                const token = document.createElement('div');
+                token.id = `player-token-${player.id}`; 
+                token.classList.add('player-token');
+                token.textContent = playerEmojis[player.order % playerEmojis.length];
+                const playerTokenColor = playerColors[player.order % playerColors.length];
+                token.style.color = playerTokenColor;
+                token.style.filter = `drop-shadow(0 0 3px ${playerTokenColor})`;
+                
+                const startSpace = document.getElementById('space-0');
+                if (startSpace) startSpace.appendChild(token);
+            });
+            updateBoardDynamicElements(gameData); 
+        }
+
+        function updateBoardDynamicElements(gameData) {
+            Object.values(gameData.players).forEach(player => {
+                const token = document.getElementById(`player-token-${player.id}`);
+                if (token) {
+                    if (player.isBankrupt) {
+                        token.style.display = 'none';
+                    } else {
+                        token.style.display = 'block';
+                        const currentSpaceEl = document.getElementById(`space-${player.position}`);
+                        if (currentSpaceEl) {
+                            currentSpaceEl.appendChild(token); 
+                        }
+                    }
+                }
+            });
+
+            gameData.propertyData.forEach(propInPropertyData => {
+                const ownerIndicator = document.getElementById(`owner-indicator-${propInPropertyData.id}`);
+                if (ownerIndicator) {
+                    if (propInPropertyData.owner && gameData.players[propInPropertyData.owner] && !gameData.players[propInPropertyData.owner].isBankrupt) {
+                        const ownerData = gameData.players[propInPropertyData.owner];
+                        const ownerColor = playerColors[ownerData.order % playerColors.length];
+                        ownerIndicator.style.backgroundColor = ownerColor;
+                    } else {
+                        ownerIndicator.style.backgroundColor = 'transparent';
+                    }
+                }
+                const boardSpaceDetails = gameData.boardLayout.find(s => s.id === propInPropertyData.id);
+                if (boardSpaceDetails && boardSpaceDetails.type === 'property') {
+                    const devIndicator = document.getElementById(`dev-indicator-${propInPropertyData.id}`);
+                    if (devIndicator) {
+                        if (propInPropertyData.permanentResidence) {
+                            devIndicator.textContent = "🏢";
+                        } else if (propInPropertyData.tenancies > 0) {
+                            devIndicator.textContent = "🏠".repeat(propInPropertyData.tenancies);
+                        } else {
+                            devIndicator.textContent = "";
+                        }
+                    }
+                }
+            });
+        }
+
+        function updatePlayerInfoPanel(gameData) {
+            playerInfoDiv.innerHTML = '';
+            gameData.playerOrder.forEach(playerId => {
+                const p = gameData.players[playerId];
+                if (!p) return;
+
+                const playerColor = playerColors[p.order % playerColors.length];
+                const pDiv = document.createElement('div');
+                if (p.isBankrupt) {
+                    pDiv.innerHTML = `<b style="color:${playerColor};">${p.name}</b>: BANKRUPT`;
+                    pDiv.style.textDecoration = 'line-through';
+                    pDiv.style.opacity = '0.6';
+                } else {
+                    pDiv.innerHTML = `<b style="color:${playerColor};">${p.name}</b>: <span style='font-weight:bold;'>£${p.money}</span> | HS: ${p.healthServices} | LegalAids: ${p.getOutOfDetentionCards}`;
+                    if (p.inDetention) pDiv.innerHTML += ` (In Detention - ${p.missedTurnsInDetention} missed)`;
+                    pDiv.innerHTML += `<br><span style='font-size:12px;color:#f7ca18;'>From UK Gov: £${p.govReceived || 0}</span>`;
+                }
+                if (gameData.playerOrder[gameData.currentPlayerIndex] === p.id && !p.isBankrupt && gameData.status === "active") {
+                    pDiv.style.border = `2px solid ${playerColor}`;
+                    pDiv.style.padding = "3px";
+                    pDiv.style.borderRadius = "4px";
+                }
+                playerInfoDiv.appendChild(pDiv);
+            });
+        }
+        
+        function updateGameStatusPanel(gameData) {
+            if (gameData.status === "waiting") {
+                const joined = Object.keys(gameData.players).length;
+                gameStatusMessageP.textContent = `Waiting for players... (${joined}/${gameData.maxPlayers} joined)`;
+            } else if (gameData.status === "active") {
+                 if (gameData.preGamePhase) {
+                    gameStatusMessageP.textContent = "Pre-game: Determine starting player.";
+                } else {
+                    gameStatusMessageP.textContent = gameData.lastActionMessage || "Game in progress...";
+                }
+            } else if (gameData.status === "finished") {
+                gameStatusMessageP.textContent = gameData.lastActionMessage || "Game Over!";
+            }
+
+            const currentPlayerInOrder = gameData.players[gameData.playerOrder[gameData.currentPlayerIndex]];
+            if (currentPlayerInOrder && !currentPlayerInOrder.isBankrupt && gameData.status === "active") {
+                currentTurnDisplay.textContent = `Current Turn: ${currentPlayerInOrder.name}`;
+                currentTurnDisplay.style.color = playerColors[currentPlayerInOrder.order % playerColors.length];
+            } else if (gameData.status === "active") {
+                 currentTurnDisplay.textContent = "Turn Over";
+                 currentTurnDisplay.style.color = '#ecf0f1';
+            } else {
+                currentTurnDisplay.textContent = "Game Not Active";
+                currentTurnDisplay.style.color = '#ecf0f1';
+            }
+        }
+
+        function updateControlsBasedOnTurn(gameData) {
+            const isMyTurn = gameData.playerOrder[gameData.currentPlayerIndex] === currentUserId;
+            const amIBankrupt = gameData.players[currentUserId]?.isBankrupt;
+            const amIInDetention = gameData.players[currentUserId]?.inDetention;
+            const myPlayerActionTakenThisTurn = gameData.players[currentUserId]?.playerActionTakenThisTurn;
+
+            rollDiceButton.style.display = 'none';
+            endTurnButton.style.display = 'none';
+            buyPropertyButton.style.display = 'none';
+            developPropertyButton.style.display = 'none';
+            otherActionsContainer.style.display = 'none';
+            detentionActionsDiv.innerHTML = '';
+
+            if (gameData.status !== "active" || amIBankrupt || gameData.preGamePhase) {
+                return;
+            }
+
+            if (isMyTurn) {
+                const playerToken = document.getElementById(`player-token-${currentUserId}`);
+                if (playerToken && cardDisplayContainer.style.display === 'none' && developPropertyContainer.style.display === 'none' && (!onBoardCardDisplayDiv || onBoardCardDisplayDiv.style.display === 'none')) {
+                    playerToken.classList.add('token-flash');
+                } else if (playerToken) {
+                    playerToken.classList.remove('token-flash');
+                }
+
+
+                if (amIInDetention) {
+                    setupDetentionActionsUI(gameData.players[currentUserId], gameData);
+                    if (myPlayerActionTakenThisTurn) { 
+                        endTurnButton.style.display = 'block';
+                        endTurnButton.classList.add('main-action-button');
+                        otherActionsContainer.style.display = 'none'; 
+                        detentionActionsDiv.innerHTML = ''; 
+                    }
+                } else if (!myPlayerActionTakenThisTurn) {
+                    rollDiceButton.style.display = 'block';
+                    rollDiceButton.classList.add('main-action-button');
+                    rollDiceButton.disabled = false;
+                    otherActionsContainer.style.display = 'none'; 
+                } else {
+                    endTurnButton.style.display = 'block';
+                    endTurnButton.classList.add('main-action-button');
+                    otherActionsContainer.style.display = 'block';
+
+                    const currentSpace = gameData.boardLayout[gameData.players[currentUserId].position];
+                    const propData = gameData.propertyData.find(p => p.id === currentSpace.id);
+                    if (propData && (currentSpace.type === 'property' || currentSpace.type === 'set_property') && propData.owner === null) {
+                        let price = currentSpace.price;
+                         if (gameData.players[currentUserId].hasHousingVoucher && currentSpace.type === 'property') {
+                             price = Math.round(price * 0.75);
+                        }
+                        buyPropertyPriceSpan.textContent = price;
+                        if (gameData.players[currentUserId].money >= price) {
+                            buyPropertyButton.style.display = 'inline-block';
+                        }
+                    }
+                    if (canPlayerDevelopAnyProperty(gameData.players[currentUserId], gameData)) {
+                        developPropertyButton.style.display = 'inline-block';
+                    }
+                     if (buyPropertyButton.style.display === 'none' && developPropertyButton.style.display === 'none') {
+                        otherActionsContainer.style.display = 'none'; 
+                    }
+                }
+            } else { 
+                const playerToken = document.getElementById(`player-token-${currentUserId}`);
+                if(playerToken) playerToken.classList.remove('token-flash');
+            }
+        }
+        
+        function updatePreGameRollUI(gameData) {
+            if (!gameData.preGamePhase || gameData.status !== 'active') {
+                preGameRollArea.style.display = 'none';
+                return;
+            }
+            preGameRollArea.style.display = 'flex'; 
+            preGameRollResultsDiv.innerHTML = ''; 
+
+            let allRolled = gameData.playerOrder.length === Object.keys(gameData.preGameRolls).length && gameData.playerOrder.length > 0;
+
+            gameData.playerOrder.forEach(pid => {
+                const playerName = gameData.players[pid]?.name || 'Unknown Player';
+                if (gameData.preGameRolls[pid] !== undefined) {
+                    preGameRollResultsDiv.innerHTML += `${playerName} rolled: ${gameData.preGameRolls[pid]}<br>`;
+                } else {
+                    preGameRollResultsDiv.innerHTML += `${playerName} has not rolled yet.<br>`;
+                }
+            });
+            
+            const myPlayerOrderIndex = gameData.playerOrder.indexOf(currentUserId);
+            const currentPlayerToRollIndex = Object.keys(gameData.preGameRolls).length % gameData.playerOrder.length;
+            const currentPlayerToRollId = gameData.playerOrder[currentPlayerToRollIndex];
+
+
+            if (allRolled) {
+                preGameRollButton.style.display = 'none';
+                preGameRollResultsDiv.innerHTML += "All players rolled. Determining start order...";
+                if (currentUserId === gameData.hostId) {
+                }
+            } else if (currentPlayerToRollId === currentUserId && !gameData.preGameRolls[currentUserId]) {
+                preGameRollButton.style.display = 'block';
+                preGameRollButton.textContent = `Your turn, ${gameData.players[currentUserId].name}, Roll to Start`;
+                preGameRollButton.disabled = false;
+            } else if (gameData.players[currentPlayerToRollId]) {
+                preGameRollButton.style.display = 'block';
+                preGameRollButton.textContent = `Waiting for ${gameData.players[currentPlayerToRollId].name} to roll...`;
+                preGameRollButton.disabled = true;
+            } else {
+                 preGameRollButton.style.display = 'none'; 
+            }
+        }
+
+
+        function updateUkGovDisplay(govMoney) {
+            if (ukGovCashSpan) {
+                 ukGovCashSpan.textContent = govMoney !== undefined ? govMoney : (localGameData.ukGovMoney || 20000);
+            }
+        }
+
+        function handleGameEndUI(gameData) {
+            gameStatusMessageP.textContent = gameData.lastActionMessage || "Game Over!";
+            currentTurnDisplay.textContent = "Game Over!";
+            rollDiceButton.style.display = 'none';
+            endTurnButton.style.display = 'none';
+            buyPropertyButton.style.display = 'none';
+            developPropertyButton.style.display = 'none';
+            otherActionsContainer.style.display = 'block';
+            otherActionsContainer.innerHTML = '<button id="leave-game-button" style="background-color:#c0392b;">Back to Setup</button>';
+            document.getElementById('leave-game-button').onclick = () => {
+                if (unsubscribeGameState) unsubscribeGameState();
+                resetToSetupScreen();
+            };
+        }
+
+        async function handleRollDiceAction() {
+            if (!currentGameId || !localGameData || localGameData.playerOrder[localGameData.currentPlayerIndex] !== currentUserId) {
+                showMessageModal("Not your turn", "It's not your turn to roll the dice.");
+                return;
+            }
+            if (localGameData.players[currentUserId]?.playerActionTakenThisTurn && !localGameData.lastDiceRoll?.isDoubles) {
+                 showMessageModal("Action Taken", "You've already taken your main action for this roll.");
+                return;
+            }
+             if (localGameData.players[currentUserId]?.inDetention) {
+                 showMessageModal("In Detention", "You must handle detention actions first.");
+                return;
+            }
+
+            rollDiceButton.disabled = true;
+
+            const die1 = Math.floor(Math.random() * 6) + 1;
+            const die2 = Math.floor(Math.random() * 6) + 1;
+            const totalRoll = die1 + die2;
+            const isDoubles = die1 === die2;
+
+            const gameDocRef = doc(db, `artifacts/${appIdentifier}/public/data/games`, currentGameId);
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const freshGameDoc = await transaction.get(gameDocRef);
+                    if (!freshGameDoc.exists()) throw new Error("Game document not found during roll.");
+                    const freshGameData = freshGameDoc.data();
+                    
+                    const playerState = freshGameData.players[currentUserId];
+                    let newPosition = playerState.position;
+                    let messages = [];
+                    let updates = {};
+                    let newPlayerState = {...playerState}; 
+
+                    updates[`players.${currentUserId}.doublesRolledInTurn`] = isDoubles ? (playerState.doublesRolledInTurn || 0) + 1 : 0;
+                    
+                    if (isDoubles && updates[`players.${currentUserId}.doublesRolledInTurn`] === 3) {
+                        messages.push(`${playerState.name} rolled 3 doubles! Sent to Detention.`);
+                        newPosition = detentionCenterSpaceId; 
+                        updates[`players.${currentUserId}.position`] = newPosition;
+                        updates[`players.${currentUserId}.inDetention`] = true;
+                        updates[`players.${currentUserId}.missedTurnsInDetention`] = 0;
+                        updates[`players.${currentUserId}.playerActionTakenThisTurn`] = true; 
+                    } else {
+                        newPosition = (playerState.position + totalRoll) % freshGameData.boardLayout.length;
+                        updates[`players.${currentUserId}.position`] = newPosition;
+                        messages.push(`${playerState.name} rolled ${totalRoll} (${die1}, ${die2})${isDoubles ? " (Doubles!)" : ""}. Moved to ${freshGameData.boardLayout[newPosition].name}.`);
+
+                        if (newPosition < playerState.position && !playerState.inDetention) { 
+                            const goPayout = 400; 
+                            updates[`players.${currentUserId}.money`] = playerState.money + goPayout;
+                            updates.ukGovMoney = freshGameData.ukGovMoney - goPayout; 
+                            updates[`players.${currentUserId}.govReceived`] = (playerState.govReceived || 0) + goPayout;
+                            messages.push(`${playerState.name} passed Dole and collected £${goPayout}.`);
+                        }
+                        
+                        updates[`players.${currentUserId}.playerActionTakenThisTurn`] = !isDoubles;
+                    }
+                    
+                    updates.lastDiceRoll = { die1, die2, total: totalRoll, isDoubles };
+                    updates.lastActionMessage = messages.join(" ");
+                    updates.updatedAt = serverTimestamp();
+                    transaction.update(gameDocRef, updates);
+                });
+            } catch (error) {
+                console.error("Error during roll dice action:", error);
+                showMessageModal("Roll Error", "Could not process roll: " + error.message);
+                rollDiceButton.disabled = false; 
+            }
+        }
+        
+        async function handlePreGameRollAction() {
+            if (!currentGameId || !localGameData || !localGameData.preGamePhase) {
+                showMessageModal("Error", "Not in pre-game roll phase.");
+                return;
+            }
+            if (localGameData.preGameRolls[currentUserId] !== undefined) {
+                showMessageModal("Already Rolled", "You have already rolled for starting position.");
+                return;
+            }
+
+            preGameRollButton.disabled = true;
+            const roll = Math.floor(Math.random() * 6) + 1 + Math.floor(Math.random() * 6) + 1; 
+
+            const gameDocRef = doc(db, `artifacts/${appIdentifier}/public/data/games`, currentGameId);
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const freshGameDoc = await transaction.get(gameDocRef);
+                    if (!freshGameDoc.exists()) throw new Error("Game not found for pre-game roll.");
+                    const freshGameData = freshGameDoc.data();
+
+                    let updates = {};
+                    updates[`preGameRolls.${currentUserId}`] = roll;
+                    updates.preGamePlayersRolled = arrayUnion(currentUserId);
+                    updates.lastActionMessage = `${localGameData.players[currentUserId].name} rolled ${roll} for starting order.`;
+                    updates.updatedAt = serverTimestamp();
+
+                    const updatedPreGamePlayersRolled = [...(freshGameData.preGamePlayersRolled || []), currentUserId];
+                    const uniqueRolledPlayers = new Set(updatedPreGamePlayersRolled);
+
+                    if (uniqueRolledPlayers.size === freshGameData.playerOrder.length) {
+                        updates.lastActionMessage += " All players rolled. Determining start order...";
+                        if (currentUserId === freshGameData.hostId) {
+                            const sortedPlayerIds = [...freshGameData.playerOrder].sort((a, b) => {
+                                const rollA = freshGameData.preGameRolls[a] || roll; 
+                                const rollB = freshGameData.preGameRolls[b] || 0;
+                                return rollB - rollA;
+                            });
+                            updates.playerOrder = sortedPlayerIds;
+                            updates.currentPlayerIndex = 0; 
+                            updates.preGamePhase = false; 
+                            updates.status = "active"; 
+                            updates.lastActionMessage = `Starting order determined. ${freshGameData.players[sortedPlayerIds[0]].name} starts!`;
+                        }
+                    }
+                    transaction.update(gameDocRef, updates);
+                });
+            } catch (error) {
+                console.error("Error during pre-game roll:", error);
+                showMessageModal("Roll Error", "Could not process pre-game roll: " + error.message);
+                preGameRollButton.disabled = false;
+            }
+        }
+
+
+        // --- Event Listeners ---
+        createGameButton.onclick = handleCreateGame;
+        joinGameButton.onclick = handleJoinGame;
+        rollDiceButton.onclick = handleRollDiceAction; 
+        preGameRollButton.onclick = handlePreGameRollAction;
+        
+        generatedGameIdSpan.onclick = () => {
+            if (generatedGameIdSpan.textContent) {
+                // Fallback for execCommand
+                const textArea = document.createElement("textarea");
+                textArea.value = generatedGameIdSpan.textContent;
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showMessageModal("Copied!", "Game ID copied to clipboard.");
+                } catch (err) {
+                    showMessageModal("Copy Failed", "Could not copy Game ID automatically.");
+                }
+                document.body.removeChild(textArea);
+            }
+        };
+        
+        function shuffleDeck(deck) { 
+            return [...deck].sort(() => Math.random() - 0.5);
+        }
+
+        function canPlayerDevelopAnyProperty(playerState, gameData) {
+            if (!playerState || playerState.isBankrupt) return false;
+            return playerState.properties.some(propId => {
+                const propDetails = gameData.propertyData.find(p => p.id === propId);
+                const propLayout = gameData.boardLayout.find(s => s.id === propId);
+
+                if (!propDetails || !propLayout || propLayout.type !== 'property') return false;
+                if (propDetails.owner !== playerState.id || propDetails.permanentResidence) return false;
+
+                const groupPropertiesLayout = gameData.boardLayout.filter(s => s.groupId === propLayout.groupId && s.type === 'property');
+                const ownsAllInGroup = groupPropertiesLayout.every(gpLayout => {
+                    const gpData = gameData.propertyData.find(pd => pd.id === gpLayout.id);
+                    return gpData && gpData.owner === playerState.id;
+                });
+                if (!ownsAllInGroup) return false;
+                return (propDetails.tenancies < MAX_TENANCIES) || (propDetails.tenancies === MAX_TENANCIES && !propDetails.permanentResidence);
+            });
+        }
+        
+        function setupDetentionActionsUI(playerState, gameData) {
+            detentionActionsDiv.innerHTML = ''; 
+            if (!playerState || !playerState.inDetention) return;
+
+            if (playerState.getOutOfDetentionCards > 0) {
+                const useCardBtn = document.createElement('button');
+                useCardBtn.textContent = "Use Legal Aid Card";
+                useCardBtn.onclick = async () => { 
+                    const gameDocRef = doc(db, `artifacts/${appIdentifier}/public/data/games`, currentGameId);
+                    try {
+                        await updateDoc(gameDocRef, {
+                            [`players.${currentUserId}.getOutOfDetentionCards`]: playerState.getOutOfDetentionCards - 1,
+                            [`players.${currentUserId}.inDetention`]: false,
+                            [`players.${currentUserId}.missedTurnsInDetention`]: 0,
+                            [`players.${currentUserId}.playerActionTakenThisTurn`]: false, 
+                            lastActionMessage: `${playerState.name} used a Legal Aid card and is free.`,
+                            updatedAt: serverTimestamp()
+                        });
+                    } catch (e) { showMessageModal("Error", "Failed to use card: " + e.message); }
+                };
+                detentionActionsDiv.appendChild(useCardBtn);
+            }
+
+            const fineAmount = 50;
+            if (playerState.money >= fineAmount) {
+                const payFineBtn = document.createElement('button');
+                payFineBtn.textContent = `Pay £${fineAmount} Fine`;
+                payFineBtn.onclick = async () => { 
+                    const gameDocRef = doc(db, `artifacts/${appIdentifier}/public/data/games`, currentGameId);
+                     try {
+                        await updateDoc(gameDocRef, {
+                            [`players.${currentUserId}.money`]: playerState.money - fineAmount,
+                            [`players.${currentUserId}.inDetention`]: false,
+                            [`players.${currentUserId}.missedTurnsInDetention`]: 0,
+                            [`players.${currentUserId}.playerActionTakenThisTurn`]: false, 
+                            bankMoney: gameData.bankMoney + fineAmount,
+                            lastActionMessage: `${playerState.name} paid £${fineAmount} fine and is free.`,
+                            updatedAt: serverTimestamp()
+                        });
+                    } catch (e) { showMessageModal("Error", "Failed to pay fine: " + e.message); }
+                };
+                detentionActionsDiv.appendChild(payFineBtn);
+            }
+
+            const rollDoublesBtn = document.createElement('button');
+            rollDoublesBtn.textContent = "Roll for Doubles (1 Chance)";
+            rollDoublesBtn.onclick = async () => { 
+                const die1 = Math.floor(Math.random() * 6) + 1;
+                const die2 = Math.floor(Math.random() * 6) + 1;
+                const isDoubles = die1 === die2;
+                const totalRoll = die1 + die2;
+                
+                const gameDocRef = doc(db, `artifacts/${appIdentifier}/public/data/games`, currentGameId);
+                let updates = { updatedAt: serverTimestamp(), lastDiceRoll: {die1, die2, total: totalRoll, isDoubles} };
+                if (isDoubles) {
+                    updates[`players.${currentUserId}.inDetention`] = false;
+                    updates[`players.${currentUserId}.missedTurnsInDetention`] = 0;
+                    updates[`players.${currentUserId}.playerActionTakenThisTurn`] = false; 
+                    updates.lastActionMessage = `${playerState.name} rolled doubles and is free! Must roll again to move.`;
+                } else {
+                    updates[`players.${currentUserId}.playerActionTakenThisTurn`] = true; 
+                    updates.lastActionMessage = `${playerState.name} failed to roll doubles in detention.`;
+                }
+                 try {
+                    await updateDoc(gameDocRef, updates);
+                } catch (e) { showMessageModal("Error", "Failed to roll for doubles: " + e.message); }
+            };
+            detentionActionsDiv.appendChild(rollDoublesBtn);
+        }
+
+
+        // --- Initial Load ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            reformatBoardLayout(); 
+            await initializeFirebase();
+            const playerToken = document.getElementById(`player-token-${currentUserId}`);
+            if(playerToken) playerToken.classList.remove('token-flash');
+        });
+
+        document.body.addEventListener('click', async () => {
+            if (!audioContextStarted && typeof Tone !== 'undefined') {
+                try {
+                    await Tone.start();
+                    audioContextStarted = true;
+                    logEvent("AudioContext started by user interaction.");
+                } catch (e) { console.error("Error starting Tone.js AudioContext:", e); }
+            }
+        }, { once: true });
+
+    </script>
+  </div>
+</body>
+</html>
