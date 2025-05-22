@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Migrantopoly (Expanded Board)</title>
+    <title>Migrantopoly (Faster Turns)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <style>
         body { /* Dark blue-grey background */
@@ -56,11 +56,11 @@
 
         #board-container {
             display: grid;
-            grid-template-columns: 100px repeat(8, 70px) 100px; /* UPDATED from 7 to 8 */
-            grid-template-rows: 100px repeat(8, 70px) 100px;    /* UPDATED from 7 to 8 */
+            grid-template-columns: 100px repeat(8, 70px) 100px; 
+            grid-template-rows: 100px repeat(8, 70px) 100px;    
             border: 3px solid #7f8c8d; 
-            width: 760px;  /* UPDATED from 690px (690 + 70) */
-            height: 760px; /* UPDATED from 690px (690 + 70) */
+            width: 760px;  
+            height: 760px; 
             position: relative;
             background-color: rgba(52, 73, 94, 0.68); 
             border-radius: 10px;
@@ -634,7 +634,7 @@
             { id: 2, name: "Welfare Card", type: "welfare" },
             { id: 3, name: "Tent in Field 2", type: "property", price: 80, rent: [8, 10, 20, 40, 80], color: "brown", groupId: "brown" },
             { id: 4, name: "Black Market Sales", type: "set_property", price: 200, rent_base: 200, groupId: "special_set" },
-            { id: 5, name: "Fake PIP declined", type: "tax", amount: 100 },
+            { id: 5, name: "Fake PIP declined", type: "tax", amount: 100 }, 
             { id: 6, name: "Tesco Cardboard Skip 1", type: "property", price: 100, rent: [6, 15, 30, 60, 120], color: "light-blue", groupId: "lightblue" },
             { id: 7, name: "Tesco Cardboard Skip 2", type: "property", price: 120, rent: [8, 15, 30, 60, 120], color: "light-blue", groupId: "lightblue" },
             { id: 8, name: "Detention Center", type: "detention_visiting" },
@@ -663,49 +663,48 @@
             { id: 31, name: "Luxury Flat 2", type: "property", price: 400, rent: [35, 60, 120, 240, 480], color: "green", groupId: "green" },
         ];
 
-        let boardLayout = []; // This will be populated by reformatBoardLayout
+        let boardLayout = []; 
 
         function reformatBoardLayout() {
-            const newSpaces = [
-                { tempId: "new1", name: "Boat Sank After Renting", type: "set_property", price: 100, rent_base: 100, groupId: "special_set" },
-                { tempId: "new2", name: "People Trafficking", type: "set_property", price: 100, rent_base: 100, groupId: "special_set" },
-                { tempId: "new3", name: "More than 15 children", type: "set_property", price: 100, rent_base: 100, groupId: "special_set" },
-                { tempId: "new4", name: "Crypto Scam from Iqbhal", type: "set_property", price: 100, rent_base: 100, groupId: "special_set" }
+            const newBoardLocations = [
+                { name: "Boat Sank After Renting", type: "set_property", price: 100, rent_base: 100, groupId: "special_set" },
+                { name: "People Trafficking", type: "set_property", price: 100, rent_base: 100, groupId: "special_set" },
+                { name: "More than 15 children", type: "set_property", price: 100, rent_base: 100, groupId: "special_set" },
+                { name: "Crypto Scam from Iqbhal", type: "set_property", price: 100, rent_base: 100, groupId: "special_set" }
             ];
 
             let tempBoard = [];
             // Go
             tempBoard.push(initialBoardLayout.find(s => s.id === 0));
-            // Side 1 (original IDs 1-7) - 7 spaces
+            // Side 1: 3 original, new, 4 original
             tempBoard.push(...initialBoardLayout.filter(s => s.id >= 1 && s.id <= 3));
-            tempBoard.push(newSpaces.find(ns => ns.tempId === "new1")); // Insert new space
+            tempBoard.push(newBoardLocations[0]);
             tempBoard.push(...initialBoardLayout.filter(s => s.id >= 4 && s.id <= 7));
-            // Corner 1 (original ID 8)
+            // Corner 1
             tempBoard.push(initialBoardLayout.find(s => s.id === 8));
-            // Side 2 (original IDs 9-15) - 7 spaces
+            // Side 2: 3 original, new, 4 original
             tempBoard.push(...initialBoardLayout.filter(s => s.id >= 9 && s.id <= 11));
-            tempBoard.push(newSpaces.find(ns => ns.tempId === "new2")); // Insert new space
+            tempBoard.push(newBoardLocations[1]);
             tempBoard.push(...initialBoardLayout.filter(s => s.id >= 12 && s.id <= 15));
-            // Corner 2 (original ID 16)
+            // Corner 2
             tempBoard.push(initialBoardLayout.find(s => s.id === 16));
-            // Side 3 (original IDs 17-23) - 7 spaces
+             // Side 3: 3 original, new, 4 original
             tempBoard.push(...initialBoardLayout.filter(s => s.id >= 17 && s.id <= 19));
-            tempBoard.push(newSpaces.find(ns => ns.tempId === "new3")); // Insert new space
+            tempBoard.push(newBoardLocations[2]);
             tempBoard.push(...initialBoardLayout.filter(s => s.id >= 20 && s.id <= 23));
-            // Corner 3 (original ID 24)
+            // Corner 3
             tempBoard.push(initialBoardLayout.find(s => s.id === 24));
-            // Side 4 (original IDs 25-31) - 7 spaces
+            // Side 4: 3 original, new, 4 original
             tempBoard.push(...initialBoardLayout.filter(s => s.id >= 25 && s.id <= 27));
-            tempBoard.push(newSpaces.find(ns => ns.tempId === "new4")); // Insert new space
+            tempBoard.push(newBoardLocations[3]);
             tempBoard.push(...initialBoardLayout.filter(s => s.id >= 28 && s.id <= 31));
-
-            // Re-assign sequential IDs
+            
             boardLayout = tempBoard.map((space, index) => ({ ...space, id: index }));
         }
-        reformatBoardLayout(); // Call this once to set up the new boardLayout
+        reformatBoardLayout();
 
 
-        let detentionCenterSpaceId = boardLayout.find(s => s.name === "Detention Center").id; // Recalculate after reformat
+        let detentionCenterSpaceId = boardLayout.find(s => s.name === "Detention Center").id; 
         const TENANCY_COST = 50;
         const PR_COST = 150;
         const MAX_TENANCIES = 3;
@@ -805,7 +804,7 @@
 
         function setupBoard() {
             boardContainer.innerHTML = ''; 
-            detentionCenterSpaceId = boardLayout.find(s => s.name === "Detention Center").id; // Ensure it's up-to-date
+            detentionCenterSpaceId = boardLayout.find(s => s.name === "Detention Center").id;
 
             const cardDecksCenter = document.createElement('div');
             cardDecksCenter.id = 'card-decks-center';
@@ -825,9 +824,9 @@
             boardContainer.appendChild(onBoardCardDiv);
 
 
-            boardLayout.forEach((s, i) => { // i is now the correct new ID
+            boardLayout.forEach((s, i) => { 
                 const spaceDiv = document.createElement('div');
-                spaceDiv.id = `space-${s.id}`; // Use s.id which is the re-assigned ID
+                spaceDiv.id = `space-${s.id}`; 
                 spaceDiv.classList.add('space');
 
                 if (s.type === 'go' || s.type === 'detention_visiting' || s.type === 'go_to_detention' || s.type === 'crime_spree') {
@@ -905,15 +904,16 @@
                     spaceDiv.appendChild(ownerIndicator);
                 }
 
-                // UPDATED Grid Positioning Logic for 10x10 effective grid (8 spaces per side)
-                if (s.id === 0) { spaceDiv.style.gridArea = `1 / 1`; } // Go
-                else if (s.id >= 1 && s.id <= 8) { spaceDiv.style.gridArea = `1 / ${s.id + 1}`; } // Bottom row
-                else if (s.id === 9) { spaceDiv.style.gridArea = `1 / 10`; } // Corner 1
-                else if (s.id >= 10 && s.id <= 17) { spaceDiv.style.gridArea = `${(s.id - 9) + 1} / 10`; } // Right column
-                else if (s.id === 18) { spaceDiv.style.gridArea = `10 / 10`; } // Corner 2
-                else if (s.id >= 19 && s.id <= 26) { spaceDiv.style.gridArea = `10 / ${10 - (s.id - 18)}`; } // Top row
-                else if (s.id === 27) { spaceDiv.style.gridArea = `10 / 1`; } // Corner 3
-                else if (s.id >= 28 && s.id <= 35) { spaceDiv.style.gridArea = `${10 - (s.id - 27)} / 1`; } // Left column
+                // Grid Positioning Logic for 10x10 effective grid (IDs 0-35)
+                const currentId = s.id;
+                if (currentId === 0) { spaceDiv.style.gridArea = `1 / 1`; } 
+                else if (currentId >= 1 && currentId <= 8) { spaceDiv.style.gridArea = `1 / ${currentId + 1}`; } 
+                else if (currentId === 9) { spaceDiv.style.gridArea = `1 / 10`; }            
+                else if (currentId >= 10 && currentId <= 17) { spaceDiv.style.gridArea = `${(currentId - 9) + 1} / 10`; } 
+                else if (currentId === 18) { spaceDiv.style.gridArea = `10 / 10`; }            
+                else if (currentId >= 19 && currentId <= 26) { spaceDiv.style.gridArea = `10 / ${10 - (currentId - 18)}`; } 
+                else if (currentId === 27) { spaceDiv.style.gridArea = `10 / 1`; }           
+                else if (currentId >= 28 && currentId <= 35) { spaceDiv.style.gridArea = `${10 - (currentId - 27)} / 1`; } 
 
 
                 boardContainer.appendChild(spaceDiv);
@@ -965,8 +965,8 @@
 
 
         function initializeGame() {
-            // reformatBoardLayout(); // Called globally once at script load
-            detentionCenterSpaceId = boardLayout.find(s => s.name === "Detention Center").id; // Ensure this is correct
+            // reformatBoardLayout(); // Called globally once
+            detentionCenterSpaceId = boardLayout.find(s => s.name === "Detention Center").id;
             getPlayerSetup(); 
 
             gameActive = true; 
@@ -989,7 +989,6 @@
                 });
                 playerGovReceived.push(0);
             }
-            // Re-initialize propertyData based on the potentially new boardLayout
             propertyData = JSON.parse(JSON.stringify(boardLayout.filter(s => s.type === 'property' || s.type === 'set_property')));
             propertyData.forEach(p => {
                 p.owner = null;
@@ -1275,7 +1274,7 @@
 
                     playPingSound();
                 }
-                await new Promise(resolve => setTimeout(resolve, player.isAI ? 150 : 300)); 
+                await new Promise(resolve => setTimeout(resolve, 150)); // UNIFIED SPEED
 
                 if (currentAnimatedPosition === 0 && prevPositionForGoPassCheck !== 0 && !player.inDetention) {
                     govPayout(player, 200); 
@@ -1793,7 +1792,7 @@
                     };
                     if (tokenElement) {
                          tokenElement.addEventListener('animationend', onAnimationEnd);
-                         setTimeout(resolve, player.isAI ? 325 : 650); 
+                         setTimeout(resolve, 325); // UNIFIED SPEED
                     } else {
                         resolve();
                     }
@@ -1823,7 +1822,7 @@
                 const useCardBtn = document.createElement('button');
                 useCardBtn.textContent = "Use Legal Aid Card";
                 useCardBtn.onclick = () => {
-                    detentionActionsDiv.innerHTML = ''; // Clear options after choice
+                    detentionActionsDiv.innerHTML = ''; 
                     player.getOutOfDetentionCards--;
                     player.inDetention = false;
                     player.missedTurnsInDetention = 0;
@@ -1839,7 +1838,7 @@
                 const payFineBtn = document.createElement('button');
                 payFineBtn.textContent = `Pay £${fineAmount} Fine`;
                 payFineBtn.onclick = () => {
-                    detentionActionsDiv.innerHTML = ''; // Clear options after choice
+                    detentionActionsDiv.innerHTML = ''; 
                     if (makePayment(player, bank, fineAmount)) {
                         player.inDetention = false;
                         player.missedTurnsInDetention = 0;
@@ -2204,14 +2203,12 @@
                     rollDiceButton.disabled = false;
                     otherActionsContainer.style.display = 'none';
                 }
-                // If still in detention and playerActionTakenThisTurn is false, detention buttons are shown by handleDetentionTurn
-            } else if (!player.playerActionTakenThisTurn) { // Must take primary action (Roll Dice)
+            } else if (!player.playerActionTakenThisTurn) { 
                 logEvent(`UI Update: ${player.name} must roll dice.`);
                 rollDiceButton.style.display = 'block';
                 rollDiceButton.classList.add('main-action-button');
                 rollDiceButton.disabled = false;
                 
-                // Show Buy Property if landed on unowned, EVEN IF must roll again due to doubles
                 const currentSpaceForBuy = boardLayout[player.position];
                 let canBuyCurrent = false;
                 if ((currentSpaceForBuy.type === 'property' || currentSpaceForBuy.type === 'set_property')) {
@@ -2239,7 +2236,7 @@
                     otherActionsContainer.style.display = 'none'; 
                 }
 
-            } else { // playerActionTakenThisTurn is TRUE (rolled non-doubles and resolved landing/card)
+            } else { 
                 logEvent(`UI Update: ${player.name} can take optional actions or end turn.`);
                 endTurnButton.style.display = 'block';
                 endTurnButton.classList.add('main-action-button');
@@ -2381,7 +2378,7 @@
             lastRollWasDoublesGlobal = actualIsDoubles; 
 
             await new Promise(resolveAnimation => {
-                let animationDuration = 800; 
+                let animationDuration = 350; // FASTER DICE ROLL 
                 let intervalTime = 50;       
                 let elapsed = 0;
                 const rollAnimationInterval = setInterval(() => {
@@ -2482,7 +2479,7 @@
             logEvent(`>>> AI Turn Start: ${player.name}`);
             player.playerActionTakenThisTurn = false; 
 
-            await new Promise(r => setTimeout(r, 500)); 
+            await new Promise(r => setTimeout(r, 200)); // AI "thinking" time
 
             if (player.inDetention) {
                 await aiHandleDetention(player); 
@@ -2497,7 +2494,7 @@
                 if (diceFace1Elem) diceFace1Elem.textContent = '🎲'; 
                 if (diceFace2Elem) diceFace2Elem.textContent = '🎲';
                 if (diceTotalDisplayText) diceTotalDisplayText.textContent = "AI Rolling...";
-                await new Promise(r => setTimeout(r, 800)); 
+                await new Promise(r => setTimeout(r, 300)); // AI roll animation time
 
                 const { totalRoll, die1, die2, isDoubles } = rollDiceInternal();
                 lastRollWasDoublesGlobal = isDoubles; 
@@ -2524,7 +2521,7 @@
                 await handleLandOnSpace(player); 
 
                 if (currentCardBeingExecuted) { 
-                    await new Promise(r => setTimeout(r, 1600));
+                    await new Promise(r => setTimeout(r, 800)); // AI "processes" card
                     if (lastRollWasDoublesGlobal && !player.inDetention && !player.isBankrupt) {
                         player.playerActionTakenThisTurn = false; 
                     } else if(!player.inDetention && !player.isBankrupt){
@@ -2541,7 +2538,7 @@
                     break; 
                 }
                 logEvent(`AI ${player.name} gets to roll again (doubles).`);
-                await new Promise(r => setTimeout(r, 1000)); 
+                await new Promise(r => setTimeout(r, 300)); // Pause before re-roll
             } 
             
             if (!player.isBankrupt && !player.inDetention) { 
@@ -2583,7 +2580,7 @@
             if (diceFace1Elem) diceFace1Elem.textContent = '🎲'; 
             if (diceFace2Elem) diceFace2Elem.textContent = '🎲';
             if (diceTotalDisplayText) diceTotalDisplayText.textContent = "AI Rolling (Detention)...";
-            await new Promise(r => setTimeout(r, 800));
+            await new Promise(r => setTimeout(r, 300)); // AI roll animation
 
             const { totalRoll, die1, die2, isDoubles } = rollDiceInternal();
             lastRollWasDoublesGlobal = isDoubles; 
@@ -2601,9 +2598,8 @@
                 
                 await movePlayerAnimated(player, totalRoll);
                 await handleLandOnSpace(player);
-                // After landing, pATT is determined by whether this roll (isDoubles) requires another.
                 if (currentCardBeingExecuted) { 
-                    await new Promise(r => setTimeout(r, 1600));
+                    await new Promise(r => setTimeout(r, 800));
                     if (lastRollWasDoublesGlobal && !player.inDetention && !player.isBankrupt) {
                         player.playerActionTakenThisTurn = false;
                     } else if(!player.inDetention && !player.isBankrupt){
@@ -2618,7 +2614,7 @@
                 }
             } else {
                 logEvent(`AI ${player.name} rolled ${totalRoll} (not doubles). Stays in Detention. Turn ends.`);
-                player.playerActionTakenThisTurn = true; // Failed roll, AI's action for detention this turn is done.
+                player.playerActionTakenThisTurn = true; 
             }
         }
 
@@ -2651,7 +2647,7 @@
         async function aiDecideDevelopProperty(player) {
             if (player.isBankrupt || !canDevelopAnyProperty(player)) return;
             logEvent(`AI ${player.name} considering property development.`);
-            await new Promise(r => setTimeout(r, 500)); 
+            await new Promise(r => setTimeout(r, 200)); // AI "thinking"
 
             for (const propId of player.properties) {
                 const propData = propertyData.find(p => p.id === propId);
@@ -2669,14 +2665,14 @@
                             logEvent(`AI ${player.name} decides to build a tenancy on ${propLayout.name}.`);
                             if(buyTenancy(propId)) { 
                                 currentPlayerIndex = originalPlayerIndex; 
-                                await new Promise(r => setTimeout(r, 300));
+                                await new Promise(r => setTimeout(r, 100));
                                 return; 
                             }
                         } else if (propData.tenancies === MAX_TENANCIES && player.money >= PR_COST) {
                             logEvent(`AI ${player.name} decides to build PR on ${propLayout.name}.`);
                             if(buyPermanentResidence(propId)) { 
                                  currentPlayerIndex = originalPlayerIndex; 
-                                 await new Promise(r => setTimeout(r, 300));
+                                 await new Promise(r => setTimeout(r, 100));
                                  return; 
                             }
                         }
