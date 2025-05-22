@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Migrantopoly (Updated Rent & Penalties)</title>
+    <title>Migrantopoly (Corrected Detention Cards)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <style>
         body { /* Dark blue-grey background */
@@ -635,7 +635,7 @@
             { id: 2, name: "Welfare Card", type: "welfare" },
             { id: 3, name: "Tent in Field 2", type: "property", price: 80, rent: [8, 10, 20, 40, 80], color: "brown", groupId: "brown" },
             { id: 4, name: "Black Market Sales", type: "set_property", price: 200, rent_base: 200, groupId: "special_set" },
-            { id: 5, name: "Fake PIP declined", type: "tax", amount: 100 }, // UPDATED amount
+            { id: 5, name: "Fake PIP declined", type: "tax", amount: 100 }, 
             { id: 6, name: "Tesco Cardboard Skip 1", type: "property", price: 100, rent: [6, 15, 30, 60, 120], color: "light-blue", groupId: "lightblue" },
             { id: 7, name: "Tesco Cardboard Skip 2", type: "property", price: 120, rent: [8, 15, 30, 60, 120], color: "light-blue", groupId: "lightblue" },
 
@@ -650,12 +650,12 @@
             { id: 15, name: "Council Highrise 3", type: "property", price: 200, rent: [16, 25, 50, 100, 200], color: "pink", groupId: "pink" },
 
             // Side 3 (Top Row)
-            { id: 16, name: "Crime Spree !!! Arrest", type: "crime_spree", amount: 200 }, // UPDATED amount
+            { id: 16, name: "Crime Spree !!! Arrest", type: "crime_spree", amount: 200 }, 
             { id: 17, name: "Gypsy Estate 1", type: "property", price: 220, rent: [18, 35, 70, 140, 280], color: "orange", groupId: "orange" },
             { id: 18, name: "Opportunity Card", type: "opportunity" },
             { id: 19, name: "Gypsy Estate 2", type: "property", price: 240, rent: [20, 35, 70, 140, 280], color: "orange", groupId: "orange" },
             { id: 20, name: "Child Wives", type: "set_property", price: 200, rent_base: 200, groupId: "special_set" },
-            { id: 21, name: "Fake ID Cards", type: "tax", amount: 100 }, // UPDATED type and amount
+            { id: 21, name: "Fake ID Cards", type: "tax", amount: 100 }, 
             { id: 22, name: "Gypsy Estate 3", type: "property", price: 260, rent: [22, 35, 70, 140, 280], color: "orange", groupId: "orange" },
             { id: 23, name: "Holiday Inn 1", type: "property", price: 280, rent: [24, 45, 90, 180, 360], color: "red", groupId: "red" },
 
@@ -685,7 +685,7 @@
             { text: "Education Grant: Collect £120.", action: "collect", amount: 120 },
             { text: "Housing Inspection: Pay £20 per tenancy owned.", action: "payPerTenancy", amountPer: 20 },
             { text: "Utility Subsidy: Collect £80.", action: "collect", amount: 80 },
-            { text: "Legal Aid: Get out of Detention Center free.", action: "getOutOfDetentionFree" },
+            { text: "Legal Aid: Get out of Detention Center free.", action: "getOutOfDetentionFree" }, // Only one
             { text: "Emergency bowels: Collect £100.", action: "collect", amount: 100 },
             { text: "Tax Audit: Pay £60.", action: "pay", amount: 60 },
             { text: "Welfare Review: Move to nearest Payout Space.", action: "moveToNearestPayout" }
@@ -696,7 +696,7 @@
             { text: "Language Subsidy: Collect £50.", action: "collect", amount: 50 },
             { text: "Community Grant: Collect £100.", action: "collect", amount: 100 },
             { text: "Deportation Threat: Go to Detention Center.", action: "goToDetentionDirect" },
-            { text: "Legal Homosexuals: Get out of Detention Center free.", action: "getOutOfDetentionFree" },
+            { text: "Legal Homosexuals: Get out of Detention Center free.", action: "getOutOfDetentionFree" }, // Only one
             { text: "Job Offer: Collect £120.", action: "collect", amount: 120 },
             { text: "Housing Voucher: Next estate purchase is 25% off.", action: "housingVoucher" },
             { text: "Free Health Service: Gain a health service (worth £100).", action: "gainHealthService" },
@@ -941,7 +941,8 @@
                     name: `Player ${i + 1}${isAIPlayer ? ' (AI)' : ''}`,
                     money: 2000, 
                     position: 0, properties: [], healthServices: 0,
-                    getOutOfDetentionCards: 0, inDetention: false, missedTurnsInDetention: 0,
+                    getOutOfDetentionCards: 0, 
+                    inDetention: false, missedTurnsInDetention: 0,
                     hasHousingVoucher: false, isBankrupt: false,
                     playerActionTakenThisTurn: false, 
                     doublesRolledInTurn: 0,
@@ -1239,8 +1240,8 @@
                 if (currentAnimatedPosition === 0 && prevPositionForGoPassCheck !== 0 && !player.inDetention) {
                     govPayout(player, 200); 
                     govPayout(player, 200); 
-                    player.getOutOfDetentionCards = (player.getOutOfDetentionCards || 0) + 1; 
-                    logEvent(`${player.name} passed Dole and collected £400 (+1 LegalAid).`);
+                    // player.getOutOfDetentionCards = (player.getOutOfDetentionCards || 0) + 1; // REMOVED - No card for passing GO
+                    logEvent(`${player.name} passed Dole and collected £400.`); // Updated log
                     updatePlayerInfo(); 
                 }
             }
@@ -1286,26 +1287,32 @@
             logEvent(`${player.name} landed on ${currentSpace.name}.`);
             let actionCompletedByLanding = false; 
 
-            if (currentSpace.name === 'Crime Spree !!! Arrest' ||
-                currentSpace.name === 'Go to Detention Center' ||
-                (currentSpace.name === 'Detention Center' && currentSpace.type === 'detention_visiting') || 
-                (currentSpace.name === 'Dole' && currentSpace.type === 'go')
-            ) {
-                player.getOutOfDetentionCards = (player.getOutOfDetentionCards || 0) + 1;
-                
-                if (currentSpace.name !== 'Go to Detention Center' && !(currentSpace.name === 'Detention Center' && currentSpace.type === 'detention_visiting')) { 
+            // Gov Payout for Dole or Crime Spree, if landed on directly.
+            // This is separate from their penalties/actions defined in the switch.
+            // Also, no "Get out of Detention" cards are given here.
+            if ( (currentSpace.name === 'Dole' && currentSpace.type === 'go') ||
+                 (currentSpace.name === 'Crime Spree !!! Arrest' && currentSpace.type === 'crime_spree') ) {
+                // For Dole and Crime Spree, an additional Gov Payout if landed on.
+                // This was the behavior of the previous combined if-block for these specific cases.
+                // Note: Passing 'Go' (Dole) has its own £400 payout logic in movePlayerAnimated.
+                // This handles landing *on* Dole.
+                if (currentSpace.name === 'Dole') { // Only if landing on Dole
                     govPayout(player, 100);
-                    logEvent(`${player.name} receives +£100 from UK Gov and +1 LegalAid for action on ${currentSpace.name}.`);
-                } else {
-                    logEvent(`${player.name} receives +1 LegalAid for action on ${currentSpace.name}.`);
+                    logEvent(`${player.name} landed on Dole, receives +£100 from UK Gov.`);
+                    updatePlayerInfo();
+                } else if (currentSpace.name === 'Crime Spree !!! Arrest') { // For Crime Spree
+                    govPayout(player, 100);
+                     logEvent(`${player.name} landed on Crime Spree, receives +£100 from UK Gov (penalty also applies).`);
+                     updatePlayerInfo();
                 }
-                updatePlayerInfo();
+            } else if (currentSpace.name === 'Go to Detention Center' || (currentSpace.name === 'Detention Center' && currentSpace.type === 'detention_visiting')) {
+                logEvent(`${player.name} is on ${currentSpace.name}.`); // Just a log, no automatic card or special payout here.
             }
 
 
             switch (currentSpace.type) {
                 case "go":
-                    logEvent(`${player.name} landed on Dole (Go).`);
+                    logEvent(`${player.name} landed on Dole (Go).`); // Gov payout handled above if landed on
                     actionCompletedByLanding = true;
                     break;
                 case "property":
@@ -1377,6 +1384,7 @@
                          logEvent(`Paying fine of £${currentSpace.amount}.`); 
                          makePayment(player, bank, currentSpace.amount); 
                     }
+                    // Gov payout handled above if landed on
                     actionCompletedByLanding = true;
                     break;
                 case "go_to_detention": 
@@ -1474,8 +1482,7 @@
                     }
                 });
                 logEvent(`${player.name} owes £${rentAmount} rent to ${owner.name} for ${propertyLayoutDetails.name} (part of "${propertyLayoutDetails.groupId}" set).`);
-            } else if (propertyLayoutDetails.type === "property" && propertyLayoutDetails.rent) { 
-                // NEW RENT LOGIC FOR UNIMPROVED PROPERTIES
+            } else if (propertyLayoutDetails.type === "property") { // Removed && propertyLayoutDetails.rent as new logic calculates base rent
                 if (propertyFromData.tenancies === 0 && !propertyFromData.permanentResidence) {
                     const propertyPrice = propertyLayoutDetails.price;
                     const groupId = propertyLayoutDetails.groupId;
@@ -1488,23 +1495,27 @@
                     rentAmount = Math.floor(propertyPrice / 2) * numOwnedInGroup;
                     logEvent(`Rent for unimproved ${propertyLayoutDetails.name}: (£${propertyPrice}/2) * ${numOwnedInGroup} (owned in group) = £${rentAmount}`);
 
-                } else { // Existing logic for developed properties
+                } else { 
                     let rentLevel = 0; 
                     if (propertyFromData.permanentResidence) {
                         rentLevel = MAX_TENANCIES + 1; 
                     } else if (propertyFromData.tenancies > 0) {
                         rentLevel = propertyFromData.tenancies; 
                     }
-                    if (rentLevel < propertyLayoutDetails.rent.length) {
+
+                    if (propertyLayoutDetails.rent && rentLevel < propertyLayoutDetails.rent.length) {
                         rentAmount = propertyLayoutDetails.rent[rentLevel];
-                    } else { // Fallback if rent level is out of bounds (e.g. MAX_TENANCIES+1 but only 4 rent tiers)
+                    } else if (propertyLayoutDetails.rent && propertyLayoutDetails.rent.length > 0) { 
                         rentAmount = propertyLayoutDetails.rent[propertyLayoutDetails.rent.length -1]; 
-                        logEvent(`Warning: Rent level ${rentLevel} adjusted for ${propertyLayoutDetails.name}. Using highest available rent.`);
+                        logEvent(`Warning: Rent level ${rentLevel} adjusted for ${propertyLayoutDetails.name}. Using highest available rent tier.`);
+                    } else {
+                        logEvent(`Error: Missing rent tiers for developed property ${propertyLayoutDetails.name}. Defaulting rent to 0.`);
+                        rentAmount = 0;
                     }
-                    logEvent(`${player.name} owes £${rentAmount} rent to ${owner.name} for ${propertyLayoutDetails.name} (Tenancies: ${propertyFromData.tenancies}, PR: ${propertyFromData.permanentResidence}).`);
+                    logEvent(`${player.name} owes £${rentAmount} rent to ${owner.name} for developed ${propertyLayoutDetails.name} (Tenancies: ${propertyFromData.tenancies}, PR: ${propertyFromData.permanentResidence}).`);
                 }
             } else {
-                logEvent(`Cannot calculate rent for ${propertyLayoutDetails.name} - unknown type or missing rent details.`);
+                logEvent(`Cannot calculate rent for ${propertyLayoutDetails.name} - unknown type or configuration.`);
                 return; 
             }
 
@@ -1643,7 +1654,6 @@
                 }
             }
             currentCardBeingExecuted = null; 
-            // lastRollWasDoublesGlobal reset handled at start of next turn or new roll sequence
 
             if (!player.isAI) {
                  updateUIForCurrentPlayer(); 
