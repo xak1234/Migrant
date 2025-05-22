@@ -690,8 +690,8 @@
 
         let boardLayout = []; 
 
-        function reformatBoardLayout() {
-            const newBoardLocations = [ 
+function reformatBoardLayout() {
+            const newBoardLocations = [
                 { name: "Boat Sank After Renting", type: "set_property", price: 100, rent_base: 100, groupId: "special_set" },
                 { name: "People Trafficking", type: "set_property", price: 100, rent_base: 100, groupId: "special_set" },
                 { name: "More than 15 children", type: "set_property", price: 100, rent_base: 100, groupId: "special_set" },
@@ -702,45 +702,52 @@
             // Go
             tempBoard.push(initialBoardLayout.find(s => s.id === 0)); //0
 
-            // Side 1: Swapping "Welfare Card" (initialBoardLayout id: 2) with "Boat Sank After Renting" (newBoardLocations[0])
-            const welfareCardOriginal = initialBoardLayout.find(s => s.id === 2);
+            // --- Side 1 (Swap: Boat Sank After Renting with Welfare Card id:2) ---
+            const welfareCardOriginalSide1 = initialBoardLayout.find(s => s.id === 2);
             const boatSankProperty = newBoardLocations[0];
-
-            tempBoard.push(initialBoardLayout.find(s => s.id === 1));   // Tent in Field 1 (Original id: 1)
-            tempBoard.push(boatSankProperty);                           // Swapped: "Boat Sank After Renting" takes original slot of "Welfare Card" (relative to other properties)
-            tempBoard.push(initialBoardLayout.find(s => s.id === 3));   // Tent in Field 2 (Original id: 3)
-            tempBoard.push(initialBoardLayout.find(s => s.id === 4));   // Black Market Sales (Original id: 4)
-            
-            tempBoard.push(welfareCardOriginal);                        // Swapped: "Welfare Card" takes original slot of "Boat Sank After Renting"
-            
-            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 5 && s.id <= 7)); // Original ids 5 (Fake PIP), 6 (Tesco Skip 1), 7 (Tesco Skip 2)
-            
+            tempBoard.push(initialBoardLayout.find(s => s.id === 1));
+            tempBoard.push(boatSankProperty); // Swapped item
+            tempBoard.push(initialBoardLayout.find(s => s.id === 3));
+            tempBoard.push(initialBoardLayout.find(s => s.id === 4));
+            tempBoard.push(welfareCardOriginalSide1); // Swapped item
+            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 5 && s.id <= 7));
             // Corner 1
-            tempBoard.push(initialBoardLayout.find(s => s.id === 8)); // Detention Center (Original id: 8)
-            
-            // Side 2: 4 original, new, 3 original
-            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 9 && s.id <= 12)); 
-            tempBoard.push(newBoardLocations[1]); // People Trafficking
+            tempBoard.push(initialBoardLayout.find(s => s.id === 8));
+
+            // --- Side 2 (Swap: People Trafficking with Payout: Job Seeker's id:9) ---
+            const peopleTraffickingProperty = newBoardLocations[1];
+            const payoutJobSeekersOriginal = initialBoardLayout.find(s => s.id === 9);
+            tempBoard.push(peopleTraffickingProperty); // Swapped item
+            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 10 && s.id <= 12));
+            tempBoard.push(payoutJobSeekersOriginal); // Swapped item
             tempBoard.push(...initialBoardLayout.filter(s => s.id >= 13 && s.id <= 15));
-            
             // Corner 2
-            tempBoard.push(initialBoardLayout.find(s => s.id === 16)); // Crime Spree (Original id: 16)
-            
-             // Side 3: 4 original, new, 3 original
-            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 17 && s.id <= 20)); 
-            tempBoard.push(newBoardLocations[2]); // More than 15 children
-            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 21 && s.id <= 23));
-            
+            tempBoard.push(initialBoardLayout.find(s => s.id === 16));
+
+            // --- Side 3 (NEW SWAP: More than 15 children with Opportunity Card id:18) ---
+            const moreThan15ChildrenProperty = newBoardLocations[2];
+            const opportunityCardSide3Original = initialBoardLayout.find(s => s.id === 18);
+            tempBoard.push(initialBoardLayout.find(s => s.id === 17)); // Gypsy Estate 1
+            tempBoard.push(moreThan15ChildrenProperty);                 // Swapped: More than 15 children takes Opportunity Card's original relative slot
+            tempBoard.push(initialBoardLayout.find(s => s.id === 19)); // Gypsy Estate 2
+            tempBoard.push(initialBoardLayout.find(s => s.id === 20)); // Child Wives
+            tempBoard.push(opportunityCardSide3Original);               // Swapped: Opportunity Card takes More than 15 children's original relative slot
+            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 21 && s.id <= 23)); // Fake ID, Gypsy Estate 3, Holiday Inn 1
             // Corner 3
-            tempBoard.push(initialBoardLayout.find(s => s.id === 24)); // Go to Detention (Original id: 24)
-            
-            // Side 4: 4 original, new, 3 original
-            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 25 && s.id <= 28)); 
-            tempBoard.push(newBoardLocations[3]); // Crypto Scam
-            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 29 && s.id <= 31));
-            
+            tempBoard.push(initialBoardLayout.find(s => s.id === 24));
+
+            // --- Side 4 (Swap: Crypto Scam with Opportunity Card id:30) ---
+            const cryptoScamProperty = newBoardLocations[3];
+            const opportunityCardSide4Original = initialBoardLayout.find(s => s.id === 30);
+            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 25 && s.id <= 28));
+            tempBoard.push(opportunityCardSide4Original); // Swapped item
+            tempBoard.push(initialBoardLayout.find(s => s.id === 29));
+            tempBoard.push(cryptoScamProperty); // Swapped item
+            tempBoard.push(initialBoardLayout.find(s => s.id === 31));
+
             boardLayout = tempBoard.map((space, index) => ({ ...space, id: index }));
         }
+
         reformatBoardLayout();
 
 
