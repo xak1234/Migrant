@@ -534,7 +534,7 @@
             transform: translate(-50%, -50%);
             font-size: 7vw;
             font-family: 'Impact', 'Arial Black', Arial, sans-serif;
-            color: #e74c3c;
+            color: #e74c3c; /* Red for loss, maybe green for gain later */
             font-weight: bold;
             opacity: 0;
             pointer-events: none;
@@ -921,6 +921,8 @@
         const modalTitle = document.getElementById('modal-title');
         const modalMessage = document.getElementById('modal-message');
         const modalOkButton = document.getElementById('modal-ok-button');
+        const moneyFlashDiv = document.getElementById('money-flash');
+
 
         // --- Game Data Definitions ---
         let initialBoardLayout = [ // This layout will be reformatted
@@ -1315,7 +1317,28 @@
             unsubscribeGameState = onSnapshot(gameDocRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const gameData = docSnap.data(); 
-                    localGameData = gameData; 
+                    
+                    // Check for money changes for the current user before updating localGameData
+                    if (localGameData.players && gameData.players && currentUserId && 
+                        localGameData.players[currentUserId] && gameData.players[currentUserId]) {
+                        
+                        const oldMoney = localGameData.players[currentUserId].money;
+                        const newMoney = gameData.players[currentUserId].money;
+
+                        if (typeof oldMoney !== 'undefined' && newMoney < oldMoney) {
+                            const amountLost = oldMoney - newMoney;
+                            if (amountLost > 0) { // Ensure it's a real loss
+                                showMoneyChangeEffect(amountLost, 'loss');
+                            }
+                        } else if (typeof oldMoney !== 'undefined' && newMoney > oldMoney) {
+                            const amountGained = newMoney - oldMoney;
+                             if (amountGained > 0) { // Ensure it's a real gain
+                                showMoneyChangeEffect(amountGained, 'gain');
+                            }
+                        }
+                    }
+                    
+                    localGameData = gameData; // Update local cache *after* checking for money changes
                     logEvent("Game state updated from Firestore:", gameData.lastActionMessage || "No message", gameData.status);
                     
                     if (gameData.boardLayout && JSON.stringify(boardLayout) !== JSON.stringify(gameData.boardLayout)) {
@@ -1609,7 +1632,7 @@
                     setupDetentionActionsUI(myPlayerState, gameData); 
                     if (myPlayerActionTakenThisTurn) { 
                         endTurnButton.style.display = 'block';
-                        endTurnButton.disabled = false; // Explicitly enable
+                        endTurnButton.disabled = false; 
                         endTurnButton.classList.add('main-action-button');
                         detentionActionsDiv.innerHTML = ''; 
                     }
@@ -1617,50 +1640,95 @@
                     const rolledDoubles = gameData.lastDiceRoll?.isDoubles;
                     const doublesCount = myPlayerState.doublesRolledInTurn || 0;
 
-                    if (rolledDoubles && doublesCount > 0 && doublesCount < 3 && !myPlayerActionTakenThisTurn) {
+                    // Roll Dice Button Logic:
+                    if (!myPlayerActionTakenThisTurn || (rolledDoubles && doublesCount > 0 && doublesCount < 3) ) {
                         rollDiceButton.style.display = 'block';
-                        rollDiceButton.disabled = false; // Explicitly enable
+                        rollDiceButton.disabled = false; 
                         rollDiceButton.classList.add('main-action-button');
-                        if(gameStatusMessageP && gameData.lastActionMessage) {
-                            const baseMessage = gameData.lastActionMessage.includes("Doubles!") ? gameData.lastActionMessage : `${myPlayerState.name} rolled doubles!`;
-                            gameStatusMessageP.textContent = `${baseMessage} Roll again.`;
-                        } else if (gameStatusMessageP) {
-                             gameStatusMessageP.textContent = `${myPlayerState.name} rolled doubles! Roll again.`;
+                        if (rolledDoubles && doublesCount > 0 && doublesCount < 3 && gameStatusMessageP) {
+                            gameStatusMessageP.textContent = `${myPlayerState.name} rolled doubles! Roll again.`;
                         }
-                    } else if (!myPlayerActionTakenThisTurn) { 
-                        rollDiceButton.style.display = 'block';
-                        rollDiceButton.disabled = false; // Explicitly enable
-                        rollDiceButton.classList.add('main-action-button');
-                    } else { 
-                        endTurnButton.style.display = 'block';
-                        endTurnButton.disabled = false; // Explicitly enable
-                        endTurnButton.classList.add('main-action-button');
-                        
-                        otherActionsContainer.style.display = 'block'; 
+                    }
 
+                    // Optional Actions (Buy/Develop) and End Turn Button Logic:
+                    let showOptionalActions = false;
+                    // Show optional actions if the player has landed (lastDiceRoll is set for their turn)
+                    // OR if playerActionTakenThisTurn is true (meaning they completed a non-doubles roll/move)
+                    if (gameData.lastDiceRoll || myPlayerActionTakenThisTurn) { 
+                        showOptionalActions = true;
+                    }
+
+
+                    if (showOptionalActions) {
+                        otherActionsContainer.style.display = 'block';
                         const currentSpace = gameData.boardLayout[myPlayerState.position];
                         const propData = Array.isArray(gameData.propertyData) ? gameData.propertyData.find(p => p.id === currentSpace?.id) : null;
-                        
+
+                        // Buy Property Button
                         if (currentSpace && propData && (currentSpace.type === 'property' || currentSpace.type === 'set_property') && propData.owner === null) {
                             let price = currentSpace.price;
-                            if (myPlayerState.hasHousingVoucher && currentSpace.type === 'property') { 
+                            if (myPlayerState.hasHousingVoucher && currentSpace.type === 'property') {
                                 price = Math.round(price * 0.75);
                             }
                             buyPropertyPriceSpan.textContent = price;
                             buyPropertyButton.style.display = (myPlayerState.money >= price) ? 'inline-block' : 'none';
-                            if (buyPropertyButton.style.display === 'inline-block') buyPropertyButton.disabled = false; 
+                            if (buyPropertyButton.style.display === 'inline-block') buyPropertyButton.disabled = false;
                         } else {
                             buyPropertyButton.style.display = 'none';
                         }
 
+                        // Develop Property Button
                         developPropertyButton.style.display = canPlayerDevelopAnyProperty(myPlayerState, gameData) ? 'inline-block' : 'none';
                         if (developPropertyButton.style.display === 'inline-block') {
-                           developPropertyButton.disabled = false; 
+                            developPropertyButton.disabled = false; 
                         }
-                        
+
                         if (buyPropertyButton.style.display === 'none' && developPropertyButton.style.display === 'none') {
-                            otherActionsContainer.style.display = 'none';
+                            otherActionsContainer.style.display = 'none'; // Hide container if no optional actions
                         }
+                    } else {
+                         otherActionsContainer.style.display = 'none';
+                    }
+                    
+                    // End Turn button: Show if playerActionTakenThisTurn is true AND they are not forced to roll again for doubles.
+                    if (myPlayerActionTakenThisTurn && !(rolledDoubles && doublesCount > 0 && doublesCount < 3) ) {
+                        endTurnButton.style.display = 'block';
+                        endTurnButton.disabled = false;
+                        endTurnButton.classList.add('main-action-button');
+                    }
+
+
+                    // Auto-end turn logic
+                    const noMandatoryRollPending = !((myPlayerState.doublesRolledInTurn || 0) > 0 && (myPlayerState.doublesRolledInTurn || 0) < 3 && !myPlayerActionTakenThisTurn);
+                    const noOptionalActionsAvailable = buyPropertyButton.style.display === 'none' && developPropertyButton.style.display === 'none';
+                    const noCardActionPending = cardDisplayContainer.style.display === 'none' && (!onBoardCardDisplayDiv || onBoardCardDisplayDiv.style.display === 'none');
+
+                    if (myPlayerActionTakenThisTurn && noMandatoryRollPending && noOptionalActionsAvailable && noCardActionPending) {
+                        logEvent("Auto-ending turn conditions met. Setting timeout.");
+                        setTimeout(() => {
+                            // Re-check critical conditions within timeout, using the most current localGameData
+                            const freshLocalDataForAutoEnd = localGameData; 
+                            if (freshLocalDataForAutoEnd && freshLocalDataForAutoEnd.players && freshLocalDataForAutoEnd.players[currentUserId]) {
+                                const stillMyTurnNow = freshLocalDataForAutoEnd.playerOrder[freshLocalDataForAutoEnd.currentPlayerIndex] === currentUserId;
+                                const playerStateNow = freshLocalDataForAutoEnd.players[currentUserId];
+                                
+                                // Re-evaluate conditions with this freshest data
+                                const noRollPendingNow = !((playerStateNow.doublesRolledInTurn || 0) > 0 && (playerStateNow.doublesRolledInTurn || 0) < 3 && !playerStateNow.playerActionTakenThisTurn);
+                                const noOptionsNow = document.getElementById('buy-property-button').style.display === 'none' &&
+                                                     document.getElementById('develop-property-button').style.display === 'none';
+                                const noCardNow = document.getElementById('card-display-container').style.display === 'none' &&
+                                                  (!document.getElementById('on-board-card-display') || document.getElementById('on-board-card-display').style.display === 'none');
+
+                                if (stillMyTurnNow && playerStateNow.playerActionTakenThisTurn && noRollPendingNow && noOptionsNow && noCardNow) {
+                                    logEvent("Auto-end conditions still met in timeout. Calling handleEndTurnAction.");
+                                    handleEndTurnAction();
+                                } else {
+                                    logEvent("Auto-end conditions changed during timeout or not my turn anymore. Not auto-ending.");
+                                }
+                            } else {
+                                logEvent("Auto-end timeout: Could not get fresh player data. Not auto-ending.");
+                            }
+                        }, 1500); 
                     }
                 }
             }
@@ -1960,7 +2028,7 @@
                         const devIndicator = document.getElementById(`dev-indicator-${propInPropertyData.id}`);
                         if (devIndicator) {
                             if (propInPropertyData.permanentResidence) {
-                                devIndicator.textContent = "🏢"; 
+                                devIndicator.textContent = "�"; 
                             } else if (propInPropertyData.tenancies > 0) {
                                 devIndicator.textContent = "🏠".repeat(propInPropertyData.tenancies); 
                             } else {
@@ -1971,6 +2039,39 @@
                 });
             } else {
                 logEvent("updateBoardDynamicElements: gameData.propertyData is NOT an array. Property visual updates will be skipped.", gameData.propertyData);
+            }
+        }
+
+        function showMoneyChangeEffect(amount, type = 'loss') {
+            const moneyFlashDivLocal = document.getElementById('money-flash'); 
+            if (!moneyFlashDivLocal) {
+                logEvent("showMoneyChangeEffect: money-flash div not found.");
+                return;
+            }
+
+            moneyFlashDivLocal.textContent = `${type === 'loss' ? '-' : '+'}£${Math.abs(amount)}`;
+            moneyFlashDivLocal.style.color = type === 'loss' ? '#e74c3c' : '#2ecc71'; 
+
+            moneyFlashDivLocal.classList.add('show'); 
+
+            // Hide after animation (which is 0.7s) + a little buffer, or simply 1 second
+            setTimeout(() => {
+                moneyFlashDivLocal.classList.remove('show');
+            }, 1000); // Display for 1 second total
+
+            if (audioContextStarted && toneSynth) {
+                try {
+                    if (type === 'loss') {
+                        // Caching / money loss sound - short descending notes
+                        toneSynth.triggerAttackRelease("A3", "16n", Tone.now());
+                        toneSynth.triggerAttackRelease("F#3", "16n", Tone.now() + 0.07);
+                    } else { // 'gain'
+                        toneSynth.triggerAttackRelease("C5", "16n", Tone.now());
+                        toneSynth.triggerAttackRelease("E5", "16n", Tone.now() + 0.07);
+                    }
+                } catch (e) {
+                    console.error("Money change sound error:", e);
+                }
             }
         }
 
@@ -2064,8 +2165,6 @@
                 }
                 await new Promise(resolve => setTimeout(resolve, stepDelay));
             }
-            // Optionally, remove the step animation class after the full move
-            // setTimeout(() => token.classList.remove('token-arrive-step'), stepDelay);
         }
 
 
@@ -2101,7 +2200,7 @@
             const die1 = Math.floor(Math.random() * 6) + 1;
             const die2 = Math.floor(Math.random() * 6) + 1;
             const totalRoll = die1 + die2;
-            const isDoubles = die1 === die2;
+            let isDoubles = die1 === die2; // Changed from const to let
 
             // Play dice roll sound immediately
             if (audioContextStarted && toneSynth) {
@@ -2157,24 +2256,53 @@
                         // Calculate the final position based on the state *before* this roll
                         newPosition = (playerState.position + totalRoll) % freshGameData.boardLayout.length;
                         updates[`players.${currentUserId}.position`] = newPosition;
-                        messages.push(`${playerState.name} rolled ${totalRoll} (${die1}, ${die2})${isDoubles ? " (Doubles!)" : ""}. Moved to ${freshGameData.boardLayout[newPosition].name}.`);
+                        const landedSpace = freshGameData.boardLayout[newPosition];
+                        messages.push(`${playerState.name} rolled ${totalRoll} (${die1}, ${die2})${isDoubles ? " (Doubles!)" : ""}. Moved to ${landedSpace.name}.`);
 
-                        // Check for passing GO based on the original position (playerState.position) and the newPosition
-                        if (newPosition < playerState.position && !(isDoubles && currentDoublesCount ===3) && !playerState.inDetention /* ensure not coming out of jail and passing go */ ) { 
-                            // This condition for passing GO might need refinement if player can go backwards
-                            // A more robust way is to check if old_pos + roll > board_length
-                            let passedGo = false;
-                            if (playerState.position + totalRoll >= freshGameData.boardLayout.length) {
-                                passedGo = true;
-                            }
+                        // Check for passing GO
+                        let passedGo = false;
+                        if (playerState.position + totalRoll >= freshGameData.boardLayout.length && !(isDoubles && currentDoublesCount ===3) && !playerState.inDetention ) {
+                             passedGo = true;
+                        }
+                        if (passedGo) {
+                            const goPayout = 400; // Standard GO payout
+                            updates[`players.${currentUserId}.money`] = (playerState.money || 0) + goPayout;
+                            updates.ukGovMoney = (freshGameData.ukGovMoney || 0) - goPayout; 
+                            updates[`players.${currentUserId}.govReceived`] = (playerState.govReceived || 0) + goPayout;
+                            messages.push(`${playerState.name} passed Dole and collected £${goPayout}.`);
+                        }
 
-                            if (passedGo) {
-                                const goPayout = 400; 
-                                updates[`players.${currentUserId}.money`] = (playerState.money || 0) + goPayout;
-                                updates.ukGovMoney = (freshGameData.ukGovMoney || 0) - goPayout; 
-                                updates[`players.${currentUserId}.govReceived`] = (playerState.govReceived || 0) + goPayout;
-                                messages.push(`${playerState.name} passed Dole and collected £${goPayout}.`);
-                            }
+                        // Handle landing on specific spaces
+                        if (landedSpace.type === 'payout' && landedSpace.amount) {
+                            updates[`players.${currentUserId}.money`] = (updates[`players.${currentUserId}.money`] || playerState.money) + landedSpace.amount;
+                            updates.ukGovMoney = (updates.ukGovMoney || freshGameData.ukGovMoney) - landedSpace.amount;
+                            updates[`players.${currentUserId}.govReceived`] = (updates[`players.${currentUserId}.govReceived`] || playerState.govReceived || 0) + landedSpace.amount;
+                            messages.push(`${playerState.name} collected £${landedSpace.amount} from ${landedSpace.name}.`);
+                        } else if (landedSpace.type === 'tax' && landedSpace.amount) {
+                            updates[`players.${currentUserId}.money`] = (playerState.money || 0) - landedSpace.amount;
+                            updates.bankMoney = (freshGameData.bankMoney || 0) + landedSpace.amount; // Tax goes to bank
+                            messages.push(`${playerState.name} paid £${landedSpace.amount} for ${landedSpace.name}.`);
+                        } else if (landedSpace.type === 'crime_spree' && landedSpace.amount) {
+                            updates[`players.${currentUserId}.money`] = (playerState.money || 0) - landedSpace.amount;
+                            updates.bankMoney = (freshGameData.bankMoney || 0) + landedSpace.amount; // Fine goes to bank
+                            updates[`players.${currentUserId}.position`] = detentionCenterSpaceId; // Send to detention
+                            updates[`players.${currentUserId}.inDetention`] = true;
+                            updates[`players.${currentUserId}.missedTurnsInDetention`] = 0;
+                            messages.push(`${playerState.name} landed on Crime Spree, paid £${landedSpace.amount} and was sent to Detention!`);
+                            isDoubles = false; // Crime spree overrides doubles continuation for this turn segment
+                            currentDoublesCount = 0; // Reset doubles count
+                            updates[`players.${currentUserId}.doublesRolledInTurn`] = 0;
+                        } else if (landedSpace.type === 'go_to_detention') {
+                            const fineForGoToJail = 100;
+                            updates[`players.${currentUserId}.money`] = (playerState.money || 0) - fineForGoToJail;
+                            updates.bankMoney = (freshGameData.bankMoney || 0) + fineForGoToJail; // Fine goes to bank
+                            updates[`players.${currentUserId}.position`] = detentionCenterSpaceId;
+                            updates[`players.${currentUserId}.inDetention`] = true;
+                            updates[`players.${currentUserId}.missedTurnsInDetention`] = 0;
+                            messages.push(`${playerState.name} was sent to Detention and fined £${fineForGoToJail}!`);
+                            isDoubles = false; // Going to jail overrides doubles continuation
+                            currentDoublesCount = 0; // Reset doubles count
+                            updates[`players.${currentUserId}.doublesRolledInTurn`] = 0;
                         }
                         
                         updates[`players.${currentUserId}.playerActionTakenThisTurn`] = !isDoubles;
@@ -2188,7 +2316,6 @@
             } catch (error) {
                 console.error("Error during roll dice action transaction:", error);
                 showMessageModal("Roll Error", "Could not process roll transaction: " + error.message);
-                // Button state will be reset by updateControlsBasedOnTurn via onSnapshot
             }
         }
         
@@ -2326,48 +2453,61 @@
         }
 
         async function handleBuyPropertyAction() {
-            logEvent("handleBuyPropertyAction called.");
+            logEvent("BuyProp: Action initiated by user: " + currentUserId); // Log 1
 
             if (!currentGameId || !localGameData || !currentUserId || !db) {
-                logEvent("BuyProp: Exiting - Missing critical global vars.");
+                logEvent("BuyProp: Exiting - Missing critical global vars.", { currentGameId, localGameDataExists: !!localGameData, currentUserId, dbExists: !!db }); // Log 2
                 showMessageModal("Error", "Game data or connection issue.");
                 return;
             }
 
             const currentSnapshotGameData = localGameData; 
-            const currentPlayerInOrder = currentSnapshotGameData.playerOrder[currentSnapshotGameData.currentPlayerIndex];
-            if (currentPlayerInOrder !== currentUserId) {
-                logEvent(`BuyProp: Exiting - Not current player's turn.`);
+            const currentPlayerIdFromOrder = currentSnapshotGameData.playerOrder[currentSnapshotGameData.currentPlayerIndex];
+            logEvent("BuyProp: Current turn player from order: " + currentPlayerIdFromOrder + ", current user: " + currentUserId); // Log 3
+
+            if (currentPlayerIdFromOrder !== currentUserId) {
+                logEvent(`BuyProp: Exiting - Not current player's turn. Expected: ${currentPlayerIdFromOrder}`); // Log 4
                 showMessageModal("Error", "Not your turn to buy property.");
                 return;
             }
 
             const playerState = currentSnapshotGameData.players[currentUserId];
-            if (!playerState || playerState.isBankrupt) {
-                logEvent(`BuyProp: Exiting - Player state error or bankrupt.`);
-                showMessageModal("Error", "Cannot buy property (player state error or bankrupt).");
+            if (!playerState) {
+                logEvent("BuyProp: Exiting - Player state not found for user: " + currentUserId); // Log 5
+                showMessageModal("Error", "Player data not found.");
+                return;
+            }
+            if (playerState.isBankrupt) {
+                logEvent(`BuyProp: Exiting - Player ${currentUserId} is bankrupt.`); // Log 6
+                showMessageModal("Error", "Cannot buy property (player is bankrupt).");
                 return;
             }
             
-            if (!playerState.playerActionTakenThisTurn) {
-                logEvent("BuyProp: Exiting - Player has not completed their roll/move action. playerActionTakenThisTurn is false.");
-                showMessageModal("Action Required", "You must complete your roll/move before buying property.");
-                return;
+            logEvent("BuyProp: Player state check passed.", { playerMoney: playerState.money, playerActionTaken: playerState.playerActionTakenThisTurn, lastDiceRoll: currentSnapshotGameData.lastDiceRoll }); // Log 7
+
+            // Allow buying if player has landed (lastDiceRoll is set from their current turn segment) 
+            // OR if playerActionTakenThisTurn is true (meaning they completed a roll/move that wasn't doubles needing a re-roll).
+            if (!currentSnapshotGameData.lastDiceRoll && !playerState.playerActionTakenThisTurn) {
+                 logEvent("BuyProp: Exiting - Player has not rolled/landed yet in this turn segment (no lastDiceRoll and playerActionTakenThisTurn is false)."); // Log 8
+                 showMessageModal("Action Required", "You must roll and land on a space before buying property.");
+                 return;
             }
 
             const currentPosition = playerState.position;
             const spaceDetails = currentSnapshotGameData.boardLayout[currentPosition];
+            logEvent("BuyProp: Attempting to buy space:", { position: currentPosition, spaceDetails }); // Log 9
+
             const propertyDataEntry = Array.isArray(currentSnapshotGameData.propertyData) ? 
                                       currentSnapshotGameData.propertyData.find(p => p.id === currentPosition) : null;
 
             if (!spaceDetails || !propertyDataEntry || (spaceDetails.type !== 'property' && spaceDetails.type !== 'set_property')) {
-                logEvent(`BuyProp: Exiting - Not a buyable property.`);
+                logEvent(`BuyProp: Exiting - Not a buyable property. Space type: ${spaceDetails?.type}, Prop entry exists: ${!!propertyDataEntry}`); // Log 10
                 showMessageModal("Invalid Space", "Not a buyable property space.");
                 return;
             }
 
             if (propertyDataEntry.owner) {
-                logEvent(`BuyProp: Exiting - Property already owned by ${propertyDataEntry.owner}`);
+                logEvent(`BuyProp: Exiting - Property already owned by ${propertyDataEntry.owner}`); // Log 11
                 showMessageModal("Owned", `This property (${spaceDetails.name}) is already owned by ${currentSnapshotGameData.players[propertyDataEntry.owner]?.name || 'another player'}.`);
                 return;
             }
@@ -2377,45 +2517,62 @@
             if (playerState.hasHousingVoucher && spaceDetails.type === 'property') { 
                 price = Math.round(price * 0.75);
                 usedVoucher = true;
+                logEvent("BuyProp: Housing voucher applied. New price: " + price); // Log 12
             }
 
             if (playerState.money < price) {
-                logEvent(`BuyProp: Exiting - Insufficient funds.`);
+                logEvent(`BuyProp: Exiting - Insufficient funds. Needs: ${price}, Has: ${playerState.money}`); // Log 13
                 showMessageModal("Insufficient Funds", `You need £${price} to buy ${spaceDetails.name}, but you only have £${playerState.money}.`);
                 return;
             }
             
+            logEvent("BuyProp: All pre-transaction checks passed. Disabling button and starting transaction."); // Log 14
             if(buyPropertyButton) buyPropertyButton.disabled = true;
 
             const gameDocRef = doc(db, "games", currentGameId);
             try {
                 await runTransaction(db, async (transaction) => {
+                    logEvent("BuyProp TXN: Inside transaction."); // Log TXN 1
                     const freshGameDoc = await transaction.get(gameDocRef);
-                    if (!freshGameDoc.exists()) throw new Error("Game not found for buying property.");
+                    if (!freshGameDoc.exists()) {
+                        logEvent("BuyProp TXN: Game doc not found."); // Log TXN 2
+                        throw new Error("Game not found for buying property.");
+                    }
                     const freshGameData = freshGameDoc.data();
+                    logEvent("BuyProp TXN: Fetched fresh game data."); // Log TXN 3
 
                     if (freshGameData.playerOrder[freshGameData.currentPlayerIndex] !== currentUserId) {
+                        logEvent("BuyProp TXN: Not player's turn in fresh data."); // Log TXN 4
                         throw new Error("Not your turn (checked in transaction).");
                     }
                     const freshPlayerState = freshGameData.players[currentUserId];
-                    if (!freshPlayerState || freshPlayerState.isBankrupt) throw new Error("Player error in transaction.");
+                    if (!freshPlayerState || freshPlayerState.isBankrupt) {
+                        logEvent("BuyProp TXN: Player state error/bankrupt in fresh data."); // Log TXN 5
+                        throw new Error("Player error in transaction.");
+                    }
                     
-                    if (!freshPlayerState.playerActionTakenThisTurn) { // Re-check in transaction
+                    // Re-check this condition with fresh data.
+                    if (!freshGameData.lastDiceRoll && !freshPlayerState.playerActionTakenThisTurn) {
+                         logEvent("BuyProp TXN: Player has not rolled/landed (fresh data)."); // Log TXN 5.1
                          throw new Error("Player action not completed (checked in transaction).");
                     }
 
                     const freshCurrentPosition = freshPlayerState.position; 
                     const actualSpaceDetails = freshGameData.boardLayout[freshCurrentPosition];
+                    logEvent("BuyProp TXN: Fresh player position: " + freshCurrentPosition); // Log TXN 6
                     
                     if (!Array.isArray(freshGameData.propertyData)) { 
+                        logEvent("BuyProp TXN: propertyData is not an array in fresh data."); // Log TXN 7
                         throw new Error("Property data in Firestore is not an array. Cannot buy.");
                     }
                     const freshPropertyDataEntry = freshGameData.propertyData.find(p => p.id === freshCurrentPosition);
 
                     if (!actualSpaceDetails || !freshPropertyDataEntry || (actualSpaceDetails.type !== 'property' && actualSpaceDetails.type !== 'set_property')) {
+                         logEvent("BuyProp TXN: Not a buyable space in fresh data.", {actualSpaceDetails, freshPropertyDataEntry}); // Log TXN 8
                          throw new Error("Not a buyable property space (checked in transaction).");
                     }
                     if (freshPropertyDataEntry.owner) {
+                        logEvent("BuyProp TXN: Property already owned in fresh data by " + freshPropertyDataEntry.owner); // Log TXN 9
                         throw new Error(`Property (${actualSpaceDetails.name}) already owned by ${freshGameData.players[freshPropertyDataEntry.owner]?.name || 'another player'} (checked in transaction).`);
                     }
                     
@@ -2426,6 +2583,7 @@
                         actualUsedVoucher = true;
                     }
                     if (freshPlayerState.money < actualPrice) {
+                         logEvent("BuyProp TXN: Insufficient funds in fresh data.", {needed: actualPrice, has: freshPlayerState.money}); // Log TXN 10
                          throw new Error(`Insufficient funds (£${freshPlayerState.money} vs £${actualPrice}) for ${actualSpaceDetails.name} (checked in transaction).`);
                     }
 
@@ -2436,8 +2594,6 @@
                         updates[`players.${currentUserId}.hasHousingVoucher`] = false;
                     }
                     
-                    updates[`players.${currentUserId}.playerActionTakenThisTurn`] = true; 
-
                     const updatedPropertyData = freshGameData.propertyData.map(prop => {
                         if (prop.id === freshCurrentPosition) {
                             return { ...prop, owner: currentUserId };
@@ -2449,20 +2605,37 @@
                     updates.lastActionMessage = `${freshPlayerState.name} bought ${actualSpaceDetails.name} for £${actualPrice}${actualUsedVoucher ? " (with voucher)" : ""}.`;
                     updates.updatedAt = serverTimestamp();
 
+                    // If player did NOT roll doubles, buying property means their main action for this turn segment is done.
+                    // If they DID roll doubles, playerActionTakenThisTurn was already false (from roll action) and stays false,
+                    // correctly indicating they still need to roll again.
+                    if (!freshGameData.lastDiceRoll?.isDoubles) {
+                        updates[`players.${currentUserId}.playerActionTakenThisTurn`] = true;
+                         logEvent("BuyProp TXN: Non-doubles roll, setting playerActionTakenThisTurn to true."); // Log TXN 11
+                    } else {
+                        // If it was doubles, playerActionTakenThisTurn should remain false (as set by handleRollDiceAction)
+                        // because they still need to roll again. Buying is an interim action.
+                        updates[`players.${currentUserId}.playerActionTakenThisTurn`] = false; 
+                        logEvent("BuyProp TXN: Doubles roll, playerActionTakenThisTurn explicitly set to false to ensure re-roll."); // Log TXN 12
+                    }
+
+
                     transaction.update(gameDocRef, updates);
+                    logEvent("BuyProp TXN: Transaction update successful."); // Log TXN 13
 
                     if (audioContextStarted && toneSynth) {
                         try {
-                            toneSynth.triggerAttackRelease("A4", "8n", Tone.now()); 
-                            setTimeout(() => { if (toneSynth) toneSynth.triggerAttackRelease("E5", "8n", Tone.now() + 0.15); }, 150);
+                            toneSynth.triggerAttackRelease("A3", "16n", Tone.now()); 
+                            toneSynth.triggerAttackRelease("F#3", "16n", Tone.now() + 0.07); 
                         } catch(e){ console.error("Buy property sound error:", e); }
                     }
                 });
+                logEvent("BuyProp: Transaction completed successfully."); // Log 15
             } catch (error) {
-                console.error("Error buying property (transaction phase):", error);
+                console.error("Error buying property (transaction phase):", error); // Log 16
                 showMessageModal("Buy Property Error", "Could not buy property: " + error.message);
             } finally {
-                 // UI will update via onSnapshot
+                 // Button state will be updated by onSnapshot -> updateControlsBasedOnTurn
+                 logEvent("BuyProp: Action finished (successfully or with error)."); // Log 17
             }
         }
 
@@ -2739,3 +2912,4 @@
   </div>
 </body>
 </html>
+�
