@@ -375,13 +375,13 @@
 
 
         .player-token {
-            width: 28px;
-            height: 28px;
+            width: 36px; /* Increased from 32px */
+            height: 36px; /* Increased from 32px */
             border-radius: 50%;
             position: absolute;
             border: none;
-            font-size: 26px;
-            line-height: 28px;
+            font-size: 34px; /* Increased from 30px */
+            line-height: 36px; /* Adjusted to match height */
             text-align: center;
             background: none;
             z-index: 10;
@@ -718,7 +718,7 @@
         #actual-dice-faces {
             display: inline-flex;
             gap: 5px;
-            margin-left: 5px;
+            /* margin-left: 5px; */ /* Removed for better centering */
             vertical-align: middle;
         }
         #dice-total-display-text {
@@ -730,8 +730,8 @@
             animation: token-flash-animation 0.7s infinite alternate;
         }
         @keyframes token-flash-animation {
-            0% { opacity: 1; transform: scale(1.1); filter: drop-shadow(0 0 6px currentColor) drop-shadow(0 0 3px #fff); }
-            100% { opacity: 0.6; transform: scale(1); filter: drop-shadow(0 0 3px currentColor); }
+            0% { opacity: 1; transform: scale(1.1); filter: drop-shadow(0 0 8px currentColor) drop-shadow(0 0 4px #fff); } /* Adjusted shadow */
+            100% { opacity: 0.6; transform: scale(1); filter: drop-shadow(0 0 4px currentColor); } /* Adjusted shadow */
         }
         .token-move-flash {
             animation: token-move-flash-animation 0.2s infinite;
@@ -2213,7 +2213,7 @@
                         token.textContent = playerEmojis[player.order % playerEmojis.length];
                         const playerTokenColor = playerColors[player.order % playerColors.length];
                         token.style.color = playerTokenColor;
-                        token.style.filter = `drop-shadow(0 0 3px ${playerTokenColor})`;
+                        token.style.filter = `drop-shadow(0 0 4px ${playerTokenColor})`; /* Adjusted shadow */
                         
                         const spaceToPlace = document.getElementById(`space-${player.position}`);
                         if (spaceToPlace) {
@@ -3931,13 +3931,16 @@
                         await updateDoc(gameDocRef, updates);
                         logEvent(`AI ${aiPlayerId} detention action: ${updates.lastActionMessage}`);
                         await new Promise(resolve => setTimeout(resolve, 500));
-                        await handleEndTurnAction();
+                        try {
+                            await handleEndTurnAction();
+                        } catch (endError) {
+                            logEvent(`Error ending turn after detention for AI ${aiPlayerId}: ${endError.message}`, endError);
+                        }
                         window._aiTurnInProgress = false;
                         return;
                     }
                 } catch (error) {
                     logEvent(`AI ${aiPlayerId} detention action failed: ${error.message}`, error);
-                    // Force turn end to prevent stalling
                     try {
                         await handleEndTurnAction();
                     } catch (endError) {
@@ -3992,6 +3995,7 @@
                             let currentDoublesCount = playerState.doublesRolledInTurn || 0;
                             if (isDoubles) {
                                 currentDoublesCount++;
+                                logEvent(`AI ${aiPlayerId} rolled doubles (${die1},${die2}), count: ${currentDoublesCount}.`);
                             } else {
                                 currentDoublesCount = 0;
                             }
@@ -4074,7 +4078,10 @@
                                     rentPropertyId = landedSpace.id;
                                     messages.push(`${playerState.name} (AI) landed on ${landedSpace.name}, owned by ${freshGameData.players[propertyDataEntry.owner]?.name}. Rent due.`);
                                 }
-                                updates[`players.${aiPlayerId}.playerActionTakenThisTurn`] = !isDoubles;
+                                updates[`players.${aiPlayerId}.playerActionTakenThisTurn`] = !isDoubles || currentDoublesCount >= 3;
+                                if (isDoubles && currentDoublesCount < 3) {
+                                    logEvent(`AI ${aiPlayerId} set to roll again due to doubles (count: ${currentDoublesCount}).`);
+                                }
                             }
         
                             updates.lastDiceRoll = { die1, die2, total: totalRoll, isDoubles };
@@ -4141,21 +4148,27 @@
                     logEvent(`AI ${aiPlayerId} move/animation failed: ${moveError.message}`, moveError);
                 }
         
-                // Always attempt to end turn after a delay to prevent stalling
+                // End turn only if action taken, bankrupt, in detention, or third doubles
                 setTimeout(async () => {
                     try {
                         const freshGameSnapshot = await getDoc(gameDocRef);
                         if (freshGameSnapshot.exists()) {
                             const freshGameData = freshGameSnapshot.data();
+                            const playerState = freshGameData.players[aiPlayerId];
+                            if (!playerState) {
+                                logEvent(`AI ${aiPlayerId} turn end skipped: Player state missing.`);
+                                window._aiTurnInProgress = false;
+                                return;
+                            }
                             if (freshGameData.playerOrder[freshGameData.currentPlayerIndex] === aiPlayerId &&
-                                (freshGameData.players[aiPlayerId]?.playerActionTakenThisTurn || 
-                                 freshGameData.players[aiPlayerId]?.isBankrupt ||
-                                 freshGameData.players[aiPlayerId]?.inDetention) &&
+                                (playerState.playerActionTakenThisTurn || playerState.isBankrupt || playerState.inDetention) &&
                                 currentUserId === freshGameData.hostId) {
-                                logEvent(`Host ending turn for AI ${aiPlayerId}.`);
+                                logEvent(`Host ending turn for AI ${aiPlayerId}. ActionTaken: ${playerState.playerActionTakenThisTurn}, Bankrupt: ${playerState.isBankrupt}, InDetention: ${playerState.inDetention}`);
                                 await handleEndTurnAction();
+                            } else if (isDoubles && playerState.doublesRolledInTurn < 3 && !playerState.inDetention && !playerState.isBankrupt) {
+                                logEvent(`AI ${aiPlayerId} turn not ended: Doubles rolled (count: ${playerState.doublesRolledInTurn}), waiting for next roll.`);
                             } else {
-                                logEvent(`AI ${aiPlayerId} turn end skipped: Conditions not met. CurrentPlayer: ${freshGameData.playerOrder[freshGameData.currentPlayerIndex]}, ActionTaken: ${freshGameData.players[aiPlayerId]?.playerActionTakenThisTurn}, Bankrupt: ${freshGameData.players[aiPlayerId]?.isBankrupt}, InDetention: ${freshGameData.players[aiPlayerId]?.inDetention}, Host: ${currentUserId === freshGameData.hostId}`);
+                                logEvent(`AI ${aiPlayerId} turn end skipped: Conditions not met. CurrentPlayer: ${freshGameData.playerOrder[freshGameData.currentPlayerIndex]}, ActionTaken: ${playerState.playerActionTakenThisTurn}, Bankrupt: ${playerState.isBankrupt}, InDetention: ${playerState.inDetention}, Host: ${currentUserId === freshGameData.hostId}`);
                             }
                         } else {
                             logEvent(`AI ${aiPlayerId} turn end skipped: Game document not found.`);
