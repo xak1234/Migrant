@@ -850,7 +850,7 @@
         const firebaseConfigToUse = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : userProvidedFirebaseConfig;
         
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        const appIdentifier = typeof __app_id !== 'undefined' ? __app_id : 'migrantopoly-default-app';
+        // const appIdentifier = typeof __app_id !== 'undefined' ? __app_id : 'migrantopoly-default-app'; // No longer used for Firestore paths
 
         // Firebase SDK imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -1116,7 +1116,8 @@
             currentGameId = newGameId; 
             const numPlayers = parseInt(numPlayersOnlineSelect.value);
 
-            const gameDocRef = doc(db, `artifacts/${appIdentifier}/public/data/games`, newGameId);
+            // ***** AMENDED Firestore Path *****
+            const gameDocRef = doc(db, "games", newGameId);
 
             reformatBoardLayout(); 
 
@@ -1152,7 +1153,7 @@
 
             const initialGameState = {
                 gameId: newGameId,
-                status: "waiting", // Initial status
+                status: "waiting", 
                 hostId: currentUserId,
                 maxPlayers: numPlayers,
                 players: { [currentUserId]: initialPlayerData }, 
@@ -1172,13 +1173,10 @@
                 updatedAt: serverTimestamp(),
                 preGameRolls: {}, 
                 preGamePlayersRolled: [], 
-                preGamePhase: true, // Start in preGamePhase, status "waiting"
+                preGamePhase: true, 
             };
-             // If creating a 1-player game (maxPlayers === 1), immediately set status to active
-            // For this game, min players is 2, so this specific condition might not be hit often
-            // but good for robustness if maxPlayers could be 1.
-            if (numPlayers === 1) {
-                initialGameState.status = "active"; // Game is active, preGamePhase handles the single player roll
+            if (numPlayers === 1 && Object.keys(initialGameState.players).length === 1) { // Check if it's a single player game from the start
+                initialGameState.status = "active"; 
                 initialGameState.lastActionMessage = `${localPlayerName} started a game. Ready to roll for start.`;
             }
 
@@ -1214,7 +1212,8 @@
                 return;
             }
 
-            const gameDocRef = doc(db, `artifacts/${appIdentifier}/public/data/games`, gameIdToJoin);
+            // ***** AMENDED Firestore Path *****
+            const gameDocRef = doc(db, "games", gameIdToJoin);
 
             try {
                 await runTransaction(db, async (transaction) => {
@@ -1275,7 +1274,8 @@
             if (unsubscribeGameState) {
                 unsubscribeGameState(); 
             }
-            const gameDocRef = doc(db, `artifacts/${appIdentifier}/public/data/games`, gameId);
+            // ***** AMENDED Firestore Path *****
+            const gameDocRef = doc(db, "games", gameId);
             unsubscribeGameState = onSnapshot(gameDocRef, (docSnap) => {
                 if (docSnap.exists()) {
                     localGameData = docSnap.data();
@@ -1317,10 +1317,9 @@
 
         // --- UI Update Functions (Driven by Firestore) ---
         function updateLocalUIFromFirestore(gameData) {
-            // ***** AMENDED: Added guard for currentUserId *****
             if (!currentUserId) {
                 logEvent("UpdateLocalUI: currentUserId not set yet, deferring UI update.");
-                gameStatusMessageP.textContent = "Authenticating..."; // Give some feedback
+                gameStatusMessageP.textContent = "Authenticating..."; 
                 return;
             }
 
@@ -1755,7 +1754,8 @@
             const totalRoll = die1 + die2;
             const isDoubles = die1 === die2;
 
-            const gameDocRef = doc(db, `artifacts/${appIdentifier}/public/data/games`, currentGameId);
+            // ***** AMENDED Firestore Path *****
+            const gameDocRef = doc(db, "games", currentGameId);
             try {
                 await runTransaction(db, async (transaction) => {
                     const freshGameDoc = await transaction.get(gameDocRef);
@@ -1817,7 +1817,8 @@
             preGameRollButton.disabled = true;
             const roll = Math.floor(Math.random() * 6) + 1 + Math.floor(Math.random() * 6) + 1; 
 
-            const gameDocRef = doc(db, `artifacts/${appIdentifier}/public/data/games`, currentGameId);
+            // ***** AMENDED Firestore Path *****
+            const gameDocRef = doc(db, "games", currentGameId);
             try {
                 await runTransaction(db, async (transaction) => {
                     const freshGameDoc = await transaction.get(gameDocRef);
@@ -1919,7 +1920,8 @@
                 const useCardBtn = document.createElement('button');
                 useCardBtn.textContent = "Use Legal Aid Card";
                 useCardBtn.onclick = async () => { 
-                    const gameDocRef = doc(db, `artifacts/${appIdentifier}/public/data/games`, currentGameId);
+                    // ***** AMENDED Firestore Path *****
+                    const gameDocRef = doc(db, "games", currentGameId);
                     try {
                         await updateDoc(gameDocRef, {
                             [`players.${currentUserId}.getOutOfDetentionCards`]: playerState.getOutOfDetentionCards - 1,
@@ -1939,7 +1941,8 @@
                 const payFineBtn = document.createElement('button');
                 payFineBtn.textContent = `Pay £${fineAmount} Fine`;
                 payFineBtn.onclick = async () => { 
-                    const gameDocRef = doc(db, `artifacts/${appIdentifier}/public/data/games`, currentGameId);
+                    // ***** AMENDED Firestore Path *****
+                    const gameDocRef = doc(db, "games", currentGameId);
                      try {
                         await updateDoc(gameDocRef, {
                             [`players.${currentUserId}.money`]: playerState.money - fineAmount,
@@ -1963,7 +1966,8 @@
                 const isDoubles = die1 === die2;
                 const totalRoll = die1 + die2;
                 
-                const gameDocRef = doc(db, `artifacts/${appIdentifier}/public/data/games`, currentGameId);
+                // ***** AMENDED Firestore Path *****
+                const gameDocRef = doc(db, "games", currentGameId);
                 let updates = { updatedAt: serverTimestamp(), lastDiceRoll: {die1, die2, total: totalRoll, isDoubles} };
                 if (isDoubles) {
                     updates[`players.${currentUserId}.inDetention`] = false;
@@ -1986,7 +1990,7 @@
         document.addEventListener('DOMContentLoaded', async () => {
             reformatBoardLayout(); 
             await initializeFirebase();
-            const playerToken = document.getElementById(`player-token-${currentUserId}`); // currentUserId might be null here initially
+            const playerToken = document.getElementById(`player-token-${currentUserId}`); 
             if(playerToken) playerToken.classList.remove('token-flash');
         });
 
