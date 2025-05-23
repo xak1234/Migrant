@@ -2929,6 +2929,71 @@
             detentionActionsDiv.appendChild(rollDoublesBtn);
         }
 
+        function showDevelopPropertyOptions(playerState, gameData) {
+            if (!developPropertyContainer || !developPropertyOptionsDiv || !developPropertyNameH3) return;
+
+            developPropertyOptionsDiv.innerHTML = ''; // Clear previous options
+            developPropertyNameH3.textContent = "Develop Property"; // Reset title
+
+            let canDevelopAnything = false;
+
+            playerState.properties.forEach(propId => {
+                const propLayout = gameData.boardLayout.find(s => s.id === propId);
+                const propData = gameData.propertyData.find(p => p.id === propId);
+
+                if (propLayout && propData && propLayout.type === 'property' && propData.owner === playerState.id) {
+                    // Check if player owns all properties in the group
+                    const groupPropertiesLayout = gameData.boardLayout.filter(s => s.groupId === propLayout.groupId && s.type === 'property');
+                    const ownsAllInGroup = groupPropertiesLayout.every(gpLayout => {
+                        const gpDataForCheck = gameData.propertyData.find(pd => pd.id === gpLayout.id);
+                        return gpDataForCheck && gpDataForCheck.owner === playerState.id;
+                    });
+
+                    if (ownsAllInGroup) {
+                        if (!propData.permanentResidence && propData.tenancies < MAX_TENANCIES) {
+                            const addTenancyButton = document.createElement('button');
+                            addTenancyButton.textContent = `Add Tenancy to ${propLayout.name} (£${TENANCY_COST})`;
+                            addTenancyButton.disabled = playerState.money < TENANCY_COST;
+                            addTenancyButton.onclick = () => handleConfirmDevelopment(propId, 'tenancy');
+                            developPropertyOptionsDiv.appendChild(addTenancyButton);
+                            canDevelopAnything = true;
+                        }
+                        if (!propData.permanentResidence && propData.tenancies === MAX_TENANCIES) {
+                            const buildPRButton = document.createElement('button');
+                            buildPRButton.textContent = `Build PR on ${propLayout.name} (£${PR_COST})`;
+                            buildPRButton.disabled = playerState.money < PR_COST;
+                            buildPRButton.onclick = () => handleConfirmDevelopment(propId, 'pr');
+                            developPropertyOptionsDiv.appendChild(buildPRButton);
+                            canDevelopAnything = true;
+                        }
+                    }
+                }
+            });
+
+            if (!canDevelopAnything) {
+                developPropertyOptionsDiv.innerHTML = '<p>No properties currently eligible for development.</p>';
+            }
+            developPropertyContainer.style.display = 'block';
+        }
+
+        async function handleConfirmDevelopment(propertyId, developmentType) {
+            logEvent(`Attempting to develop property ${propertyId} with ${developmentType}`);
+            // This function will handle the Firestore transaction for development.
+            // It needs to:
+            // 1. Verify player turn, ownership, funds, and development validity (e.g., max tenancies).
+            // 2. Update player money.
+            // 3. Update propertyData (tenancies or permanentResidence).
+            // 4. Update lastActionMessage.
+            // 5. Check for bankruptcy.
+            // 6. Close the modal.
+            // 7. Trigger auto-end turn if applicable.
+            
+            // For now, just a placeholder:
+            showMessageModal("Development", `Development action for ${propertyId} (${developmentType}) needs to be fully implemented.`);
+            developPropertyContainer.style.display = 'none'; // Close modal
+            // Potentially call updateControlsBasedOnTurn or trigger auto-end here after actual Firestore update
+        }
+
 
         // --- Initial Load ---
         document.addEventListener('DOMContentLoaded', async () => {
@@ -2970,4 +3035,4 @@
     </script>
   </div>
 </body>
-</ht
+</html>
