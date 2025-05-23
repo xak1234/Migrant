@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1516,7 +1515,6 @@
                          logEvent("Switched to game container as game status is active/finished and setup screen was visible.");
                     }
                     // AI Turn Logic Trigger
-                    logEvent(`subscribeToGameState: Checking AI turn trigger. Host: ${gameData.hostId === currentUserId}, Status: ${gameData.status}, PreGame: ${gameData.preGamePhase}`);
                     if (
                         gameData.status === "active" &&
                         !gameData.preGamePhase &&
@@ -1526,61 +1524,45 @@
                     ) {
                         const currentPlayerId = gameData.playerOrder[gameData.currentPlayerIndex];
                         const currentPlayer = gameData.players[currentPlayerId];
-                        logEvent(`subscribeToGameState: Current player is ${currentPlayerId}, Is AI: ${currentPlayer?.isAI}, Bankrupt: ${currentPlayer?.isBankrupt}, _aiTurnInProgress: ${window._aiTurnInProgress}`);
-
                         if (currentPlayer && currentPlayer.isAI && !currentPlayer.isBankrupt) {
                             if (!window._aiTurnInProgress) {
                                 window._aiTurnInProgress = true;
-                                logEvent(`Host (${currentUserId}) about to trigger AI turn for ${currentPlayerId}. _aiTurnInProgress set to true.`);
+                                logEvent(`Host (${currentUserId}) is about to trigger AI turn for ${currentPlayerId}.`);
                                 setTimeout(async () => {
                                     try {
+                                        // Fetch fresh game data before AI acts
                                         const freshGameSnapshotForAI = await getDoc(doc(db, "games", gameId));
                                         if (freshGameSnapshotForAI.exists()) {
                                             const freshGameDataForAI = freshGameSnapshotForAI.data();
-                                            logEvent(`subscribeToGameState: AI turn timeout - Fresh data fetched. Current player in fresh data: ${freshGameDataForAI.playerOrder[freshGameDataForAI.currentPlayerIndex]}, Target AI: ${currentPlayerId}`);
-                                            if (
-                                                freshGameDataForAI.playerOrder[freshGameDataForAI.currentPlayerIndex] === currentPlayerId &&
+                                            // Double-check conditions
+                                            if (freshGameDataForAI.playerOrder[freshGameDataForAI.currentPlayerIndex] === currentPlayerId &&
                                                 freshGameDataForAI.players[currentPlayerId]?.isAI &&
-                                                freshGameDataForAI.hostId === currentUserId &&
                                                 !freshGameDataForAI.players[currentPlayerId]?.isBankrupt &&
-                                                freshGameDataForAI.status === "active" && !freshGameDataForAI.preGamePhase
-                                            ) {
-                                                logEvent(`subscribeToGameState: Conditions met for AI ${currentPlayerId} turn. Calling handleAITurn.`);
+                                                freshGameDataForAI.hostId === currentUserId &&
+                                                freshGameDataForAI.status === "active" &&
+                                                !freshGameDataForAI.preGamePhase) {
+                                                logEvent(`AI ${currentPlayerId} turn conditions valid. Processing turn.`);
                                                 await handleAITurn(freshGameDataForAI, currentPlayerId);
-                                                // _aiTurnInProgress is now managed by handleAITurn
                                             } else {
-                                                logEvent(`AI turn for ${currentPlayerId} skipped: Conditions changed or invalid state in fresh data. _aiTurnInProgress will be reset.`);
-                                                window._aiTurnInProgress = false;
+                                                logEvent(`AI ${currentPlayerId} turn skipped: Invalid conditions. CurrentPlayer: ${freshGameDataForAI.playerOrder[freshGameDataForAI.currentPlayerIndex]}, IsAI: ${freshGameDataForAI.players[currentPlayerId]?.isAI}, Bankrupt: ${freshGameDataForAI.players[currentPlayerId]?.isBankrupt}, Host: ${freshGameDataForAI.hostId === currentUserId}, Status: ${freshGameDataForAI.status}, PreGame: ${freshGameDataForAI.preGamePhase}`);
                                             }
                                         } else {
-                                            logEvent(`AI turn for ${currentPlayerId} skipped: Game document no longer exists. _aiTurnInProgress will be reset.`);
-                                            window._aiTurnInProgress = false;
+                                            logEvent(`AI ${currentPlayerId} turn skipped: Game document not found.`);
                                         }
                                     } catch (error) {
-                                        logEvent(`Error during AI turn execution for ${currentPlayerId}: ${error.message}`, error);
-                                        window._aiTurnInProgress = false; // Reset on error
+                                        logEvent(`AI ${currentPlayerId} turn processing failed: ${error.message}`, error);
+                                    } finally {
+                                        window._aiTurnInProgress = false;
                                     }
-                                    // Explicitly NOT setting _aiTurnInProgress = false here if handleAITurn is called,
-                                    // as handleAITurn is expected to manage it.
-                                }, 1500);
+                                }, 1500); // Match handleAITurn delay
                             } else {
-                                logEvent(`AI turn for ${currentPlayerId} skipped: _aiTurnInProgress is true. Current value: ${window._aiTurnInProgress}`);
+                                logEvent(`AI ${currentPlayerId} turn skipped: Previous AI turn still in progress.`);
                             }
-                        } else {
-                             logEvent(`AI turn trigger: Not an AI, or AI is bankrupt. Player: ${currentPlayerId}, Is AI: ${currentPlayer?.isAI}, Bankrupt: ${currentPlayer?.isBankrupt}`);
-                             if (window._aiTurnInProgress && currentPlayerId !== gameData.playerOrder[gameData.currentPlayerIndex]) {
-                                // If _aiTurnInProgress was true, but it's no longer that AI's turn, reset the flag.
-                                logEvent(`Resetting _aiTurnInProgress as it's no longer ${currentPlayerId}'s turn or they are no longer eligible.`);
-                                window._aiTurnInProgress = false;
-                             }
-                        }
-                    } else {
-                        logEvent(`AI turn trigger: Conditions not met. Host: ${gameData.hostId === currentUserId}, Status: ${gameData.status}, PreGame: ${gameData.preGamePhase}`);
-                         if (window._aiTurnInProgress && (gameData.status !== "active" || gameData.preGamePhase)) {
-                            logEvent("Resetting _aiTurnInProgress as game is no longer active or is in pre-game.");
-                            window._aiTurnInProgress = false;
+                        } else if (currentPlayer) {
+                            logEvent(`AI turn check for ${currentPlayerId} skipped: Not AI or bankrupt. IsAI: ${currentPlayer.isAI}, Bankrupt: ${currentPlayer.isBankrupt}`);
                         }
                     }
+
                 } else {
                     logEvent(`Game ${gameId} no longer exists or access denied.`);
                     showMessageModal("Game Ended", "The game session has ended or is no longer available.");
@@ -4143,11 +4125,22 @@
                         }, rentPaymentRequired ? 800 : 400);
                     } catch (rollError) {
                         logEvent(`AI ${aiPlayerId} roll transaction failed: ${rollError.message}`, rollError);
+                        // Fallback: reset action flag to allow retry
+                        try {
+                            await updateDoc(gameDocRef, {
+                                [`players.${aiPlayerId}.playerActionTakenThisTurn`]: false,
+                                lastActionMessage: `${aiPlayerState.name} (AI) roll failed, retrying next turn.`,
+                                updatedAt: serverTimestamp()
+                            });
+                        } catch (resetError) {
+                            logEvent(`AI ${aiPlayerId} action flag reset failed: ${resetError.message}`, resetError);
+                        }
                     }
-                } catch (moveError) {
-                    logEvent(`AI ${aiPlayerId} move/animation failed: ${moveError.message}`, moveError);
+                } catch (moveError) { // Catch for the outer try block (animatePlayerMove and subsequent logic)
+                    logEvent(`AI ${aiPlayerId} move/animation or subsequent action failed: ${moveError.message}`, moveError);
+                    // Consider if a general turn end or reset is needed here
                 }
-        
+
                 // End turn only if action taken, bankrupt, in detention, or third doubles
                 setTimeout(async () => {
                     try {
