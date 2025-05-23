@@ -1290,7 +1290,8 @@
                     logEvent("Game state updated from Firestore:", localGameData.lastActionMessage || "No last action message");
                     updateLocalUIFromFirestore(localGameData);
                     // Show game container if we have a game ID and the setup screen is visible
-                    if (currentGameId && onlineSetupScreen.style.display !== 'none') {
+                    // Only transition to game screen if game is active and not in waiting state
+                    if (currentGameId && onlineSetupScreen.style.display !== 'none' && localGameData.status === "active") {
                          onlineSetupScreen.style.display = 'none';
                          gameContainer.style.display = 'flex';
                     }
@@ -1652,11 +1653,14 @@
             if (amIBankrupt || gameData.status === "finished") return;
 
 
+            // Handle pre-game phase separately to show pre-game roll button
             if (gameData.preGamePhase && gameData.status === "active") { 
+                // Pre-game phase specific controls will be handled elsewhere
                 return; 
             }
             
-            if (gameData.status !== "active" || gameData.preGamePhase || gameData.gamePhase !== "main") return; 
+            // Only show main game controls when in active main game phase
+            if (gameData.status !== "active" || gameData.gamePhase !== "main") return; 
 
             const isMyTurn = gameData.playerOrder[gameData.currentPlayerIndex] === currentUserId;
             const amIInDetention = gameData.players[currentUserId]?.inDetention;
@@ -1801,8 +1805,12 @@
                 showMessageModal("Not your turn", "It's not your turn to roll the dice.");
                 return;
             }
-             if (localGameData.preGamePhase || localGameData.gamePhase !== "main") {
-                showMessageModal("Game Phase Error", "Cannot roll main dice during pre-game roll phase or before game has started.");
+             if (localGameData.preGamePhase) {
+                showMessageModal("Game Phase Error", "Cannot roll main dice during pre-game roll phase. Use the pre-game roll button instead.");
+                return;
+            }
+            if (localGameData.gamePhase !== "main") {
+                showMessageModal("Game Phase Error", "Cannot roll dice before the main game has started.");
                 return;
             }
             if (!localGameData.players || !localGameData.players[currentUserId]) {
@@ -1922,7 +1930,9 @@
                             updates.playerOrder = sortedPlayerIds; 
                             updates.currentPlayerIndex = 0; 
                             updates.preGamePhase = false; 
-                            updates.gamePhase = "main"; // Add this line to set the game phase to main
+                            updates.gamePhase = "main"; 
+                            // Make sure the game status is active
+                            updates.status = "active";
                             updates.lastActionMessage = `Starting order determined. ${freshGameData.players[sortedPlayerIds[0]].name} starts!`;
                         } else {
                             updates.lastActionMessage += " Waiting for host to finalize starting order.";
