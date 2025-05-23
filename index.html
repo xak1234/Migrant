@@ -900,6 +900,7 @@
         let currentGameId = null; 
         let unsubscribeGameState = null; 
         let localGameData = {}; // Local cache of the game state
+        let aiAddTimerId = null; // Timer for adding AI players
         // let analytics; // Declare analytics if you plan to use it
 
         // --- DOM Elements ---
@@ -1231,9 +1232,18 @@
                 gamePhase: "setup", 
             };
             
-            if (Object.keys(initialGameState.players).length === numPlayers) {
-                initialGameState.status = "active"; 
-                initialGameState.lastActionMessage = `${localPlayerName} created the game. Starting pre-game rolls.`;
+            if (Object.keys(initialGameState.players).length < numPlayers) {
+                // Start AI timer only if the game is not full and this client is the host
+                if (currentUserId === initialGameState.hostId) {
+                    if (aiAddTimerId) clearTimeout(aiAddTimerId); // Clear any existing timer
+                    logEvent(`Host starting 30s timer to add AI players if game not full.`);
+                    aiAddTimerId = setTimeout(() => {
+                        checkAndAddAIPlayers(newGameId, numPlayers);
+                    }, 30000); // 30 seconds
+                }
+            } else {
+                 initialGameState.status = "active"; 
+                 initialGameState.lastActionMessage = `${localPlayerName} created the game. Starting pre-game rolls.`;
             }
 
 
@@ -1316,6 +1326,7 @@
                             updates.preGamePhase = true; 
                             updates.status = "active";   
                             updates.lastActionMessage = `${localPlayerName} joined. All players present! Starting pre-game rolls.`;
+                            // If host's AI timer was running, it should be cleared by onSnapshot update
                         } else {
                             updates.lastActionMessage = `${localPlayerName} joined the game. Waiting for ${gameData.maxPlayers - newPlayerCount} more.`;
                         }
@@ -1335,6 +1346,74 @@
             }
         }
 
+        async function checkAndAddAIPlayers(gameId, maxPlayersInGame) {
+            if (aiAddTimerId) { // Clear the timer as it's now being processed
+                clearTimeout(aiAddTimerId);
+                aiAddTimerId = null;
+            }
+            logEvent(`checkAndAddAIPlayers called for game ${gameId}. Max players: ${maxPlayersInGame}`);
+
+            const gameDocRef = doc(db, "games", gameId);
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const gameDoc = await transaction.get(gameDocRef);
+                    if (!gameDoc.exists()) {
+                        logEvent("checkAndAddAIPlayers: Game document no longer exists.");
+                        return;
+                    }
+                    const gameData = gameDoc.data();
+
+                    if (gameData.status !== "waiting" || Object.keys(gameData.players).length >= maxPlayersInGame) {
+                        logEvent("checkAndAddAIPlayers: Game is no longer waiting or is full. No AI needed.", { status: gameData.status, playerCount: Object.keys(gameData.players).length });
+                        return;
+                    }
+
+                    const numHumanPlayers = Object.keys(gameData.players).length;
+                    const numAIToAdd = maxPlayersInGame - numHumanPlayers;
+
+                    if (numAIToAdd <= 0) {
+                        logEvent("checkAndAddAIPlayers: No AI players needed.");
+                        return;
+                    }
+
+                    logEvent(`checkAndAddAIPlayers: Adding ${numAIToAdd} AI player(s).`);
+                    let updates = {};
+                    let newPlayerOrder = [...gameData.playerOrder];
+                    let newPlayersObject = {...gameData.players};
+                    let aiPlayerNames = [];
+
+                    for (let i = 0; i < numAIToAdd; i++) {
+                        const aiPlayerId = `AI-${crypto.randomUUID().substring(0, 8)}`;
+                        const aiPlayerName = `AI Bot ${i + 1}`;
+                        aiPlayerNames.push(aiPlayerName);
+                        const aiOrderIndex = newPlayerOrder.length; // AI players join last in initial order
+                        const aiPlayerData = {
+                            id: aiPlayerId, name: aiPlayerName, money: 2000, position: 0, properties: [],
+                            healthServices: 0, getOutOfDetentionCards: 0, inDetention: false, missedTurnsInDetention: 0,
+                            hasHousingVoucher: false, isBankrupt: false, playerActionTakenThisTurn: false,
+                            doublesRolledInTurn: 0, order: aiOrderIndex, govReceived: 0, isAI: true
+                        };
+                        newPlayersObject[aiPlayerId] = aiPlayerData;
+                        newPlayerOrder.push(aiPlayerId);
+                    }
+
+                    updates.players = newPlayersObject;
+                    updates.playerOrder = newPlayerOrder;
+                    updates.preGamePhase = true; 
+                    updates.status = "active";   
+                    updates.lastActionMessage = `${aiPlayerNames.join(', ')} joined as AI. Starting pre-game rolls.`;
+                    updates.updatedAt = serverTimestamp();
+                    
+                    transaction.update(gameDocRef, updates);
+                    logEvent(`checkAndAddAIPlayers: Successfully added ${numAIToAdd} AI player(s).`);
+                });
+            } catch (error) {
+                console.error("Error in checkAndAddAIPlayers transaction:", error);
+                showMessageModal("AI Add Error", "Could not add AI players: " + error.message);
+            }
+        }
+
+
         function subscribeToGameState(gameId) {
             if (unsubscribeGameState) {
                 unsubscribeGameState(); 
@@ -1343,6 +1422,15 @@
             unsubscribeGameState = onSnapshot(gameDocRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const gameData = docSnap.data(); 
+                    
+                    // If host and AI timer is running, check if game is full or started
+                    if (currentUserId === gameData.hostId && aiAddTimerId) {
+                        if (gameData.status !== "waiting" || Object.keys(gameData.players).length >= gameData.maxPlayers) {
+                            logEvent("Game filled or started, clearing AI add timer.");
+                            clearTimeout(aiAddTimerId);
+                            aiAddTimerId = null;
+                        }
+                    }
                     
                     // Check for money changes for the current user before updating localGameData
                     if (localGameData.players && gameData.players && currentUserId && 
@@ -1407,6 +1495,10 @@
             if (unsubscribeGameState) {
                 unsubscribeGameState();
                 unsubscribeGameState = null;
+            }
+            if (aiAddTimerId) { // Clear AI timer if it's running
+                clearTimeout(aiAddTimerId);
+                aiAddTimerId = null;
             }
             onlineSetupMessage.textContent = "Ready to create or join a new game.";
             gameIdDisplayDiv.style.display = 'none';
@@ -3035,4 +3127,4 @@
     </script>
   </div>
 </body>
-</html>
+</ht
