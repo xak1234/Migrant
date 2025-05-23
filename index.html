@@ -19,8 +19,10 @@
             align-items: center;
             justify-content: center;
         }
+        /* body::before is intended for a subtle background texture or effect.
+           Its content is empty, so it should not display any text itself. */
         body::before {
-            content: '';
+            content: ''; 
             position: fixed;
             top: 50%;
             left: 50%;
@@ -39,7 +41,7 @@
 
         .main-content {
           position: relative;
-          z-index: 3;
+          z-index: 3; /* Ensures main content is above body::before and overlay */
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -48,6 +50,7 @@
           width: 100%;
           padding-top: 20px;
           padding-bottom: 20px;
+          background-color: #2c3e50; /* Added to ensure opacity over potential stray body content */
         }
 
         #player-setup-screen, #online-setup-screen {
@@ -380,8 +383,6 @@
             user-select: none;
             pointer-events: none;
         }
-        /* Player token colors will be set dynamically via JS based on Firestore player data */
-
 
         #game-info-area {
             width: 320px;
@@ -619,7 +620,7 @@
           position: fixed;
           top: 0; left: 0; right: 0; bottom: 0;
           background: rgba(24,28,36,0.48);
-          z-index: 2;
+          z-index: 2; /* Ensure it's above body::before but below main content modals */
           pointer-events: none;
         }
 
@@ -639,7 +640,18 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
 
-        .token-hop {
+        .dice-animation {
+            animation: dice-roll-effect 0.4s ease-out;
+        }
+        @keyframes dice-roll-effect {
+            0% { transform: scale(1) rotate(0deg); opacity: 0.5; }
+            25% { transform: scale(1.3) rotate(90deg); opacity: 0.75; }
+            50% { transform: scale(1.1) rotate(180deg); opacity: 1; }
+            75% { transform: scale(1.3) rotate(270deg); opacity: 0.75; }
+            100% { transform: scale(1) rotate(360deg); opacity: 1; }
+        }
+
+        .token-hop { /* General hop for landing, can be reused or a new one for steps */
             animation: hop-animation 0.3s ease-out;
         }
         @keyframes hop-animation {
@@ -649,11 +661,11 @@
             100% { transform: translateY(0) scale(1); opacity: 1; }
         }
 
-        .token-arrive-step {
-            animation: arrive-step-animation 0.25s ease-out;
+        .token-arrive-step { /* Short animation for each step */
+            animation: arrive-step-animation 0.15s ease-out;
         }
         @keyframes arrive-step-animation {
-            0% { transform: scale(0.6) translateY(5px); opacity: 0.4; }
+            0% { transform: scale(0.8) translateY(2px); opacity: 0.7; }
             100% { transform: scale(1) translateY(0); opacity: 1; }
         }
 
@@ -839,28 +851,30 @@
     <script type="module">
         // --- Firebase Configuration ---
         const userProvidedFirebaseConfig = {
-            apiKey: "AIzaSyARzlfhH_AC0YTxJ5fKvhz_SPDq1r6mWPA", 
+            apiKey: "AIzaSyARzlfhH_AC0YTxJ5fKvhz_SPDq1r6mWPA",
             authDomain: "migrantopoly.firebaseapp.com",
             projectId: "migrantopoly",
-            storageBucket: "migrantopoly.firebasestorage.app", 
+            storageBucket: "migrantopoly.firebasestorage.app",
             messagingSenderId: "649348280586",
             appId: "1:649348280586:web:2bd3be4d2de84c0ea8caf3",
-            measurementId: "G-1TMRSC6KL8" 
+            measurementId: "G-1TMRSC6KL8"
         };
+        // Use global config if available, otherwise fallback to userProvided (or your defaults)
         const firebaseConfigToUse = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : userProvidedFirebaseConfig;
         
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        // const appIdentifier = typeof __app_id !== 'undefined' ? __app_id : 'migrantopoly-default-app'; // No longer used for Firestore paths
 
         // Firebase SDK imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, serverTimestamp, arrayUnion, arrayRemove, runTransaction, writeBatch, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js"; // Analytics can be added if needed
 
         let db, auth, currentUserId = null, localPlayerName = '';
         let currentGameId = null; 
         let unsubscribeGameState = null; 
-        let localGameData = {}; 
+        let localGameData = {}; // Local cache of the game state
+        // let analytics; // Declare analytics if you plan to use it
 
         // --- DOM Elements ---
         const onlineSetupScreen = document.getElementById('online-setup-screen');
@@ -909,7 +923,7 @@
         const modalOkButton = document.getElementById('modal-ok-button');
 
         // --- Game Data Definitions ---
-        let initialBoardLayout = [
+        let initialBoardLayout = [ // This layout will be reformatted
             { id: 0, name: "Dole", type: "go" },
             { id: 1, name: "Tent in Field 1", type: "property", price: 60, rent: [4, 10, 20, 40, 80], color: "brown", groupId: "brown" },
             { id: 2, name: "Welfare Card", type: "welfare" },
@@ -923,27 +937,27 @@
             { id: 10, name: "Tesco Cardboard Skip 3", type: "property", price: 140, rent: [10, 15, 30, 60, 120], color: "light-blue", groupId: "lightblue" },
             { id: 11, name: "Council Highrise 1", type: "property", price: 160, rent: [12, 25, 50, 100, 200], color: "pink", groupId: "pink" },
             { id: 12, name: "Forced Marriage", type: "set_property", price: 200, rent_base: 200, groupId: "special_set" },
-            { id: 13, name: "Welfare Card", type: "welfare" },
+            { id: 13, name: "Welfare Card", type: "welfare" }, // Note: this was id 13, will be re-indexed
             { id: 14, name: "Council Highrise 2", type: "property", price: 180, rent: [14, 25, 50, 100, 200], color: "pink", groupId: "pink" },
             { id: 15, name: "Council Highrise 3", type: "property", price: 200, rent: [16, 25, 50, 100, 200], color: "pink", groupId: "pink" },
             { id: 16, name: "Crime Spree !!! Arrest", type: "crime_spree", amount: 200 },
             { id: 17, name: "Gypsy Estate 1", type: "property", price: 220, rent: [18, 35, 70, 140, 280], color: "orange", groupId: "orange" },
-            { id: 18, name: "Opportunity Card", type: "opportunity" },
+            { id: 18, name: "Opportunity Card", type: "opportunity" }, // Note: this was id 18
             { id: 19, name: "Gypsy Estate 2", type: "property", price: 240, rent: [20, 35, 70, 140, 280], color: "orange", groupId: "orange" },
             { id: 20, name: "Child Wives", type: "set_property", price: 200, rent_base: 200, groupId: "special_set" },
             { id: 21, name: "Fake ID Cards", type: "tax", amount: 100 },
             { id: 22, name: "Gypsy Estate 3", type: "property", price: 260, rent: [22, 35, 70, 140, 280], color: "orange", groupId: "orange" },
             { id: 23, name: "Holiday Inn 1", type: "property", price: 280, rent: [24, 45, 90, 180, 360], color: "red", groupId: "red" },
             { id: 24, name: "Go to Detention Center", type: "go_to_detention" },
-            { id: 25, name: "Welfare Card", type: "welfare" },
+            { id: 25, name: "Welfare Card", type: "welfare" }, // Note: this was id 25
             { id: 26, name: "Holiday Inn 2", type: "property", price: 300, rent: [26, 45, 90, 180, 360], color: "red", groupId: "red" },
             { id: 27, name: "Holiday Inn 3", type: "property", price: 320, rent: [28, 45, 90, 180, 360], color: "red", groupId: "red" },
             { id: 28, name: "I Dont speak English", type: "set_property", price: 200, rent_base: 200, groupId: "special_set" },
             { id: 29, name: "Luxury Flat 1", type: "property", price: 350, rent: [30, 60, 120, 240, 480], color: "green", groupId: "green" },
-            { id: 30, name: "Opportunity Card", type: "opportunity" },
+            { id: 30, name: "Opportunity Card", type: "opportunity" }, // Note: this was id 30
             { id: 31, name: "Luxury Flat 2", type: "property", price: 400, rent: [35, 60, 120, 240, 480], color: "green", groupId: "green" },
         ];
-        let boardLayout = []; 
+        let boardLayout = []; // Will hold the final, re-indexed board layout
         let detentionCenterSpaceId;
         const TENANCY_COST = 50;
         const PR_COST = 150;
@@ -983,11 +997,15 @@
         let toneSynth;
         let audioContextStarted = false;
         let currentCardBeingExecuted = null; 
-        let lastRollWasDoublesGlobal = false; 
+        // let lastRollWasDoublesGlobal = false; // This global seems redundant with per-player doubles tracking
 
         // --- Utility Functions ---
-        function logEvent(message) {
-            console.log(`[Game Log] ${new Date().toLocaleTimeString()}: ${message}`);
+        function logEvent(message, data = null) {
+            if (data) {
+                console.log(`[Game Log] ${new Date().toLocaleTimeString()}: ${message}`, data);
+            } else {
+                console.log(`[Game Log] ${new Date().toLocaleTimeString()}: ${message}`);
+            }
         }
 
         function showMessageModal(title, message) {
@@ -1004,6 +1022,8 @@
         }
 
         function reformatBoardLayout() { 
+            // This function re-arranges and re-indexes the board spaces.
+            // It's important that all clients use the *exact same* logic here.
             const newBoardLocations = [
                 { name: "Boat Sank After Renting", type: "set_property", price: 100, rent_base: 100, groupId: "special_set" },
                 { name: "People Trafficking", type: "set_property", price: 100, rent_base: 100, groupId: "special_set" },
@@ -1026,7 +1046,7 @@
             tempBoard.push(peopleTraffickingProperty);
             tempBoard.push(...initialBoardLayout.filter(s => s.id >= 10 && s.id <= 12));
             tempBoard.push(payoutJobSeekersOriginal);
-            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 13 && s.id <= 15));
+            tempBoard.push(...initialBoardLayout.filter(s => s.id === 13 || (s.id >= 14 && s.id <= 15))); // Corrected to include id 13
             tempBoard.push(initialBoardLayout.find(s => s.id === 16)); 
             const moreThan15ChildrenProperty = newBoardLocations[2];
             const opportunityCardSide3Original = initialBoardLayout.find(s => s.id === 18);
@@ -1039,30 +1059,35 @@
             tempBoard.push(initialBoardLayout.find(s => s.id === 24)); 
             const cryptoScamProperty = newBoardLocations[3];
             const opportunityCardSide4Original = initialBoardLayout.find(s => s.id === 30);
-            tempBoard.push(...initialBoardLayout.filter(s => s.id >= 25 && s.id <= 28));
+            tempBoard.push(...initialBoardLayout.filter(s => s.id === 25 || (s.id >= 26 && s.id <= 28))); // Corrected to include id 25
             tempBoard.push(opportunityCardSide4Original);
             tempBoard.push(initialBoardLayout.find(s => s.id === 29));
             tempBoard.push(cryptoScamProperty);
             tempBoard.push(initialBoardLayout.find(s => s.id === 31));
-            boardLayout = tempBoard.map((space, index) => ({ ...space, id: index }));
+            
+            boardLayout = tempBoard.map((space, index) => ({ ...space, id: index })); // Re-index
+            
             const dcSpace = boardLayout.find(s => s.name === "Detention Center");
-            detentionCenterSpaceId = dcSpace ? dcSpace.id : (boardLayout.find(s => s.type === "detention_visiting")?.id || 8) ;
+            detentionCenterSpaceId = dcSpace ? dcSpace.id : (boardLayout.find(s => s.type === "detention_visiting")?.id || 8) ; // Fallback if name changes
         }
 
 
         // --- Firebase Setup ---
         async function initializeFirebase() {
-            if (!firebaseConfigToUse || !firebaseConfigToUse.apiKey) { 
-                onlineSetupMessage.textContent = "Firebase configuration is missing or incomplete. Cannot connect to online services.";
-                console.error("Firebase config is not available or incomplete.");
+            // Check if the essential parts of the config are placeholders or missing
+            if (!firebaseConfigToUse || !firebaseConfigToUse.apiKey || firebaseConfigToUse.apiKey === "YOUR_API_KEY" || !firebaseConfigToUse.projectId) { 
+                onlineSetupMessage.textContent = "Firebase configuration is missing or incomplete. Online features disabled.";
+                console.error("Firebase config is not available or incomplete. Please update it in the script with your actual Firebase project details.");
                 createGameButton.disabled = true;
                 joinGameButton.disabled = true;
+                showMessageModal("Setup Error", "Firebase is not configured. Please check the console for details. Online play is unavailable.");
                 return;
             }
             try {
                 const app = initializeApp(firebaseConfigToUse); 
                 db = getFirestore(app);
                 auth = getAuth(app);
+                // analytics = getAnalytics(app); // Initialize analytics if you plan to use it
 
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
@@ -1072,15 +1097,11 @@
                         onlineSetupMessage.textContent = "Connected. Ready to create or join a game.";
                         createGameButton.disabled = false;
                         joinGameButton.disabled = false;
-                         // ***** ADDED: If game data already exists, try to update UI now that user is authed *****
-                        if (localGameData && Object.keys(localGameData).length > 0 && currentGameId) {
-                            logEvent("User authenticated, re-processing existing localGameData for UI.");
-                            updateLocalUIFromFirestore(localGameData);
-                        }
+                        // onSnapshot will handle UI updates if already subscribed
                     } else {
                         currentUserId = null;
                         localUserIdSpan.textContent = "Not Signed In";
-                        logEvent("User is signed out or authentication failed.");
+                        logEvent("User is signed out or initial authentication pending.");
                         
                         if (initialAuthToken) {
                             try {
@@ -1100,6 +1121,7 @@
             } catch (error) {
                 console.error("Firebase initialization error:", error);
                 onlineSetupMessage.textContent = "Error connecting to Firebase: " + error.message;
+                showMessageModal("Firebase Error", "Could not initialize Firebase: " + error.message);
                 createGameButton.disabled = true;
                 joinGameButton.disabled = true;
             }
@@ -1123,12 +1145,12 @@
 
             const gameDocRef = doc(db, "games", newGameId);
 
-            reformatBoardLayout(); 
+            reformatBoardLayout(); // Ensure board layout is finalized before game creation
 
-            const initialPropertyDataForFirestore = JSON.parse(JSON.stringify(boardLayout)) 
+            const initialPropertyDataForFirestore = boardLayout
                 .filter(s => s.type === 'property' || s.type === 'set_property')
                 .map(p => ({
-                    id: p.id,
+                    id: p.id, 
                     name: p.name,
                     owner: null, 
                     tenancies: 0,
@@ -1180,8 +1202,9 @@
                 preGamePhase: true, 
                 gamePhase: "setup", 
             };
+            
             if (Object.keys(initialGameState.players).length === numPlayers) {
-                initialGameState.status = "active";
+                initialGameState.status = "active"; 
                 initialGameState.lastActionMessage = `${localPlayerName} created the game. Starting pre-game rolls.`;
             }
 
@@ -1227,16 +1250,26 @@
                     }
 
                     const gameData = gameDoc.data();
+                    if (gameData.boardLayout && gameData.boardLayout.length > 0) {
+                        boardLayout = gameData.boardLayout;
+                        const dcSpace = boardLayout.find(s => s.name === "Detention Center");
+                        detentionCenterSpaceId = dcSpace ? dcSpace.id : (boardLayout.find(s => s.type === "detention_visiting")?.id || 8);
+                    } else {
+                        reformatBoardLayout();
+                        logEvent("Warning: Joined game was missing boardLayout, reformatted locally.");
+                    }
+
+
                     if (Object.keys(gameData.players).length >= gameData.maxPlayers) {
                         if (!gameData.players[currentUserId]) { 
                              throw new Error("Game is full.");
                         } else {
-                            logEvent("Already part of this game. Rejoining...");
+                            logEvent("Already part of this game. Rejoining/Resubscribing...");
                         }
                     }
                     
                     if (!gameData.players[currentUserId]) { 
-                        const newPlayerOrderIndex = gameData.playerOrder.length;
+                        const newPlayerOrderIndex = gameData.playerOrder.length; 
                         const newPlayerData = {
                             id: currentUserId, name: localPlayerName, money: 2000, position: 0, properties: [],
                             healthServices: 0, getOutOfDetentionCards: 0, inDetention: false, missedTurnsInDetention: 0,
@@ -1246,7 +1279,7 @@
 
                         const updates = {};
                         updates[`players.${currentUserId}`] = newPlayerData;
-                        updates.playerOrder = arrayUnion(currentUserId);
+                        updates.playerOrder = arrayUnion(currentUserId); 
                         updates.updatedAt = serverTimestamp();
 
                         const newPlayerCount = gameData.playerOrder.length + 1; 
@@ -1259,7 +1292,7 @@
                             updates.lastActionMessage = `${localPlayerName} joined the game. Waiting for ${gameData.maxPlayers - newPlayerCount} more.`;
                         }
                         transaction.update(gameDocRef, updates);
-                        logEvent(`${localPlayerName} joining game ${gameIdToJoin}.`);
+                        logEvent(`${localPlayerName} joining game ${gameIdToJoin}. Player order index: ${newPlayerOrderIndex}`);
                     }
                 });
 
@@ -1281,14 +1314,27 @@
             const gameDocRef = doc(db, "games", gameId);
             unsubscribeGameState = onSnapshot(gameDocRef, (docSnap) => {
                 if (docSnap.exists()) {
-                    const gameData = docSnap.data(); // Get data once
-                    localGameData = gameData; // Update global localGameData immediately
-                    logEvent("Game state updated from Firestore:", gameData.lastActionMessage || "No last action message");
-                    updateLocalUIFromFirestore(gameData); // Pass the fetched data directly
+                    const gameData = docSnap.data(); 
+                    localGameData = gameData; 
+                    logEvent("Game state updated from Firestore:", gameData.lastActionMessage || "No message", gameData.status);
                     
-                    if (currentGameId && onlineSetupScreen.style.display !== 'none' && gameData.status === "active") {
+                    if (gameData.boardLayout && JSON.stringify(boardLayout) !== JSON.stringify(gameData.boardLayout)) {
+                        logEvent("Board layout received from Firestore is different or not set, adopting it.");
+                        boardLayout = gameData.boardLayout;
+                        const dcSpace = boardLayout.find(s => s.name === "Detention Center");
+                        detentionCenterSpaceId = dcSpace ? dcSpace.id : (boardLayout.find(s => s.type === "detention_visiting")?.id || 8);
+                        if (boardContainer.innerHTML.trim() !== '') { // Only redraw if already drawn
+                            logEvent("Board was already drawn, re-setting up from new Firestore layout.");
+                            setupBoardFromFirestore(gameData); 
+                        }
+                    }
+                    
+                    updateLocalUIFromFirestore(gameData); 
+                    
+                    if (currentGameId && onlineSetupScreen.style.display !== 'none' && (gameData.status === "active" || gameData.status === "finished")) {
                          onlineSetupScreen.style.display = 'none';
                          gameContainer.style.display = 'flex';
+                         logEvent("Switched to game container as game status is active/finished and setup screen was visible.");
                     }
                 } else {
                     logEvent(`Game ${gameId} no longer exists or access denied.`);
@@ -1319,12 +1365,18 @@
             gameIdInput.value = '';
             boardLayout = []; 
             if(boardContainer) boardContainer.innerHTML = ''; 
+            if(playerInfoDiv) playerInfoDiv.innerHTML = '';
+            if(diceFace1Elem) diceFace1Elem.textContent = '--';
+            if(diceFace2Elem) diceFace2Elem.textContent = '--';
+            if(diceTotalDisplayText) diceTotalDisplayText.textContent = '';
+            if(currentTurnDisplay) currentTurnDisplay.textContent = 'Current Turn: Player 1';
+            if(gameStatusMessageP) gameStatusMessageP.textContent = 'Waiting for game to start...';
+
         }
 
-        // --- BEGIN FIX ---
         async function finalizePreGameAsHost() {
-            if (!currentGameId || !currentUserId || !db) {
-                console.error("finalizePreGameAsHost: Missing critical variables (currentGameId, currentUserId, db).");
+            if (!currentGameId || !currentUserId || !db || !localGameData.hostId || localGameData.hostId !== currentUserId) {
+                logEvent("finalizePreGameAsHost: Conditions not met.");
                 return;
             }
             logEvent("Host attempting to finalize pre-game rolls.");
@@ -1338,40 +1390,38 @@
                     }
                     const freshGameData = freshGameDoc.data();
 
-                    // Condition check inside transaction to ensure it's still necessary
                     if (!freshGameData.preGamePhase) {
-                        logEvent("Host finalization: Pre-game phase already ended. No action needed.");
-                        return; // Already finalized
+                        logEvent("Host finalization: Pre-game phase already ended.");
+                        return; 
+                    }
+                     if (freshGameData.hostId !== currentUserId) { 
+                        logEvent("Host finalization check: Current user is NOT host in fresh data. Aborting.");
+                        return;
                     }
 
                     const allPlayersInOrder = freshGameData.playerOrder || [];
                     const currentPreGameRolls = freshGameData.preGameRolls || {};
-                    // Ensure all players in the order have actually rolled in the fresh data
                     const allHaveRolled = allPlayersInOrder.length > 0 &&
+                                        allPlayersInOrder.length === freshGameData.maxPlayers && 
                                         allPlayersInOrder.every(pid => currentPreGameRolls[pid] !== undefined);
 
                     if (!allHaveRolled) {
-                        logEvent("Host finalization: Not all players have rolled in fresh data. Aborting to prevent premature finalization.");
+                        logEvent("Host finalization: Not all players have rolled or not all joined. Aborting.");
                         return; 
                     }
-                     if (freshGameData.hostId !== currentUserId) { 
-                        logEvent("Host finalization check: Current user is no longer host or an error occurred. Aborting.");
-                        return;
-                    }
-
-                    logEvent("Host is proceeding with finalization of pre-game rolls via dedicated function.");
+                    
+                    logEvent("Host is proceeding with finalization of pre-game rolls.");
                     let updates = {};
                     const sortedPlayerIds = [...allPlayersInOrder].sort((a, b) => {
                         const rollA = currentPreGameRolls[a];
                         const rollB = currentPreGameRolls[b];
-                        if (rollB === rollA) { // If rolls are tied
-                            // Maintain original join order for tie-breaking (or whatever order is current in playerOrder)
-                            return allPlayersInOrder.indexOf(a) - allPlayersInOrder.indexOf(b);
+                        if (rollB === rollA) { 
+                            return (freshGameData.players[a]?.order || 0) - (freshGameData.players[b]?.order || 0);
                         }
-                        return rollB - rollA; // Higher roll first
+                        return rollB - rollA; 
                     });
 
-                    updates.playerOrder = sortedPlayerIds;
+                    updates.playerOrder = sortedPlayerIds; 
                     updates.currentPlayerIndex = 0;
                     updates.preGamePhase = false;
                     updates.gamePhase = "main";
@@ -1380,92 +1430,354 @@
                     updates.updatedAt = serverTimestamp();
                     
                     transaction.update(gameDocRef, updates);
-                    logEvent("Host successfully finalized pre-game starting order via dedicated function.");
+                    logEvent("Host successfully finalized pre-game starting order.");
                 });
             } catch (error) {
                 console.error("Error during host finalization of pre-game rolls:", error);
                 showMessageModal("Host Finalization Error", "Could not finalize game start: " + error.message);
             }
         }
-        // --- END FIX ---
 
+        // --- UI HELPER FUNCTION DEFINITIONS ---
+        function updateDiceUIDisplay(gameData) {
+            const diceDisplayContainer = document.getElementById('actual-dice-faces');
+            if (!diceFace1Elem || !diceFace2Elem || !diceTotalDisplayText || !diceDisplayContainer) return;
 
-        // --- UI Update Functions (Driven by Firestore) ---
-        function updateLocalUIFromFirestore(gameData) { // gameData is the fresh snapshot from Firestore
-            if (!currentUserId) {
-                logEvent("UpdateLocalUI: currentUserId not set yet, deferring UI update.");
-                if(gameStatusMessageP) gameStatusMessageP.textContent = "Authenticating..."; 
+            if (gameData.lastDiceRoll && gameData.gamePhase === "main" && !gameData.preGamePhase) {
+                diceFace1Elem.textContent = gameData.lastDiceRoll.die1;
+                diceFace2Elem.textContent = gameData.lastDiceRoll.die2;
+                diceTotalDisplayText.textContent = ` = ${gameData.lastDiceRoll.total}`;
+                
+                diceDisplayContainer.classList.remove('dice-animation');
+                void diceDisplayContainer.offsetWidth; 
+                diceDisplayContainer.classList.add('dice-animation');
+            } else { 
+                diceFace1Elem.textContent = '--';
+                diceFace2Elem.textContent = '--';
+                diceTotalDisplayText.textContent = '';
+                diceDisplayContainer.classList.remove('dice-animation');
+            }
+        }
+
+        function updatePlayerInfoPanel(gameData) {
+            if (!playerInfoDiv) return;
+            playerInfoDiv.innerHTML = ''; 
+            if (!gameData.playerOrder || !gameData.players) {
+                logEvent("updatePlayerInfoPanel: Missing playerOrder or players data.");
                 return;
             }
 
-            if (!gameData || Object.keys(gameData).length === 0) {
-                logEvent("UpdateLocalUI: No game data received.");
+            gameData.playerOrder.forEach(playerId => {
+                const p = gameData.players[playerId];
+                if (!p || typeof p.id === 'undefined' || typeof p.order === 'undefined') { 
+                    logEvent("updatePlayerInfoPanel: Invalid player data encountered for ID:", playerId, p);
+                    return; 
+                };
+
+                const playerColor = playerColors[p.order % playerColors.length];
+                const pDiv = document.createElement('div');
+                if (p.isBankrupt) {
+                    pDiv.innerHTML = `<b style="color:${playerColor};">${p.name}</b>: BANKRUPT`;
+                    pDiv.style.textDecoration = 'line-through';
+                    pDiv.style.opacity = '0.6';
+                } else {
+                    pDiv.innerHTML = `<b style="color:${playerColor};">${p.name}</b>: <span style='font-weight:bold;'>£${p.money}</span> | HS: ${p.healthServices} | LegalAids: ${p.getOutOfDetentionCards}`;
+                    if (p.inDetention) pDiv.innerHTML += ` (In Detention - ${p.missedTurnsInDetention} missed)`;
+                    pDiv.innerHTML += `<br><span style='font-size:12px;color:#f7ca18;'>From UK Gov: £${p.govReceived || 0}</span>`;
+                }
+                if (!gameData.preGamePhase && gameData.status === "active" && gameData.playerOrder[gameData.currentPlayerIndex] === p.id && !p.isBankrupt) { 
+                    pDiv.style.border = `2px solid ${playerColor}`;
+                    pDiv.style.padding = "3px";
+                    pDiv.style.borderRadius = "4px";
+                    pDiv.classList.add('player-highlight'); 
+                } else {
+                    pDiv.classList.remove('player-highlight');
+                }
+                playerInfoDiv.appendChild(pDiv);
+            });
+        }
+        
+        function updateGameStatusPanel(gameData) {
+            if (!gameStatusMessageP || !currentTurnDisplay || !gameData.players || !gameData.playerOrder) return;
+
+            if (gameData.preGamePhase) {
+                 const joined = Object.keys(gameData.players).length;
+                 if (joined < gameData.maxPlayers) {
+                    gameStatusMessageP.textContent = `Waiting for players... (${joined}/${gameData.maxPlayers} joined)`;
+                 } else { 
+                    const allRolled = gameData.playerOrder.every(pid => gameData.preGameRolls && gameData.preGameRolls[pid] !== undefined);
+                    if (allRolled) {
+                        gameStatusMessageP.textContent = "All players rolled. Host is determining start order...";
+                    } else {
+                        gameStatusMessageP.textContent = "Pre-game: Determine starting player by rolling.";
+                    }
+                 }
+            } else if (gameData.status === "active" && gameData.gamePhase === "main") {
+                gameStatusMessageP.textContent = gameData.lastActionMessage || "Game in progress...";
+            } else if (gameData.status === "finished") {
+                gameStatusMessageP.textContent = gameData.lastActionMessage || "Game Over!";
+            } else { 
+                 gameStatusMessageP.textContent = `Waiting for players... (${Object.keys(gameData.players).length}/${gameData.maxPlayers} joined)`;
+            }
+
+            const currentPlayerIdInOrder = gameData.playerOrder[gameData.currentPlayerIndex];
+            const currentPlayerInOrder = gameData.players[currentPlayerIdInOrder];
+
+            if (currentPlayerInOrder && gameData.status === "active") { 
+                if (gameData.preGamePhase) {
+                    let nextPlayerToRollForDisplayId = null;
+                    for(const pid of gameData.playerOrder) { 
+                        if(!gameData.preGameRolls || gameData.preGameRolls[pid] === undefined) {
+                            nextPlayerToRollForDisplayId = pid;
+                            break;
+                        }
+                    }
+                    const playerToRoll = gameData.players[nextPlayerToRollForDisplayId];
+
+                    if (playerToRoll && typeof playerToRoll.name !== 'undefined' && typeof playerToRoll.order !== 'undefined') {
+                         currentTurnDisplay.textContent = `Pre-Game Roll: ${playerToRoll.name}`;
+                         currentTurnDisplay.style.color = playerColors[playerToRoll.order % playerColors.length];
+                    } else if (Object.keys(gameData.players).length === gameData.maxPlayers) { 
+                        currentTurnDisplay.textContent = "Pre-Game Rolls Complete";
+                        currentTurnDisplay.style.color = '#ecf0f1'; 
+                    } else {
+                        currentTurnDisplay.textContent = "Waiting for Players...";
+                        currentTurnDisplay.style.color = '#ecf0f1';
+                    }
+                } else if (gameData.gamePhase === "main" && !currentPlayerInOrder.isBankrupt) { 
+                    currentTurnDisplay.textContent = `Current Turn: ${currentPlayerInOrder.name}`;
+                    currentTurnDisplay.style.color = playerColors[currentPlayerInOrder.order % playerColors.length];
+                } else if (gameData.gamePhase === "main" && currentPlayerInOrder.isBankrupt) {
+                    currentTurnDisplay.textContent = `Skipping Bankrupt: ${currentPlayerInOrder.name}`;
+                    currentTurnDisplay.style.color = '#7f8c8d'; 
+                }
+            } else if (gameData.status === "finished") {
+                currentTurnDisplay.textContent = "Game Over!";
+                currentTurnDisplay.style.color = '#e74c3c';
+            } else { 
+                currentTurnDisplay.textContent = "Game Not Fully Started";
+                currentTurnDisplay.style.color = '#ecf0f1';
+            }
+        }
+
+        function updateControlsBasedOnTurn(gameData) {
+            if (!currentUserId || !gameData.players || !gameData.players[currentUserId]) {
+                rollDiceButton.style.display = 'none';
+                endTurnButton.style.display = 'none';
+                buyPropertyButton.style.display = 'none';
+                developPropertyButton.style.display = 'none';
+                otherActionsContainer.style.display = 'none'; 
+                detentionActionsDiv.innerHTML = ''; 
+                return;
+            }
+            const amIBankrupt = gameData.players[currentUserId]?.isBankrupt;
+
+            rollDiceButton.style.display = 'none';
+            endTurnButton.style.display = 'none';
+            buyPropertyButton.style.display = 'none';
+            developPropertyButton.style.display = 'none';
+            otherActionsContainer.style.display = 'none'; 
+            detentionActionsDiv.innerHTML = ''; 
+
+            if (amIBankrupt || gameData.status === "finished" || gameData.preGamePhase) {
+                const playerToken = document.getElementById(`player-token-${currentUserId}`);
+                if (playerToken) playerToken.classList.remove('token-flash');
                 return;
             }
             
-            // localGameData = gameData; // This line is already in subscribeToGameState, ensuring localGameData is up-to-date.
-                                      // Using the passed `gameData` parameter is safer within this function scope.
+            if (gameData.status !== "active" || gameData.gamePhase !== "main") return;
 
-            // --- BEGIN FIX ---
-            // Check if host needs to finalize pre-game rolls
-            // This check is performed using the gameData received from the snapshot
-            if (gameData.preGamePhase && 
-                gameData.status === "active" &&
-                gameData.hostId === currentUserId && // I am the host
-                gameData.playerOrder && gameData.playerOrder.length > 0 &&
-                gameData.preGameRolls &&
-                gameData.playerOrder.every(pid => gameData.preGameRolls[pid] !== undefined)
-               ) {
-                // All conditions met for host to potentially finalize.
-                // The finalizePreGameAsHost function will fetch fresh data again and check preGamePhase within a transaction.
-                logEvent("Host detected conditions to finalize pre-game based on current snapshot. Calling finalizePreGameAsHost.");
-                finalizePreGameAsHost(); // Call the new function. It uses global currentGameId.
-            }
-            // --- END FIX ---
+            const isMyTurn = gameData.playerOrder[gameData.currentPlayerIndex] === currentUserId;
+            const myPlayerState = gameData.players[currentUserId]; 
+            const amIInDetention = myPlayerState.inDetention;
+            const myPlayerActionTakenThisTurn = myPlayerState.playerActionTakenThisTurn; 
 
-            // Board setup logic
-            logEvent("UpdateLocalUI: Checking board setup. Current boardLayout.length: " + boardLayout.length + ", gameData.boardLayout exists: " + !!gameData.boardLayout);
-            if (gameData.boardLayout && gameData.boardLayout.length > 0) {
-                if (boardLayout.length === 0 || (boardContainer && boardContainer.innerHTML.trim() === '')) {
-                    logEvent("UpdateLocalUI: Setting up board from Firestore data.");
-                    boardLayout = gameData.boardLayout; 
-                    const dcSpace = boardLayout.find(s => s.name === "Detention Center");
-                    detentionCenterSpaceId = dcSpace ? dcSpace.id : (boardLayout.find(s => s.type === "detention_visiting")?.id || 8);
-                    setupBoardFromFirestore(gameData); 
-                } else {
-                    logEvent("UpdateLocalUI: Board already seems set up, updating dynamic elements.");
-                    updateBoardDynamicElements(gameData);
+            const playerToken = document.getElementById(`player-token-${currentUserId}`);
+            if (isMyTurn) {
+                if (playerToken && cardDisplayContainer.style.display === 'none' && developPropertyContainer.style.display === 'none' && (!onBoardCardDisplayDiv || onBoardCardDisplayDiv.style.display === 'none')) {
+                    playerToken.classList.add('token-flash');
+                } else if (playerToken) {
+                    playerToken.classList.remove('token-flash');
                 }
             } else {
-                logEvent("UpdateLocalUI: gameData.boardLayout is missing or empty. Board not set up.");
+                 if (playerToken) playerToken.classList.remove('token-flash');
             }
 
 
-            updatePlayerInfoPanel(gameData);
-            updateGameStatusPanel(gameData);
-            updateControlsBasedOnTurn(gameData); 
-            updateUkGovDisplay(gameData.ukGovMoney);
+            if (isMyTurn) {
+                if (amIInDetention) {
+                    setupDetentionActionsUI(myPlayerState, gameData); 
+                    if (myPlayerActionTakenThisTurn) { 
+                        endTurnButton.style.display = 'block';
+                        endTurnButton.disabled = false; // Explicitly enable
+                        endTurnButton.classList.add('main-action-button');
+                        detentionActionsDiv.innerHTML = ''; 
+                    }
+                } else { 
+                    const rolledDoubles = gameData.lastDiceRoll?.isDoubles;
+                    const doublesCount = myPlayerState.doublesRolledInTurn || 0;
 
-            if (gameData.preGamePhase) {
-                updatePreGameRollUI(gameData);
-            } else {
-                if(preGameRollArea) preGameRollArea.style.display = 'none';
+                    if (rolledDoubles && doublesCount > 0 && doublesCount < 3 && !myPlayerActionTakenThisTurn) {
+                        rollDiceButton.style.display = 'block';
+                        rollDiceButton.disabled = false; // Explicitly enable
+                        rollDiceButton.classList.add('main-action-button');
+                        if(gameStatusMessageP && gameData.lastActionMessage) {
+                            const baseMessage = gameData.lastActionMessage.includes("Doubles!") ? gameData.lastActionMessage : `${myPlayerState.name} rolled doubles!`;
+                            gameStatusMessageP.textContent = `${baseMessage} Roll again.`;
+                        } else if (gameStatusMessageP) {
+                             gameStatusMessageP.textContent = `${myPlayerState.name} rolled doubles! Roll again.`;
+                        }
+                    } else if (!myPlayerActionTakenThisTurn) { 
+                        rollDiceButton.style.display = 'block';
+                        rollDiceButton.disabled = false; // Explicitly enable
+                        rollDiceButton.classList.add('main-action-button');
+                    } else { 
+                        endTurnButton.style.display = 'block';
+                        endTurnButton.disabled = false; // Explicitly enable
+                        endTurnButton.classList.add('main-action-button');
+                        
+                        otherActionsContainer.style.display = 'block'; 
+
+                        const currentSpace = gameData.boardLayout[myPlayerState.position];
+                        const propData = Array.isArray(gameData.propertyData) ? gameData.propertyData.find(p => p.id === currentSpace?.id) : null;
+                        
+                        if (currentSpace && propData && (currentSpace.type === 'property' || currentSpace.type === 'set_property') && propData.owner === null) {
+                            let price = currentSpace.price;
+                            if (myPlayerState.hasHousingVoucher && currentSpace.type === 'property') { 
+                                price = Math.round(price * 0.75);
+                            }
+                            buyPropertyPriceSpan.textContent = price;
+                            buyPropertyButton.style.display = (myPlayerState.money >= price) ? 'inline-block' : 'none';
+                            if (buyPropertyButton.style.display === 'inline-block') buyPropertyButton.disabled = false; 
+                        } else {
+                            buyPropertyButton.style.display = 'none';
+                        }
+
+                        developPropertyButton.style.display = canPlayerDevelopAnyProperty(myPlayerState, gameData) ? 'inline-block' : 'none';
+                        if (developPropertyButton.style.display === 'inline-block') {
+                           developPropertyButton.disabled = false; 
+                        }
+                        
+                        if (buyPropertyButton.style.display === 'none' && developPropertyButton.style.display === 'none') {
+                            otherActionsContainer.style.display = 'none';
+                        }
+                    }
+                }
             }
-
-            if (gameData.status === "finished") {
-                handleGameEndUI(gameData);
-            } 
         }
         
+        function updatePreGameRollUI(gameData) {
+            if (!preGameRollArea || !preGameRollButton || !preGameRollResultsDiv || !gameData.players) { 
+                logEvent("updatePreGameRollUI: Missing DOM elements or player data.");
+                return;
+            }
+
+            if (!gameData.preGamePhase || gameData.status !== "active" || Object.keys(gameData.players).length < gameData.maxPlayers) { 
+                preGameRollArea.style.display = 'none';
+                preGameRollButton.style.display = 'none';
+                return;
+            }
+            
+            preGameRollArea.style.display = 'flex'; 
+            preGameRollResultsDiv.innerHTML = ''; 
+            preGameRollButton.style.display = 'none'; // Default to hidden
+
+            let allPlayerIdsInOrder = gameData.playerOrder || []; 
+            let preGameRollsData = gameData.preGameRolls || {};
+            let numberOfPlayers = allPlayerIdsInOrder.length;
+            
+            let rolledPlayerCount = 0;
+            allPlayerIdsInOrder.forEach(pid => {
+                const playerName = gameData.players[pid]?.name || 'Unknown Player';
+                const playerOrderForColor = gameData.players[pid]?.order; 
+                const playerColor = (typeof playerOrderForColor !== 'undefined') ? playerColors[playerOrderForColor % playerColors.length] : '#ecf0f1';
+
+                if (preGameRollsData[pid] !== undefined) {
+                    preGameRollResultsDiv.innerHTML += `<span style="color:${playerColor};">${playerName}</span> rolled: ${preGameRollsData[pid]}<br>`;
+                    rolledPlayerCount++;
+                } else {
+                    preGameRollResultsDiv.innerHTML += `<span style="color:${playerColor};">${playerName}</span> has not rolled yet.<br>`;
+                }
+            });
+            
+            if (rolledPlayerCount === numberOfPlayers && numberOfPlayers > 0 && numberOfPlayers === gameData.maxPlayers) {
+                preGameRollResultsDiv.innerHTML += "All players rolled. Host is determining start order...";
+            } else if (numberOfPlayers > 0 && numberOfPlayers === gameData.maxPlayers) { 
+                let nextPlayerToRollId = null;
+                const sortedByJoinOrder = [...allPlayerIdsInOrder].sort((a,b) => (gameData.players[a]?.order || 0) - (gameData.players[b]?.order || 0));
+
+                for (const pid of sortedByJoinOrder) {
+                    if (preGameRollsData[pid] === undefined) {
+                        nextPlayerToRollId = pid;
+                        break;
+                    }
+                }
+
+                if (nextPlayerToRollId === currentUserId) {
+                    preGameRollButton.style.display = 'block';
+                    preGameRollButton.textContent = `Your turn, ${gameData.players[currentUserId]?.name || 'Player'}, Roll to Start`;
+                    preGameRollButton.disabled = false;
+                } else if (nextPlayerToRollId && gameData.players[nextPlayerToRollId]) {
+                    preGameRollButton.style.display = 'block'; 
+                    preGameRollButton.textContent = `Waiting for ${gameData.players[nextPlayerToRollId].name} to roll...`;
+                    preGameRollButton.disabled = true;
+                } else if (rolledPlayerCount < numberOfPlayers) { 
+                    preGameRollButton.style.display = 'block';
+                    preGameRollButton.textContent = `Waiting for players to roll...`;
+                    preGameRollButton.disabled = true;
+                }
+            } else { 
+                 preGameRollResultsDiv.innerHTML = "Waiting for all players to join before starting rolls...";
+            }
+        }
+
+        function updateUkGovDisplay(govMoney) {
+            if (ukGovCashSpan) {
+                 ukGovCashSpan.textContent = govMoney !== undefined ? govMoney : (localGameData.ukGovMoney || 20000);
+            }
+        }
+
+        function handleGameEndUI(gameData) {
+            if (!gameStatusMessageP || !currentTurnDisplay || !rollDiceButton || !endTurnButton || !buyPropertyButton || !developPropertyButton || !preGameRollArea || !otherActionsContainer) return;
+            
+            gameStatusMessageP.textContent = gameData.lastActionMessage || "Game Over!";
+            currentTurnDisplay.textContent = "Game Over!";
+            currentTurnDisplay.style.color = '#e74c3c';
+
+            rollDiceButton.style.display = 'none';
+            endTurnButton.style.display = 'none';
+            buyPropertyButton.style.display = 'none';
+            developPropertyButton.style.display = 'none';
+            preGameRollArea.style.display = 'none'; 
+            detentionActionsDiv.innerHTML = ''; 
+
+            otherActionsContainer.style.display = 'block'; 
+            otherActionsContainer.innerHTML = '<button id="leave-game-button" style="background-color:#c0392b;">Back to Setup</button>';
+            const leaveButton = document.getElementById('leave-game-button');
+            if (leaveButton) {
+                leaveButton.onclick = () => {
+                    if (unsubscribeGameState) unsubscribeGameState();
+                    resetToSetupScreen();
+                };
+            }
+        }
+
         function setupBoardFromFirestore(gameData) {
-            logEvent("setupBoardFromFirestore called.");
             if (!boardContainer) {
                 logEvent("Error: boardContainer DOM element not found in setupBoardFromFirestore.");
                 return;
             }
             boardContainer.innerHTML = ''; 
-            const dcSpace = gameData.boardLayout.find(s => s.name === "Detention Center");
-            detentionCenterSpaceId = dcSpace ? dcSpace.id : (gameData.boardLayout.find(s => s.type === "detention_visiting")?.id || 8) ;
+            
+            if (gameData.boardLayout && gameData.boardLayout.length > 0) {
+                boardLayout = gameData.boardLayout;
+            } else {
+                logEvent("setupBoardFromFirestore: gameData.boardLayout is missing or empty. Cannot setup board.");
+                return;
+            }
+            
+            const dcSpace = boardLayout.find(s => s.name === "Detention Center");
+            detentionCenterSpaceId = dcSpace ? dcSpace.id : (boardLayout.find(s => s.type === "detention_visiting")?.id || 8) ;
 
             const cardDecksCenter = document.createElement('div');
             cardDecksCenter.id = 'card-decks-center';
@@ -1477,18 +1789,18 @@
 
             const onBoardCardDiv = document.createElement('div');
             onBoardCardDiv.id = 'on-board-card-display'; 
-            onBoardCardDiv.style.display = 'none';
+            onBoardCardDiv.style.display = 'none'; 
             onBoardCardDiv.innerHTML = `
-                <h4 id="on-board-card-type"></h4>
-                <p id="on-board-card-text"></p>
+                <h4 id="on-board-card-type">Card Type</h4>
+                <p id="on-board-card-text">Card text will appear here.</p>
             `;
             boardContainer.appendChild(onBoardCardDiv);
-            onBoardCardDisplayDiv = onBoardCardDiv; 
+            onBoardCardDisplayDiv = document.getElementById('on-board-card-display'); 
             onBoardCardTypeH4 = document.getElementById('on-board-card-type');
             onBoardCardTextP = document.getElementById('on-board-card-text');
 
 
-            gameData.boardLayout.forEach((s) => {
+            boardLayout.forEach((s) => {
                 const spaceDiv = document.createElement('div');
                 spaceDiv.id = `space-${s.id}`;
                 spaceDiv.classList.add('space');
@@ -1502,7 +1814,7 @@
                      spaceDiv.classList.add('dole-space');
                      const doleSign = document.createElement('div');
                      doleSign.classList.add('dole-sign');
-                     doleSign.textContent = '$';
+                     doleSign.textContent = '$'; 
                      spaceDiv.appendChild(doleSign);
                 }
                 if (s.name === 'Detention Center') {
@@ -1515,7 +1827,7 @@
                     const subLabel = document.createElement('div'); subLabel.className = 'sub-label'; subLabel.textContent = 'DO NOT PASS GO'; spaceDiv.appendChild(subLabel);
                 }
                 if (s.type === 'property') {
-                    spaceDiv.classList.add('property', s.color || s.groupId);
+                    spaceDiv.classList.add('property', s.color || s.groupId); 
                     const colorBar = document.createElement('div'); colorBar.classList.add('color-bar'); spaceDiv.appendChild(colorBar);
                 } else if (s.type === 'set_property') {
                     spaceDiv.classList.add('set-property');
@@ -1541,352 +1853,221 @@
                     spaceDiv.appendChild(ownerIndicator);
                 }
                 
-                const currentId = s.id;
-                if (currentId === 0) { spaceDiv.style.gridArea = `1 / 1`; }
-                else if (currentId >= 1 && currentId <= 8) { spaceDiv.style.gridArea = `1 / ${currentId + 1}`; }
-                else if (currentId === 9) { spaceDiv.style.gridArea = `1 / 10`; }
-                else if (currentId >= 10 && currentId <= 17) { spaceDiv.style.gridArea = `${(currentId - 9) + 1} / 10`; }
-                else if (currentId === 18) { spaceDiv.style.gridArea = `10 / 10`; }
-                else if (currentId >= 19 && currentId <= 26) { spaceDiv.style.gridArea = `10 / ${10 - (currentId - 18)}`; }
-                else if (currentId === 27) { spaceDiv.style.gridArea = `10 / 1`; }
-                else if (currentId >= 28 && currentId <= 35) { spaceDiv.style.gridArea = `${10 - (currentId - 27)} / 1`; } 
+                const currentId = s.id; 
+                if (currentId === 0) { spaceDiv.style.gridArea = `1 / 1`; } 
+                else if (currentId >= 1 && currentId <= 8) { spaceDiv.style.gridArea = `1 / ${currentId + 1}`; } 
+                else if (currentId === 9) { spaceDiv.style.gridArea = `1 / 10`; } 
+                else if (currentId >= 10 && currentId <= 17) { spaceDiv.style.gridArea = `${(currentId - 9) + 1} / 10`; } 
+                else if (currentId === 18) { spaceDiv.style.gridArea = `10 / 10`; } 
+                else if (currentId >= 19 && currentId <= 26) { spaceDiv.style.gridArea = `10 / ${10 - (currentId - 18)}`; } 
+                else if (currentId === 27) { spaceDiv.style.gridArea = `10 / 1`; } 
+                else if (currentId >= 28 && currentId <= 31) { 
+                     spaceDiv.style.gridArea = `${10 - (currentId - 27)} / 1`; 
+                } else if (currentId >= 28 && currentId <= 35) { 
+                    spaceDiv.style.gridArea = `${10 - (currentId - 27)} / 1`; 
+                }
+
                 boardContainer.appendChild(spaceDiv);
             });
 
             if (gameData.players && gameData.playerOrder) {
                 Object.values(gameData.players).forEach(player => {
-                    if (player && player.id !== undefined && player.order !== undefined) { 
-                        const token = document.createElement('div');
-                        token.id = `player-token-${player.id}`; 
-                        token.classList.add('player-token');
+                    if (player && typeof player.id !== 'undefined' && typeof player.order !== 'undefined') { 
+                        let token = document.getElementById(`player-token-${player.id}`);
+                        if (!token) { 
+                            token = document.createElement('div');
+                            token.id = `player-token-${player.id}`; 
+                            token.classList.add('player-token');
+                        }
                         token.textContent = playerEmojis[player.order % playerEmojis.length];
                         const playerTokenColor = playerColors[player.order % playerColors.length];
                         token.style.color = playerTokenColor;
                         token.style.filter = `drop-shadow(0 0 3px ${playerTokenColor})`;
                         
-                        const startSpace = document.getElementById('space-0');
-                        if (startSpace) startSpace.appendChild(token);
+                        const spaceToPlace = document.getElementById(`space-${player.position}`);
+                        if (spaceToPlace) {
+                            spaceToPlace.appendChild(token);
+                        } else {
+                            logEvent(`Warning: Could not find space-${player.position} to place token for ${player.name}`);
+                            const goSpace = document.getElementById('space-0'); 
+                            if (goSpace) goSpace.appendChild(token);
+                        }
                     } else {
-                        logEvent("Warning: Invalid player data in setupBoardFromFirestore, skipping token creation for one player.", player);
+                        logEvent("Warning: Invalid player data in setupBoardFromFirestore, skipping token creation/update.", player);
                     }
                 });
             } else {
-                logEvent("Warning: gameData.players or gameData.playerOrder is missing in setupBoardFromFirestore.");
+                logEvent("Warning: gameData.players or gameData.playerOrder is missing in setupBoardFromFirestore. Tokens not created.");
             }
             updateBoardDynamicElements(gameData); 
-            logEvent("setupBoardFromFirestore completed.");
         }
-
+        
         function updateBoardDynamicElements(gameData) {
-            if (!gameData.players) {
-                logEvent("updateBoardDynamicElements: gameData.players is missing.");
+            if (!gameData || !gameData.players || !gameData.boardLayout) {
+                logEvent("updateBoardDynamicElements: Missing critical gameData. Skipping updates.");
                 return;
             }
+
             Object.values(gameData.players).forEach(player => {
-                 if (!player || player.id === undefined) { 
-                    logEvent("Warning: Invalid player data in updateBoardDynamicElements for token positioning.", player);
-                    return;
-                }
+                if (!player || typeof player.id === 'undefined') { 
+                    logEvent("updateBoardDynamicElements: Invalid player object in players list.", player);
+                    return; 
+                } 
                 const token = document.getElementById(`player-token-${player.id}`);
                 if (token) {
                     if (player.isBankrupt) {
-                        token.style.display = 'none';
+                        token.style.display = 'none'; 
                     } else {
                         token.style.display = 'block';
                         const currentSpaceEl = document.getElementById(`space-${player.position}`);
-                        if (currentSpaceEl) {
-                            currentSpaceEl.appendChild(token); 
-                        }
-                    }
-                }
-            });
-
-            if (!gameData.propertyData || !gameData.boardLayout) {
-                 logEvent("updateBoardDynamicElements: gameData.propertyData or gameData.boardLayout is missing.");
-                return;
-            }
-            gameData.propertyData.forEach(propInPropertyData => {
-                const ownerIndicator = document.getElementById(`owner-indicator-${propInPropertyData.id}`);
-                if (ownerIndicator) {
-                    if (propInPropertyData.owner && gameData.players[propInPropertyData.owner] && !gameData.players[propInPropertyData.owner].isBankrupt) {
-                        const ownerData = gameData.players[propInPropertyData.owner];
-                        if (ownerData && ownerData.order !== undefined) { 
-                            const ownerColor = playerColors[ownerData.order % playerColors.length];
-                            ownerIndicator.style.backgroundColor = ownerColor;
+                        if (currentSpaceEl) { 
+                            if (token.parentNode !== currentSpaceEl) {
+                                currentSpaceEl.appendChild(token); 
+                            }
                         } else {
-                             ownerIndicator.style.backgroundColor = 'transparent'; 
+                            logEvent(`updateBoardDynamicElements: Could not find space-${player.position} for token ${player.id}`);
                         }
-                    } else {
-                        ownerIndicator.style.backgroundColor = 'transparent';
-                    }
-                }
-                const boardSpaceDetails = gameData.boardLayout.find(s => s.id === propInPropertyData.id);
-                if (boardSpaceDetails && boardSpaceDetails.type === 'property') {
-                    const devIndicator = document.getElementById(`dev-indicator-${propInPropertyData.id}`);
-                    if (devIndicator) {
-                        if (propInPropertyData.permanentResidence) {
-                            devIndicator.textContent = "🏢";
-                        } else if (propInPropertyData.tenancies > 0) {
-                            devIndicator.textContent = "🏠".repeat(propInPropertyData.tenancies);
-                        } else {
-                            devIndicator.textContent = "";
-                        }
-                    }
-                }
-            });
-        }
-
-        function updatePlayerInfoPanel(gameData) {
-            if (!playerInfoDiv) return;
-            playerInfoDiv.innerHTML = '';
-            if (!gameData.playerOrder || !gameData.players) return;
-
-            gameData.playerOrder.forEach(playerId => {
-                const p = gameData.players[playerId];
-                if (!p || p.id === undefined || p.order === undefined) { 
-                    logEvent("Warning: Invalid player data in updatePlayerInfoPanel.", p);
-                    return;
-                };
-
-                const playerColor = playerColors[p.order % playerColors.length];
-                const pDiv = document.createElement('div');
-                if (p.isBankrupt) {
-                    pDiv.innerHTML = `<b style="color:${playerColor};">${p.name}</b>: BANKRUPT`;
-                    pDiv.style.textDecoration = 'line-through';
-                    pDiv.style.opacity = '0.6';
-                } else {
-                    pDiv.innerHTML = `<b style="color:${playerColor};">${p.name}</b>: <span style='font-weight:bold;'>£${p.money}</span> | HS: ${p.healthServices} | LegalAids: ${p.getOutOfDetentionCards}`;
-                    if (p.inDetention) pDiv.innerHTML += ` (In Detention - ${p.missedTurnsInDetention} missed)`;
-                    pDiv.innerHTML += `<br><span style='font-size:12px;color:#f7ca18;'>From UK Gov: £${p.govReceived || 0}</span>`;
-                }
-                if (gameData.playerOrder[gameData.currentPlayerIndex] === p.id && !p.isBankrupt && gameData.status === "active" && !gameData.preGamePhase) { 
-                    pDiv.style.border = `2px solid ${playerColor}`;
-                    pDiv.style.padding = "3px";
-                    pDiv.style.borderRadius = "4px";
-                }
-                playerInfoDiv.appendChild(pDiv);
-            });
-        }
-        
-        function updateGameStatusPanel(gameData) {
-            if (!gameStatusMessageP || !currentTurnDisplay || !gameData.players || !gameData.playerOrder) return;
-
-            if (gameData.preGamePhase) {
-                 const joined = Object.keys(gameData.players).length;
-                 if (joined < gameData.maxPlayers) {
-                    gameStatusMessageP.textContent = `Waiting for players... (${joined}/${gameData.maxPlayers} joined)`;
-                 } else {
-                    const allRolled = gameData.playerOrder.every(pid => gameData.preGameRolls && gameData.preGameRolls[pid] !== undefined);
-                    if (allRolled) {
-                        gameStatusMessageP.textContent = "All players rolled. Host is determining start order...";
-                    } else {
-                        gameStatusMessageP.textContent = "Pre-game: Determine starting player by rolling.";
-                    }
-                 }
-            } else if (gameData.status === "active") {
-                gameStatusMessageP.textContent = gameData.lastActionMessage || "Game in progress...";
-            } else if (gameData.status === "finished") {
-                gameStatusMessageP.textContent = gameData.lastActionMessage || "Game Over!";
-            } else { 
-                 gameStatusMessageP.textContent = `Waiting for players... (${Object.keys(gameData.players).length}/${gameData.maxPlayers} joined)`;
-            }
-
-            const currentPlayerIdInOrder = gameData.playerOrder[gameData.currentPlayerIndex];
-            const currentPlayerInOrder = gameData.players[currentPlayerIdInOrder];
-
-            if (currentPlayerInOrder && !currentPlayerInOrder.isBankrupt && gameData.status === "active") {
-                if (gameData.preGamePhase) {
-                    let nextPlayerToRollForDisplayId = null;
-                    for(const pid of gameData.playerOrder) {
-                        if(!gameData.preGameRolls || gameData.preGameRolls[pid] === undefined) {
-                            nextPlayerToRollForDisplayId = pid;
-                            break;
-                        }
-                    }
-                    const playerToRoll = gameData.players[nextPlayerToRollForDisplayId];
-
-                    if (playerToRoll && playerToRoll.name !== undefined && playerToRoll.order !== undefined) {
-                         currentTurnDisplay.textContent = `Pre-Game Roll: ${playerToRoll.name}`;
-                         currentTurnDisplay.style.color = playerColors[playerToRoll.order % playerColors.length];
-                    } else { 
-                        currentTurnDisplay.textContent = "Pre-Game Rolls Complete";
-                        currentTurnDisplay.style.color = '#ecf0f1';
                     }
                 } else {
-                    currentTurnDisplay.textContent = `Current Turn: ${currentPlayerInOrder.name}`;
-                    currentTurnDisplay.style.color = playerColors[currentPlayerInOrder.order % playerColors.length];
+                    logEvent(`updateBoardDynamicElements: Token not found for player ${player.id}. It should have been created.`);
                 }
-            } else if (gameData.preGamePhase && Object.keys(gameData.players).length === gameData.maxPlayers) {
-                 currentTurnDisplay.textContent = "Waiting for Rolls...";
-                 currentTurnDisplay.style.color = '#ecf0f1';
-            }
-             else {
-                currentTurnDisplay.textContent = "Game Not Fully Started";
-                currentTurnDisplay.style.color = '#ecf0f1';
+            });
+
+            if (Array.isArray(gameData.propertyData)) {
+                gameData.propertyData.forEach(propInPropertyData => {
+                    if (!propInPropertyData || typeof propInPropertyData.id === 'undefined') {
+                        logEvent("Warning: Invalid item in propertyData array during UI update, skipping this item.", propInPropertyData);
+                        return; 
+                    }
+
+                    const ownerIndicator = document.getElementById(`owner-indicator-${propInPropertyData.id}`);
+                    if (ownerIndicator) {
+                        if (propInPropertyData.owner && gameData.players[propInPropertyData.owner] && !gameData.players[propInPropertyData.owner].isBankrupt) {
+                            const ownerData = gameData.players[propInPropertyData.owner];
+                            if (ownerData && typeof ownerData.order !== 'undefined') {
+                                const ownerColor = playerColors[ownerData.order % playerColors.length];
+                                ownerIndicator.style.backgroundColor = ownerColor;
+                            } else {
+                                 ownerIndicator.style.backgroundColor = 'transparent'; 
+                            }
+                        } else {
+                            ownerIndicator.style.backgroundColor = 'transparent'; 
+                        }
+                    }
+
+                    const boardSpaceDetails = gameData.boardLayout.find(s => s.id === propInPropertyData.id);
+                    if (boardSpaceDetails && boardSpaceDetails.type === 'property') { 
+                        const devIndicator = document.getElementById(`dev-indicator-${propInPropertyData.id}`);
+                        if (devIndicator) {
+                            if (propInPropertyData.permanentResidence) {
+                                devIndicator.textContent = "🏢"; 
+                            } else if (propInPropertyData.tenancies > 0) {
+                                devIndicator.textContent = "🏠".repeat(propInPropertyData.tenancies); 
+                            } else {
+                                devIndicator.textContent = ""; 
+                            }
+                        }
+                    }
+                });
+            } else {
+                logEvent("updateBoardDynamicElements: gameData.propertyData is NOT an array. Property visual updates will be skipped.", gameData.propertyData);
             }
         }
 
-        function updateControlsBasedOnTurn(gameData) {
-            if (!currentUserId || !gameData.players || !gameData.players[currentUserId]) { 
-                logEvent("updateControlsBasedOnTurn: currentUserId or player data missing, skipping controls update.");
+
+        // --- MAIN UI UPDATE FUNCTION (Calls helpers) ---
+        function updateLocalUIFromFirestore(gameData) { 
+            if (!currentUserId) {
+                logEvent("UpdateLocalUI: currentUserId not set yet, deferring UI update.");
+                if(gameStatusMessageP) gameStatusMessageP.textContent = "Authenticating..."; 
                 return;
             }
-            const amIBankrupt = gameData.players[currentUserId]?.isBankrupt;
+
+            if (!gameData || Object.keys(gameData).length === 0) {
+                logEvent("UpdateLocalUI: No game data received. Cannot update UI.");
+                return;
+            }
             
-            rollDiceButton.style.display = 'none';
-            endTurnButton.style.display = 'none';
-            buyPropertyButton.style.display = 'none';
-            developPropertyButton.style.display = 'none';
-            otherActionsContainer.style.display = 'none';
-            detentionActionsDiv.innerHTML = '';
-
-            if (amIBankrupt || gameData.status === "finished") return;
-
-
-            if (gameData.preGamePhase && gameData.status === "active") { 
+            if (gameData.preGamePhase && 
+                gameData.status === "active" &&
+                gameData.hostId === currentUserId && 
+                gameData.playerOrder && gameData.playerOrder.length === gameData.maxPlayers && 
+                gameData.preGameRolls &&
+                gameData.playerOrder.every(pid => gameData.preGameRolls[pid] !== undefined) 
+               ) {
+                logEvent("Host detected conditions to finalize pre-game. Calling finalizePreGameAsHost.");
+                finalizePreGameAsHost(); 
                 return; 
             }
-            
-            if (gameData.status !== "active" || gameData.gamePhase !== "main") return; 
 
-            const isMyTurn = gameData.playerOrder[gameData.currentPlayerIndex] === currentUserId;
-            const amIInDetention = gameData.players[currentUserId]?.inDetention;
-            const myPlayerActionTakenThisTurn = gameData.players[currentUserId]?.playerActionTakenThisTurn;
-
-            if (isMyTurn) {
-                const playerToken = document.getElementById(`player-token-${currentUserId}`);
-                if (playerToken && cardDisplayContainer.style.display === 'none' && developPropertyContainer.style.display === 'none' && (!onBoardCardDisplayDiv || onBoardCardDisplayDiv.style.display === 'none')) {
-                    playerToken.classList.add('token-flash');
-                } else if (playerToken) {
-                    playerToken.classList.remove('token-flash');
-                }
-
-                if (amIInDetention) {
-                    setupDetentionActionsUI(gameData.players[currentUserId], gameData);
-                    if (myPlayerActionTakenThisTurn) { 
-                        endTurnButton.style.display = 'block';
-                        endTurnButton.classList.add('main-action-button');
-                        otherActionsContainer.style.display = 'none'; 
-                        detentionActionsDiv.innerHTML = ''; 
-                    }
-                } else if (!myPlayerActionTakenThisTurn) {
-                    rollDiceButton.style.display = 'block';
-                    rollDiceButton.classList.add('main-action-button');
-                    rollDiceButton.disabled = false;
-                    otherActionsContainer.style.display = 'none'; 
+            if (gameData.boardLayout && gameData.boardLayout.length > 0) {
+                const boardIsMissingOrDifferent = boardLayout.length === 0 || 
+                                                (boardContainer && boardContainer.innerHTML.trim() === '') ||
+                                                JSON.stringify(boardLayout) !== JSON.stringify(gameData.boardLayout);
+                if (boardIsMissingOrDifferent) {
+                    logEvent("UpdateLocalUI: Setting up/refreshing board from Firestore data.");
+                    setupBoardFromFirestore(gameData); 
                 } else {
-                    endTurnButton.style.display = 'block';
-                    endTurnButton.classList.add('main-action-button');
-                    otherActionsContainer.style.display = 'block';
-
-                    const currentSpace = gameData.boardLayout[gameData.players[currentUserId].position];
-                    const propData = gameData.propertyData.find(p => p.id === currentSpace.id);
-                    if (currentSpace && propData && (currentSpace.type === 'property' || currentSpace.type === 'set_property') && propData.owner === null) {
-                        let price = currentSpace.price;
-                         if (gameData.players[currentUserId].hasHousingVoucher && currentSpace.type === 'property') {
-                             price = Math.round(price * 0.75);
-                        }
-                        buyPropertyPriceSpan.textContent = price;
-                        if (gameData.players[currentUserId].money >= price) {
-                            buyPropertyButton.style.display = 'inline-block';
-                        }
-                    }
-                    if (canPlayerDevelopAnyProperty(gameData.players[currentUserId], gameData)) {
-                        developPropertyButton.style.display = 'inline-block';
-                    }
-                     if (buyPropertyButton.style.display === 'none' && developPropertyButton.style.display === 'none') {
-                        otherActionsContainer.style.display = 'none'; 
-                    }
+                    updateBoardDynamicElements(gameData);
                 }
-            } else { 
-                const playerToken = document.getElementById(`player-token-${currentUserId}`);
-                if(playerToken) playerToken.classList.remove('token-flash');
+            } else {
+                logEvent("UpdateLocalUI: gameData.boardLayout is missing or empty. Board not set up/updated.");
             }
+
+            updateDiceUIDisplay(gameData); 
+            updatePlayerInfoPanel(gameData); 
+            updateGameStatusPanel(gameData);
+            updateControlsBasedOnTurn(gameData); 
+            updateUkGovDisplay(gameData.ukGovMoney);
+
+            if (gameData.preGamePhase && gameData.status === "active") { 
+                updatePreGameRollUI(gameData);
+            } else {
+                if(preGameRollArea) preGameRollArea.style.display = 'none';
+            }
+
+            if (gameData.status === "finished") {
+                handleGameEndUI(gameData);
+            } 
         }
         
-        function updatePreGameRollUI(gameData) {
-            if (!preGameRollArea || !preGameRollButton || !preGameRollResultsDiv || !gameData.players) { 
-                logEvent("updatePreGameRollUI: Critical DOM element or gameData.players missing.");
-                return;
-            }
+        // --- ACTION HANDLERS (Dice, Turn, Property, etc.) ---
 
-            if (!gameData.preGamePhase) { 
-                preGameRollArea.style.display = 'none';
-                preGameRollButton.style.display = 'none';
-                return;
-            }
-            
-            preGameRollArea.style.display = 'flex'; 
-            preGameRollResultsDiv.innerHTML = ''; 
-            preGameRollButton.style.display = 'none'; 
+        // New function to animate player movement step-by-step
+        async function animatePlayerMove(playerId, startPos, steps, currentBoardLayout) {
+            const token = document.getElementById(`player-token-${playerId}`);
+            if (!token || !currentBoardLayout || currentBoardLayout.length === 0) return;
 
-            let allPlayerIdsInOrder = gameData.playerOrder || [];
-            let preGameRollsData = gameData.preGameRolls || {};
-            let numberOfPlayers = allPlayerIdsInOrder.length;
-            
-            let rolledPlayerCount = 0;
-            allPlayerIdsInOrder.forEach(pid => {
-                const playerName = gameData.players[pid]?.name || 'Unknown Player';
-                if (preGameRollsData[pid] !== undefined) {
-                    preGameRollResultsDiv.innerHTML += `${playerName} rolled: ${preGameRollsData[pid]}<br>`;
-                    rolledPlayerCount++;
-                } else {
-                    preGameRollResultsDiv.innerHTML += `${playerName} has not rolled yet.<br>`;
+            let currentVisualPos = startPos;
+            const stepDelay = 200; // Milliseconds per step, adjust for desired speed
+
+            for (let i = 0; i < steps; i++) {
+                currentVisualPos = (currentVisualPos + 1) % currentBoardLayout.length;
+                const nextSpaceEl = document.getElementById(`space-${currentVisualPos}`);
+                
+                if (nextSpaceEl) {
+                    nextSpaceEl.appendChild(token); // Move token to the new space
+                    
+                    // Apply a brief animation for the step
+                    token.classList.remove('token-arrive-step'); 
+                    void token.offsetWidth; // Force reflow to restart animation if already applied
+                    token.classList.add('token-arrive-step');
                 }
-            });
-            
-            if (rolledPlayerCount === numberOfPlayers && numberOfPlayers > 0) {
-                preGameRollResultsDiv.innerHTML += "All players rolled. Determining start order...";
-                 // Host finalization logic is now primarily handled by the check in updateLocalUIFromFirestore
-            } else if (numberOfPlayers > 0) {
-                let nextPlayerToRollId = null;
-                for (let i = 0; i < allPlayerIdsInOrder.length; i++) {
-                    const pid = allPlayerIdsInOrder[i];
-                    if (preGameRollsData[pid] === undefined) {
-                        nextPlayerToRollId = pid;
-                        break;
+
+                if (audioContextStarted && toneSynth) {
+                    try {
+                        // Play a short, high-pitched sound for each step
+                        toneSynth.triggerAttackRelease("A5", "32n", Tone.now() + (i * 0.02)); // Stagger slightly if steps are very fast
+                    } catch (e) { 
+                        console.error("Token move sound error:", e); 
                     }
                 }
-
-                if (nextPlayerToRollId === currentUserId) {
-                    preGameRollButton.style.display = 'block';
-                    preGameRollButton.textContent = `Your turn, ${gameData.players[currentUserId]?.name || 'Player'}, Roll to Start`;
-                    preGameRollButton.disabled = false;
-                } else if (nextPlayerToRollId && gameData.players[nextPlayerToRollId]) {
-                    preGameRollButton.style.display = 'block';
-                    preGameRollButton.textContent = `Waiting for ${gameData.players[nextPlayerToRollId].name} to roll...`;
-                    preGameRollButton.disabled = true;
-                } else if (rolledPlayerCount < numberOfPlayers) { 
-                    preGameRollButton.style.display = 'block';
-                    preGameRollButton.textContent = `Waiting for players to roll...`;
-                    preGameRollButton.disabled = true;
-                }
+                await new Promise(resolve => setTimeout(resolve, stepDelay));
             }
+            // Optionally, remove the step animation class after the full move
+            // setTimeout(() => token.classList.remove('token-arrive-step'), stepDelay);
         }
 
-
-        function updateUkGovDisplay(govMoney) {
-            if (ukGovCashSpan) {
-                 ukGovCashSpan.textContent = govMoney !== undefined ? govMoney : (localGameData.ukGovMoney || 20000);
-            }
-        }
-
-        function handleGameEndUI(gameData) {
-            gameStatusMessageP.textContent = gameData.lastActionMessage || "Game Over!";
-            currentTurnDisplay.textContent = "Game Over!";
-            rollDiceButton.style.display = 'none';
-            endTurnButton.style.display = 'none';
-            buyPropertyButton.style.display = 'none';
-            developPropertyButton.style.display = 'none';
-            preGameRollButton.style.display = 'none';
-            preGameRollArea.style.display = 'none';
-            otherActionsContainer.style.display = 'block';
-            otherActionsContainer.innerHTML = '<button id="leave-game-button" style="background-color:#c0392b;">Back to Setup</button>';
-            document.getElementById('leave-game-button').onclick = () => {
-                if (unsubscribeGameState) unsubscribeGameState();
-                resetToSetupScreen();
-            };
-        }
 
         async function handleRollDiceAction() {
             if (!currentGameId || !localGameData || !localGameData.playerOrder || localGameData.playerOrder[localGameData.currentPlayerIndex] !== currentUserId) {
@@ -1894,7 +2075,7 @@
                 return;
             }
              if (localGameData.preGamePhase) {
-                showMessageModal("Game Phase Error", "Cannot roll main dice during pre-game roll phase. Use the pre-game roll button instead.");
+                showMessageModal("Game Phase Error", "Cannot roll main dice during pre-game roll phase. Use 'Roll to Start'.");
                 return;
             }
             if (localGameData.gamePhase !== "main") {
@@ -1904,21 +2085,37 @@
             if (!localGameData.players || !localGameData.players[currentUserId]) {
                  showMessageModal("Error", "Player data not found."); return;
             }
-            if (localGameData.players[currentUserId]?.playerActionTakenThisTurn && !localGameData.lastDiceRoll?.isDoubles) {
-                 showMessageModal("Action Taken", "You've already taken your main action for this roll.");
+            
+            const currentPlayerStateFromLocal = localGameData.players[currentUserId]; // Use local for initial checks
+            if (currentPlayerStateFromLocal.playerActionTakenThisTurn && !(localGameData.lastDiceRoll?.isDoubles && currentPlayerStateFromLocal.doublesRolledInTurn < 3 && currentPlayerStateFromLocal.doublesRolledInTurn > 0)) {
+                 showMessageModal("Action Taken", "You've already completed your roll action for this part of the turn.");
                 return;
             }
-             if (localGameData.players[currentUserId]?.inDetention) {
-                 showMessageModal("In Detention", "You must handle detention actions first.");
+             if (currentPlayerStateFromLocal.inDetention) {
+                 showMessageModal("In Detention", "You are in detention. Use detention actions (roll for doubles, pay, or use card).");
                 return;
             }
 
-            rollDiceButton.disabled = true;
+            if(rollDiceButton) rollDiceButton.disabled = true; 
 
             const die1 = Math.floor(Math.random() * 6) + 1;
             const die2 = Math.floor(Math.random() * 6) + 1;
             const totalRoll = die1 + die2;
             const isDoubles = die1 === die2;
+
+            // Play dice roll sound immediately
+            if (audioContextStarted && toneSynth) {
+                try {
+                    toneSynth.triggerAttackRelease("C4", "16n", Tone.now());
+                    setTimeout(() => { if (toneSynth) toneSynth.triggerAttackRelease("E4", "16n", Tone.now() + 0.1); }, 100);
+                } catch (e) { console.error("Dice roll sound error:", e); }
+            }
+            
+            // Perform client-side animation first
+            // Use the player's current position from localGameData for the animation start
+            const playerStartPosForAnim = localGameData.players[currentUserId].position;
+            await animatePlayerMove(currentUserId, playerStartPosForAnim, totalRoll, localGameData.boardLayout);
+
 
             const gameDocRef = doc(db, "games", currentGameId);
             try {
@@ -1927,32 +2124,57 @@
                     if (!freshGameDoc.exists()) throw new Error("Game document not found during roll.");
                     const freshGameData = freshGameDoc.data();
                     
-                    if (!freshGameData.players || !freshGameData.players[currentUserId]) throw new Error("Player data missing in Firestore during roll.");
-                    const playerState = freshGameData.players[currentUserId];
-                    let newPosition = playerState.position;
+                    const playerState = freshGameData.players[currentUserId]; 
+                    if (!playerState || playerState.isBankrupt) throw new Error("Player data missing or bankrupt in Firestore during roll.");
+                    if (freshGameData.playerOrder[freshGameData.currentPlayerIndex] !== currentUserId) {
+                        throw new Error("Not your turn (checked in transaction).");
+                    }
+                     if (playerState.inDetention) { 
+                        throw new Error("Still in detention (checked in transaction).");
+                    }
+
+                    let newPosition = playerState.position; // This is the position *before* the current roll
                     let messages = [];
                     let updates = {};
 
-                    updates[`players.${currentUserId}.doublesRolledInTurn`] = isDoubles ? (playerState.doublesRolledInTurn || 0) + 1 : 0;
+                    let currentDoublesCount = playerState.doublesRolledInTurn || 0;
+                    if (isDoubles) {
+                        currentDoublesCount++;
+                    } else {
+                        currentDoublesCount = 0; 
+                    }
+                    updates[`players.${currentUserId}.doublesRolledInTurn`] = currentDoublesCount;
                     
-                    if (isDoubles && updates[`players.${currentUserId}.doublesRolledInTurn`] === 3) {
+                    if (isDoubles && currentDoublesCount === 3) {
                         messages.push(`${playerState.name} rolled 3 doubles! Sent to Detention.`);
                         newPosition = detentionCenterSpaceId; 
                         updates[`players.${currentUserId}.position`] = newPosition;
                         updates[`players.${currentUserId}.inDetention`] = true;
-                        updates[`players.${currentUserId}.missedTurnsInDetention`] = 0;
+                        updates[`players.${currentUserId}.missedTurnsInDetention`] = 0; 
                         updates[`players.${currentUserId}.playerActionTakenThisTurn`] = true; 
+                        updates[`players.${currentUserId}.doublesRolledInTurn`] = 0; 
                     } else {
+                        // Calculate the final position based on the state *before* this roll
                         newPosition = (playerState.position + totalRoll) % freshGameData.boardLayout.length;
                         updates[`players.${currentUserId}.position`] = newPosition;
                         messages.push(`${playerState.name} rolled ${totalRoll} (${die1}, ${die2})${isDoubles ? " (Doubles!)" : ""}. Moved to ${freshGameData.boardLayout[newPosition].name}.`);
 
-                        if (newPosition < playerState.position && !playerState.inDetention) { 
-                            const goPayout = 400; 
-                            updates[`players.${currentUserId}.money`] = (playerState.money || 0) + goPayout;
-                            updates.ukGovMoney = (freshGameData.ukGovMoney || 0) - goPayout; 
-                            updates[`players.${currentUserId}.govReceived`] = (playerState.govReceived || 0) + goPayout;
-                            messages.push(`${playerState.name} passed Dole and collected £${goPayout}.`);
+                        // Check for passing GO based on the original position (playerState.position) and the newPosition
+                        if (newPosition < playerState.position && !(isDoubles && currentDoublesCount ===3) && !playerState.inDetention /* ensure not coming out of jail and passing go */ ) { 
+                            // This condition for passing GO might need refinement if player can go backwards
+                            // A more robust way is to check if old_pos + roll > board_length
+                            let passedGo = false;
+                            if (playerState.position + totalRoll >= freshGameData.boardLayout.length) {
+                                passedGo = true;
+                            }
+
+                            if (passedGo) {
+                                const goPayout = 400; 
+                                updates[`players.${currentUserId}.money`] = (playerState.money || 0) + goPayout;
+                                updates.ukGovMoney = (freshGameData.ukGovMoney || 0) - goPayout; 
+                                updates[`players.${currentUserId}.govReceived`] = (playerState.govReceived || 0) + goPayout;
+                                messages.push(`${playerState.name} passed Dole and collected £${goPayout}.`);
+                            }
                         }
                         
                         updates[`players.${currentUserId}.playerActionTakenThisTurn`] = !isDoubles;
@@ -1964,21 +2186,313 @@
                     transaction.update(gameDocRef, updates);
                 });
             } catch (error) {
-                console.error("Error during roll dice action:", error);
-                showMessageModal("Roll Error", "Could not process roll: " + error.message);
-                if(rollDiceButton) rollDiceButton.disabled = false; 
+                console.error("Error during roll dice action transaction:", error);
+                showMessageModal("Roll Error", "Could not process roll transaction: " + error.message);
+                // Button state will be reset by updateControlsBasedOnTurn via onSnapshot
             }
         }
         
+        async function handleEndTurnAction() {
+            logEvent("handleEndTurnAction called."); 
+
+            if (!currentGameId || !localGameData || !currentUserId || !db) {
+                logEvent("EndTurn: Exiting - Missing critical global vars."); 
+                showMessageModal("Error", "Game data or connection issue.");
+                return;
+            }
+
+            const gameDataForCheck = localGameData; 
+            const currentPlayerId = gameDataForCheck.playerOrder[gameDataForCheck.currentPlayerIndex]; 
+            
+            if (gameDataForCheck.players && gameDataForCheck.players[currentUserId]) {
+                const pState = gameDataForCheck.players[currentUserId];
+                logEvent(`EndTurn Initial Check: Player ${currentUserId} (current turn player: ${currentPlayerId})
+                    playerActionTakenThisTurn: ${pState.playerActionTakenThisTurn}, 
+                    inDetention: ${pState.inDetention},
+                    doublesRolledInTurn: ${pState.doublesRolledInTurn},
+                    lastDiceRoll.isDoubles: ${gameDataForCheck.lastDiceRoll?.isDoubles}`);
+            } else {
+                logEvent("EndTurn Initial Check: Player data for currentUserId not found in localGameData.");
+            }
+
+
+            if (currentPlayerId !== currentUserId) { 
+                logEvent(`EndTurn: ERROR - It's not your turn! Expected: ${currentPlayerId}, You are: ${currentUserId}.`);
+                showMessageModal("Error", "It's not your turn to end.");
+                return;
+            }
+
+            const playerState = gameDataForCheck.players[currentUserId]; 
+            if (!playerState || playerState.isBankrupt) {
+                logEvent(`EndTurn: Exiting - Player state error or bankrupt.`);
+                showMessageModal("Error", "Cannot end turn (player state error or bankrupt).");
+                return;
+            }
+            
+            if (gameDataForCheck.lastDiceRoll?.isDoubles && 
+                (playerState.doublesRolledInTurn || 0) > 0 && 
+                (playerState.doublesRolledInTurn || 0) < 3 && 
+                !playerState.inDetention &&
+                !playerState.playerActionTakenThisTurn) { 
+                logEvent("EndTurn: Exiting - Player must roll again (doubles).");
+                showMessageModal("Doubles!", "You rolled doubles, please roll again before ending your turn!");
+                return;
+            }
+            if (!playerState.playerActionTakenThisTurn && !playerState.inDetention) { 
+                logEvent("EndTurn: Exiting - Player has not taken their main action (e.g., rolled dice). playerActionTakenThisTurn is false.");
+                showMessageModal("Action Required", "You must take an action (e.g., roll dice) before ending your turn.");
+                return;
+            }
+            
+            logEvent("EndTurn: Proceeding to transaction.");
+            if(endTurnButton) endTurnButton.disabled = true;
+
+            const gameDocRef = doc(db, "games", currentGameId);
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const freshGameDoc = await transaction.get(gameDocRef);
+                    if (!freshGameDoc.exists()) throw new Error("Game not found for end turn.");
+                    const freshGameData = freshGameDoc.data();
+
+                    if (freshGameData.playerOrder[freshGameData.currentPlayerIndex] !== currentUserId) {
+                        logEvent("EndTurn TXN: Turn already changed. Aborting.");
+                        return; 
+                    }
+                    const freshPlayerState = freshGameData.players[currentUserId];
+                     if (!freshPlayerState || freshPlayerState.isBankrupt) {
+                        logEvent("EndTurn TXN: Player bankrupt/missing. Aborting.");
+                        return; 
+                    }
+                    if (freshGameData.lastDiceRoll?.isDoubles && 
+                        (freshPlayerState.doublesRolledInTurn || 0) > 0 && 
+                        (freshPlayerState.doublesRolledInTurn || 0) < 3 &&
+                        !freshPlayerState.inDetention &&
+                        !freshPlayerState.playerActionTakenThisTurn) { 
+                        logEvent("EndTurn TXN: Must roll again (doubles) based on fresh data. Aborting.");
+                        return; 
+                    }
+                     if (!freshPlayerState.playerActionTakenThisTurn && !freshPlayerState.inDetention) {
+                        logEvent("EndTurn TXN: Player action not taken in fresh data. Aborting. playerActionTakenThisTurn is false.");
+                        return;
+                    }
+
+
+                    let updates = {};
+                    updates[`players.${currentUserId}.playerActionTakenThisTurn`] = false; 
+                    updates[`players.${currentUserId}.doublesRolledInTurn`] = 0;      
+
+                    let nextPlayerIndex = (freshGameData.currentPlayerIndex + 1) % freshGameData.playerOrder.length;
+                    let nextPlayerId = freshGameData.playerOrder[nextPlayerIndex];
+                    let attempts = 0;
+                    const maxAttempts = freshGameData.playerOrder.length;
+
+                    while (freshGameData.players[nextPlayerId]?.isBankrupt && attempts < maxAttempts) {
+                        nextPlayerIndex = (nextPlayerIndex + 1) % freshGameData.playerOrder.length;
+                        nextPlayerId = freshGameData.playerOrder[nextPlayerIndex];
+                        attempts++;
+                    }
+
+                    const nonBankruptPlayers = freshGameData.playerOrder.filter(pid => !freshGameData.players[pid]?.isBankrupt);
+
+                    if (nonBankruptPlayers.length <= 1 && freshGameData.playerOrder.length > 1) { 
+                         updates.status = "finished";
+                         const winnerName = nonBankruptPlayers.length === 1 ? freshGameData.players[nonBankruptPlayers[0]].name : "No one";
+                         updates.lastActionMessage = `Game Over! ${winnerName} is the winner!`;
+                         logEvent(`Game ended. Winner: ${winnerName}`);
+                    } else if (attempts >= maxAttempts && nonBankruptPlayers.length > 1) { 
+                        logEvent("Error in turn progression: Loop completed but non-bankrupt players should exist.");
+                        updates.status = "finished"; 
+                        updates.lastActionMessage = "Error finding next player. Game Over.";
+                    } else if (nonBankruptPlayers.length === 0 && freshGameData.playerOrder.length >=1){ 
+                        updates.status = "finished";
+                        updates.lastActionMessage = "All players are bankrupt! Game Over!";
+                    }
+                    else { 
+                        updates.currentPlayerIndex = nextPlayerIndex;
+                        updates.lastActionMessage = `${freshPlayerState.name} ended their turn. It's now ${freshGameData.players[nextPlayerId].name}'s turn.`;
+                        updates.lastDiceRoll = null; 
+                    }
+                    
+                    updates.updatedAt = serverTimestamp();
+                    transaction.update(gameDocRef, updates);
+                    logEvent(`EndTurn TXN: ${freshPlayerState.name} ended turn. Next is ${nextPlayerId || 'N/A'}.`);
+                });
+            } catch (error) {
+                console.error("Error ending turn (transaction phase):", error);
+                showMessageModal("End Turn Error", "Could not end turn: " + error.message);
+            } finally {
+                 // UI will update via onSnapshot
+            }
+        }
+
+        async function handleBuyPropertyAction() {
+            logEvent("handleBuyPropertyAction called.");
+
+            if (!currentGameId || !localGameData || !currentUserId || !db) {
+                logEvent("BuyProp: Exiting - Missing critical global vars.");
+                showMessageModal("Error", "Game data or connection issue.");
+                return;
+            }
+
+            const currentSnapshotGameData = localGameData; 
+            const currentPlayerInOrder = currentSnapshotGameData.playerOrder[currentSnapshotGameData.currentPlayerIndex];
+            if (currentPlayerInOrder !== currentUserId) {
+                logEvent(`BuyProp: Exiting - Not current player's turn.`);
+                showMessageModal("Error", "Not your turn to buy property.");
+                return;
+            }
+
+            const playerState = currentSnapshotGameData.players[currentUserId];
+            if (!playerState || playerState.isBankrupt) {
+                logEvent(`BuyProp: Exiting - Player state error or bankrupt.`);
+                showMessageModal("Error", "Cannot buy property (player state error or bankrupt).");
+                return;
+            }
+            
+            if (!playerState.playerActionTakenThisTurn) {
+                logEvent("BuyProp: Exiting - Player has not completed their roll/move action. playerActionTakenThisTurn is false.");
+                showMessageModal("Action Required", "You must complete your roll/move before buying property.");
+                return;
+            }
+
+            const currentPosition = playerState.position;
+            const spaceDetails = currentSnapshotGameData.boardLayout[currentPosition];
+            const propertyDataEntry = Array.isArray(currentSnapshotGameData.propertyData) ? 
+                                      currentSnapshotGameData.propertyData.find(p => p.id === currentPosition) : null;
+
+            if (!spaceDetails || !propertyDataEntry || (spaceDetails.type !== 'property' && spaceDetails.type !== 'set_property')) {
+                logEvent(`BuyProp: Exiting - Not a buyable property.`);
+                showMessageModal("Invalid Space", "Not a buyable property space.");
+                return;
+            }
+
+            if (propertyDataEntry.owner) {
+                logEvent(`BuyProp: Exiting - Property already owned by ${propertyDataEntry.owner}`);
+                showMessageModal("Owned", `This property (${spaceDetails.name}) is already owned by ${currentSnapshotGameData.players[propertyDataEntry.owner]?.name || 'another player'}.`);
+                return;
+            }
+
+            let price = spaceDetails.price;
+            let usedVoucher = false;
+            if (playerState.hasHousingVoucher && spaceDetails.type === 'property') { 
+                price = Math.round(price * 0.75);
+                usedVoucher = true;
+            }
+
+            if (playerState.money < price) {
+                logEvent(`BuyProp: Exiting - Insufficient funds.`);
+                showMessageModal("Insufficient Funds", `You need £${price} to buy ${spaceDetails.name}, but you only have £${playerState.money}.`);
+                return;
+            }
+            
+            if(buyPropertyButton) buyPropertyButton.disabled = true;
+
+            const gameDocRef = doc(db, "games", currentGameId);
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const freshGameDoc = await transaction.get(gameDocRef);
+                    if (!freshGameDoc.exists()) throw new Error("Game not found for buying property.");
+                    const freshGameData = freshGameDoc.data();
+
+                    if (freshGameData.playerOrder[freshGameData.currentPlayerIndex] !== currentUserId) {
+                        throw new Error("Not your turn (checked in transaction).");
+                    }
+                    const freshPlayerState = freshGameData.players[currentUserId];
+                    if (!freshPlayerState || freshPlayerState.isBankrupt) throw new Error("Player error in transaction.");
+                    
+                    if (!freshPlayerState.playerActionTakenThisTurn) { // Re-check in transaction
+                         throw new Error("Player action not completed (checked in transaction).");
+                    }
+
+                    const freshCurrentPosition = freshPlayerState.position; 
+                    const actualSpaceDetails = freshGameData.boardLayout[freshCurrentPosition];
+                    
+                    if (!Array.isArray(freshGameData.propertyData)) { 
+                        throw new Error("Property data in Firestore is not an array. Cannot buy.");
+                    }
+                    const freshPropertyDataEntry = freshGameData.propertyData.find(p => p.id === freshCurrentPosition);
+
+                    if (!actualSpaceDetails || !freshPropertyDataEntry || (actualSpaceDetails.type !== 'property' && actualSpaceDetails.type !== 'set_property')) {
+                         throw new Error("Not a buyable property space (checked in transaction).");
+                    }
+                    if (freshPropertyDataEntry.owner) {
+                        throw new Error(`Property (${actualSpaceDetails.name}) already owned by ${freshGameData.players[freshPropertyDataEntry.owner]?.name || 'another player'} (checked in transaction).`);
+                    }
+                    
+                    let actualPrice = actualSpaceDetails.price;
+                    let actualUsedVoucher = false;
+                    if (freshPlayerState.hasHousingVoucher && actualSpaceDetails.type === 'property') {
+                        actualPrice = Math.round(actualPrice * 0.75);
+                        actualUsedVoucher = true;
+                    }
+                    if (freshPlayerState.money < actualPrice) {
+                         throw new Error(`Insufficient funds (£${freshPlayerState.money} vs £${actualPrice}) for ${actualSpaceDetails.name} (checked in transaction).`);
+                    }
+
+                    let updates = {};
+                    updates[`players.${currentUserId}.money`] = freshPlayerState.money - actualPrice;
+                    updates[`players.${currentUserId}.properties`] = arrayUnion(freshCurrentPosition); 
+                    if (actualUsedVoucher) {
+                        updates[`players.${currentUserId}.hasHousingVoucher`] = false;
+                    }
+                    
+                    updates[`players.${currentUserId}.playerActionTakenThisTurn`] = true; 
+
+                    const updatedPropertyData = freshGameData.propertyData.map(prop => {
+                        if (prop.id === freshCurrentPosition) {
+                            return { ...prop, owner: currentUserId };
+                        }
+                        return prop;
+                    });
+                    updates.propertyData = updatedPropertyData; 
+
+                    updates.lastActionMessage = `${freshPlayerState.name} bought ${actualSpaceDetails.name} for £${actualPrice}${actualUsedVoucher ? " (with voucher)" : ""}.`;
+                    updates.updatedAt = serverTimestamp();
+
+                    transaction.update(gameDocRef, updates);
+
+                    if (audioContextStarted && toneSynth) {
+                        try {
+                            toneSynth.triggerAttackRelease("A4", "8n", Tone.now()); 
+                            setTimeout(() => { if (toneSynth) toneSynth.triggerAttackRelease("E5", "8n", Tone.now() + 0.15); }, 150);
+                        } catch(e){ console.error("Buy property sound error:", e); }
+                    }
+                });
+            } catch (error) {
+                console.error("Error buying property (transaction phase):", error);
+                showMessageModal("Buy Property Error", "Could not buy property: " + error.message);
+            } finally {
+                 // UI will update via onSnapshot
+            }
+        }
+
         async function handlePreGameRollAction() {
             if (!currentGameId || !localGameData || !localGameData.preGamePhase) {
                 showMessageModal("Error", "Not in pre-game roll phase.");
+                return;
+            }
+             if (Object.keys(localGameData.players).length < localGameData.maxPlayers) {
+                showMessageModal("Waiting", "Waiting for all players to join before rolling.");
                 return;
             }
             if (localGameData.preGameRolls && localGameData.preGameRolls[currentUserId] !== undefined) {
                 showMessageModal("Already Rolled", "You have already rolled for starting position.");
                 return;
             }
+
+            let nextToRollInPreGame = null;
+            const sortedByJoinOrderForPreGame = [...localGameData.playerOrder].sort((a,b) => (localGameData.players[a]?.order || 0) - (localGameData.players[b]?.order || 0));
+            for (const pid of sortedByJoinOrderForPreGame) {
+                if (!localGameData.preGameRolls || localGameData.preGameRolls[pid] === undefined) {
+                    nextToRollInPreGame = pid;
+                    break;
+                }
+            }
+            if (nextToRollInPreGame !== currentUserId) {
+                showMessageModal("Wait", "It's not your turn to roll for starting position.");
+                return;
+            }
+
 
             if(preGameRollButton) preGameRollButton.disabled = true;
             const roll = Math.floor(Math.random() * 6) + 1 + Math.floor(Math.random() * 6) + 1; 
@@ -1990,29 +2504,32 @@
                     if (!freshGameDoc.exists()) throw new Error("Game not found for pre-game roll.");
                     const freshGameData = freshGameDoc.data();
                      if (!freshGameData.players || !freshGameData.players[currentUserId]) throw new Error("Player data missing in Firestore for pre-game roll.");
-
+                     if (!freshGameData.preGamePhase) throw new Error("Pre-game phase ended."); 
+                     if (freshGameData.preGameRolls && freshGameData.preGameRolls[currentUserId] !== undefined) {
+                         throw new Error("Already rolled (checked in transaction).");
+                     }
 
                     let updates = {};
                     updates[`preGameRolls.${currentUserId}`] = roll;
-                    updates.preGamePlayersRolled = arrayUnion(currentUserId); 
                     updates.lastActionMessage = `${freshGameData.players[currentUserId].name} rolled ${roll} for starting order.`;
                     updates.updatedAt = serverTimestamp();
 
-                    const currentPreGameRolls = { ...(freshGameData.preGameRolls || {}), [currentUserId]: roll };
+                    const currentPreGameRollsWithThis = { ...(freshGameData.preGameRolls || {}), [currentUserId]: roll };
                     const allPlayersInOrder = freshGameData.playerOrder || [];
-                    const allHaveRolled = allPlayersInOrder.length > 0 && allPlayersInOrder.every(pid => currentPreGameRolls[pid] !== undefined);
+                    const allHaveRolled = allPlayersInOrder.length > 0 && 
+                                          allPlayersInOrder.length === freshGameData.maxPlayers &&
+                                          allPlayersInOrder.every(pid => currentPreGameRollsWithThis[pid] !== undefined);
 
 
-                    if (allHaveRolled) { // Check if all players have rolled
+                    if (allHaveRolled) { 
                         updates.lastActionMessage += " All players rolled.";
                         if (currentUserId === freshGameData.hostId) { 
-                            // Host is the one making the final roll, finalize immediately
-                            logEvent("Host is the last to roll in pre-game, finalizing directly.");
+                            logEvent("Host is the last to roll (or among the last) in pre-game, finalizing directly.");
                             const sortedPlayerIds = [...allPlayersInOrder].sort((a, b) => {
-                                const rollA = currentPreGameRolls[a]; 
-                                const rollB = currentPreGameRolls[b];
+                                const rollA = currentPreGameRollsWithThis[a]; 
+                                const rollB = currentPreGameRollsWithThis[b];
                                 if (rollB === rollA) { 
-                                    return allPlayersInOrder.indexOf(a) - allPlayersInOrder.indexOf(b);
+                                    return (freshGameData.players[a]?.order || 0) - (freshGameData.players[b]?.order || 0);
                                 }
                                 return rollB - rollA; 
                             });
@@ -2023,8 +2540,6 @@
                             updates.status = "active";
                             updates.lastActionMessage = `Starting order determined. ${freshGameData.players[sortedPlayerIds[0]].name} starts!`;
                         } else {
-                            // Non-host made the (potentially) final roll. Message indicates waiting for host.
-                            // The host's client will pick this up via onSnapshot and call finalizePreGameAsHost.
                             updates.lastActionMessage += " Waiting for host to finalize starting order.";
                         }
                     }
@@ -2033,7 +2548,7 @@
             } catch (error) {
                 console.error("Error during pre-game roll:", error);
                 showMessageModal("Roll Error", "Could not process pre-game roll: " + error.message);
-                if(preGameRollButton) preGameRollButton.disabled = false;
+                if(preGameRollButton) preGameRollButton.disabled = false; 
             }
         }
 
@@ -2043,6 +2558,8 @@
         joinGameButton.onclick = handleJoinGame;
         rollDiceButton.onclick = handleRollDiceAction; 
         preGameRollButton.onclick = handlePreGameRollAction;
+        endTurnButton.onclick = handleEndTurnAction; 
+        buyPropertyButton.onclick = handleBuyPropertyAction; 
         
         generatedGameIdSpan.onclick = () => {
             if (generatedGameIdSpan.textContent) {
@@ -2052,27 +2569,34 @@
                 textArea.focus();
                 textArea.select();
                 try {
-                    document.execCommand('copy');
+                    document.execCommand('copy'); 
                     showMessageModal("Copied!", "Game ID copied to clipboard.");
                 } catch (err) {
-                    showMessageModal("Copy Failed", "Could not copy Game ID automatically.");
+                    console.error('Fallback: Oops, unable to copy', err);
+                    showMessageModal("Copy Failed", "Could not copy Game ID automatically. Please select and copy manually.");
                 }
                 document.body.removeChild(textArea);
             }
         };
         
         function shuffleDeck(deck) { 
-            return [...deck].sort(() => Math.random() - 0.5);
+            let newDeck = [...deck];
+            for (let i = newDeck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
+            }
+            return newDeck;
         }
 
         function canPlayerDevelopAnyProperty(playerState, gameData) {
-            if (!playerState || playerState.isBankrupt || !gameData || !gameData.propertyData || !gameData.boardLayout) return false;
+            if (!playerState || playerState.isBankrupt || !gameData || !Array.isArray(gameData.propertyData) || !gameData.boardLayout) return false;
+            
             return playerState.properties.some(propId => {
                 const propDetails = gameData.propertyData.find(p => p.id === propId);
                 const propLayout = gameData.boardLayout.find(s => s.id === propId);
 
-                if (!propDetails || !propLayout || propLayout.type !== 'property') return false;
-                if (propDetails.owner !== playerState.id || propDetails.permanentResidence) return false;
+                if (!propDetails || !propLayout || propLayout.type !== 'property') return false; 
+                if (propDetails.owner !== playerState.id || propDetails.permanentResidence) return false; 
 
                 const groupPropertiesLayout = gameData.boardLayout.filter(s => s.groupId === propLayout.groupId && s.type === 'property');
                 const ownsAllInGroup = groupPropertiesLayout.every(gpLayout => {
@@ -2080,6 +2604,7 @@
                     return gpData && gpData.owner === playerState.id;
                 });
                 if (!ownsAllInGroup) return false;
+                
                 return (propDetails.tenancies < MAX_TENANCIES) || (propDetails.tenancies === MAX_TENANCIES && !propDetails.permanentResidence);
             });
         }
@@ -2088,9 +2613,12 @@
             if (!playerState || !playerState.inDetention || !detentionActionsDiv) return;
             detentionActionsDiv.innerHTML = ''; 
 
+            const canTakeAction = gameData.playerOrder[gameData.currentPlayerIndex] === currentUserId && !playerState.playerActionTakenThisTurn;
+
             if (playerState.getOutOfDetentionCards > 0) {
                 const useCardBtn = document.createElement('button');
                 useCardBtn.textContent = "Use Legal Aid Card";
+                useCardBtn.disabled = !canTakeAction;
                 useCardBtn.onclick = async () => { 
                     const gameDocRef = doc(db, "games", currentGameId);
                     try {
@@ -2099,7 +2627,7 @@
                             [`players.${currentUserId}.inDetention`]: false,
                             [`players.${currentUserId}.missedTurnsInDetention`]: 0,
                             [`players.${currentUserId}.playerActionTakenThisTurn`]: false, 
-                            lastActionMessage: `${playerState.name} used a Legal Aid card and is free.`,
+                            lastActionMessage: `${playerState.name} used a Legal Aid card and is free. Roll to move.`,
                             updatedAt: serverTimestamp()
                         });
                     } catch (e) { showMessageModal("Error", "Failed to use card: " + e.message); }
@@ -2111,6 +2639,7 @@
             if (playerState.money >= fineAmount) {
                 const payFineBtn = document.createElement('button');
                 payFineBtn.textContent = `Pay £${fineAmount} Fine`;
+                payFineBtn.disabled = !canTakeAction;
                 payFineBtn.onclick = async () => { 
                     const gameDocRef = doc(db, "games", currentGameId);
                      try {
@@ -2119,8 +2648,8 @@
                             [`players.${currentUserId}.inDetention`]: false,
                             [`players.${currentUserId}.missedTurnsInDetention`]: 0,
                             [`players.${currentUserId}.playerActionTakenThisTurn`]: false, 
-                            bankMoney: (gameData.bankMoney || 0) + fineAmount,
-                            lastActionMessage: `${playerState.name} paid £${fineAmount} fine and is free.`,
+                            bankMoney: (gameData.bankMoney || 0) + fineAmount, 
+                            lastActionMessage: `${playerState.name} paid £${fineAmount} fine and is free. Roll to move.`,
                             updatedAt: serverTimestamp()
                         });
                     } catch (e) { showMessageModal("Error", "Failed to pay fine: " + e.message); }
@@ -2129,27 +2658,41 @@
             }
 
             const rollDoublesBtn = document.createElement('button');
-            rollDoublesBtn.textContent = "Roll for Doubles (1 Chance)";
+            rollDoublesBtn.textContent = "Roll for Doubles (Exit Jail)";
+            rollDoublesBtn.disabled = !canTakeAction;
             rollDoublesBtn.onclick = async () => { 
                 const die1 = Math.floor(Math.random() * 6) + 1;
                 const die2 = Math.floor(Math.random() * 6) + 1;
                 const isDoubles = die1 === die2;
-                const totalRoll = die1 + die2;
+                const totalRoll = die1 + die2; 
                 
                 const gameDocRef = doc(db, "games", currentGameId);
-                let updates = { updatedAt: serverTimestamp(), lastDiceRoll: {die1, die2, total: totalRoll, isDoubles} };
+                let updates = { updatedAt: serverTimestamp(), lastDiceRoll: {die1, die2, total: totalRoll, isDoubles: isDoubles} }; 
+                let missedTurns = playerState.missedTurnsInDetention || 0;
+
                 if (isDoubles) {
                     updates[`players.${currentUserId}.inDetention`] = false;
                     updates[`players.${currentUserId}.missedTurnsInDetention`] = 0;
                     updates[`players.${currentUserId}.playerActionTakenThisTurn`] = false; 
-                    updates.lastActionMessage = `${playerState.name} rolled doubles and is free! Must roll again to move.`;
+                    updates.lastActionMessage = `${playerState.name} rolled doubles (${die1},${die2}) and is out of Detention! Roll again to move.`;
                 } else {
+                    missedTurns++;
+                    updates[`players.${currentUserId}.missedTurnsInDetention`] = missedTurns;
                     updates[`players.${currentUserId}.playerActionTakenThisTurn`] = true; 
-                    updates.lastActionMessage = `${playerState.name} failed to roll doubles in detention.`;
+                    if (missedTurns >= 3) {
+                        updates[`players.${currentUserId}.inDetention`] = false; 
+                        updates[`players.${currentUserId}.missedTurnsInDetention`] = 0;
+                        updates[`players.${currentUserId}.money`] = (playerState.money || 0) - fineAmount; 
+                        updates.bankMoney = (gameData.bankMoney || 0) + fineAmount;
+                        updates[`players.${currentUserId}.playerActionTakenThisTurn`] = false; 
+                        updates.lastActionMessage = `${playerState.name} failed to roll doubles for 3 turns, paid £${fineAmount} fine and is out. Must roll to move on their next turn.`;
+                    } else {
+                        updates.lastActionMessage = `${playerState.name} failed to roll doubles (${die1},${die2}) in detention. Still in detention. ${3 - missedTurns} attempt(s) left.`;
+                    }
                 }
                  try {
                     await updateDoc(gameDocRef, updates);
-                } catch (e) { showMessageModal("Error", "Failed to roll for doubles: " + e.message); }
+                } catch (e) { showMessageModal("Error", "Failed to roll for doubles in detention: " + e.message); }
             };
             detentionActionsDiv.appendChild(rollDoublesBtn);
         }
@@ -2157,19 +2700,40 @@
 
         // --- Initial Load ---
         document.addEventListener('DOMContentLoaded', async () => {
+            // Firebase config placeholder check
+            if (firebaseConfigToUse.apiKey === "YOUR_API_KEY" || !firebaseConfigToUse.projectId) {
+                 onlineSetupMessage.textContent = "CRITICAL: Firebase is not configured. Please update firebaseConfigToUse in the script.";
+                 console.error("CRITICAL: Firebase configuration is a placeholder. Update it with your actual Firebase project details.");
+                 createGameButton.disabled = true;
+                 joinGameButton.disabled = true;
+                 showMessageModal("SETUP REQUIRED", "Firebase is not configured. Online features are disabled. See console for details.");
+                 return; 
+            }
             reformatBoardLayout(); 
             await initializeFirebase();
+            
+            const overlay = document.querySelector('.overlay');
+            if(overlay) overlay.style.display = 'none';
         });
 
         document.body.addEventListener('click', async () => {
-            if (!audioContextStarted && typeof Tone !== 'undefined') {
+            if (!audioContextStarted && typeof Tone !== 'undefined' && Tone.context.state !== 'running') {
                 try {
                     await Tone.start();
                     audioContextStarted = true;
                     logEvent("AudioContext started by user interaction.");
-                } catch (e) { console.error("Error starting Tone.js AudioContext:", e); }
+                    if (!toneSynth) { 
+                        toneSynth = new Tone.Synth({
+                            oscillator: { type: "triangle" }, 
+                            envelope: { attack: 0.005, decay: 0.1, sustain: 0.2, release: 0.3 }
+                        }).toDestination();
+                        logEvent("Tone.Synth initialized.");
+                    }
+                } catch (e) { 
+                    console.error("Error starting Tone.js AudioContext or initializing synth:", e); 
+                }
             }
-        }, { once: true });
+        }, { once: true }); 
 
     </script>
   </div>
