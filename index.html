@@ -1121,12 +1121,11 @@
             currentGameId = newGameId; 
             const numPlayers = parseInt(numPlayersOnlineSelect.value);
 
-            // ***** AMENDED Firestore Path *****
             const gameDocRef = doc(db, "games", newGameId);
 
-            reformatBoardLayout(); // This populates the global `boardLayout`
+            reformatBoardLayout(); 
 
-            const initialPropertyDataForFirestore = JSON.parse(JSON.stringify(boardLayout)) // Use the globally set boardLayout
+            const initialPropertyDataForFirestore = JSON.parse(JSON.stringify(boardLayout)) 
                 .filter(s => s.type === 'property' || s.type === 'set_property')
                 .map(p => ({
                     id: p.id,
@@ -1164,7 +1163,7 @@
                 players: { [currentUserId]: initialPlayerData }, 
                 playerOrder: [currentUserId], 
                 currentPlayerIndex: 0, 
-                boardLayout: boardLayout, // Use the globally set boardLayout
+                boardLayout: boardLayout, 
                 propertyData: initialPropertyDataForFirestore, 
                 bankMoney: 15000,
                 ukGovMoney: 20000,
@@ -1181,8 +1180,6 @@
                 preGamePhase: true, 
                 gamePhase: "setup", 
             };
-            // If the game is full immediately upon creation (e.g. maxPlayers is 1, though our UI min is 2)
-            // Set status to active to trigger pre-game rolls.
             if (Object.keys(initialGameState.players).length === numPlayers) {
                 initialGameState.status = "active";
                 initialGameState.lastActionMessage = `${localPlayerName} created the game. Starting pre-game rolls.`;
@@ -1220,7 +1217,6 @@
                 return;
             }
 
-            // ***** AMENDED Firestore Path *****
             const gameDocRef = doc(db, "games", gameIdToJoin);
 
             try {
@@ -1282,16 +1278,15 @@
             if (unsubscribeGameState) {
                 unsubscribeGameState(); 
             }
-            // ***** AMENDED Firestore Path *****
             const gameDocRef = doc(db, "games", gameId);
             unsubscribeGameState = onSnapshot(gameDocRef, (docSnap) => {
                 if (docSnap.exists()) {
-                    localGameData = docSnap.data();
-                    logEvent("Game state updated from Firestore:", localGameData.lastActionMessage || "No last action message");
-                    updateLocalUIFromFirestore(localGameData);
-                    // Show game container if we have a game ID and the setup screen is visible
-                    // Only transition to game screen if game is active and not in waiting state
-                    if (currentGameId && onlineSetupScreen.style.display !== 'none' && localGameData.status === "active") {
+                    const gameData = docSnap.data(); // Get data once
+                    localGameData = gameData; // Update global localGameData immediately
+                    logEvent("Game state updated from Firestore:", gameData.lastActionMessage || "No last action message");
+                    updateLocalUIFromFirestore(gameData); // Pass the fetched data directly
+                    
+                    if (currentGameId && onlineSetupScreen.style.display !== 'none' && gameData.status === "active") {
                          onlineSetupScreen.style.display = 'none';
                          gameContainer.style.display = 'flex';
                     }
@@ -1323,11 +1318,80 @@
             generatedGameIdSpan.textContent = '';
             gameIdInput.value = '';
             boardLayout = []; 
-            if(boardContainer) boardContainer.innerHTML = ''; // Explicitly clear board container
+            if(boardContainer) boardContainer.innerHTML = ''; 
         }
 
+        // --- BEGIN FIX ---
+        async function finalizePreGameAsHost() {
+            if (!currentGameId || !currentUserId || !db) {
+                console.error("finalizePreGameAsHost: Missing critical variables (currentGameId, currentUserId, db).");
+                return;
+            }
+            logEvent("Host attempting to finalize pre-game rolls.");
+
+            const gameDocRef = doc(db, "games", currentGameId);
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const freshGameDoc = await transaction.get(gameDocRef);
+                    if (!freshGameDoc.exists()) {
+                        throw new Error("Game document not found during host finalization.");
+                    }
+                    const freshGameData = freshGameDoc.data();
+
+                    // Condition check inside transaction to ensure it's still necessary
+                    if (!freshGameData.preGamePhase) {
+                        logEvent("Host finalization: Pre-game phase already ended. No action needed.");
+                        return; // Already finalized
+                    }
+
+                    const allPlayersInOrder = freshGameData.playerOrder || [];
+                    const currentPreGameRolls = freshGameData.preGameRolls || {};
+                    // Ensure all players in the order have actually rolled in the fresh data
+                    const allHaveRolled = allPlayersInOrder.length > 0 &&
+                                        allPlayersInOrder.every(pid => currentPreGameRolls[pid] !== undefined);
+
+                    if (!allHaveRolled) {
+                        logEvent("Host finalization: Not all players have rolled in fresh data. Aborting to prevent premature finalization.");
+                        return; 
+                    }
+                     if (freshGameData.hostId !== currentUserId) { 
+                        logEvent("Host finalization check: Current user is no longer host or an error occurred. Aborting.");
+                        return;
+                    }
+
+                    logEvent("Host is proceeding with finalization of pre-game rolls via dedicated function.");
+                    let updates = {};
+                    const sortedPlayerIds = [...allPlayersInOrder].sort((a, b) => {
+                        const rollA = currentPreGameRolls[a];
+                        const rollB = currentPreGameRolls[b];
+                        if (rollB === rollA) { // If rolls are tied
+                            // Maintain original join order for tie-breaking (or whatever order is current in playerOrder)
+                            return allPlayersInOrder.indexOf(a) - allPlayersInOrder.indexOf(b);
+                        }
+                        return rollB - rollA; // Higher roll first
+                    });
+
+                    updates.playerOrder = sortedPlayerIds;
+                    updates.currentPlayerIndex = 0;
+                    updates.preGamePhase = false;
+                    updates.gamePhase = "main";
+                    updates.status = "active"; 
+                    updates.lastActionMessage = `Starting order determined by host. ${freshGameData.players[sortedPlayerIds[0]].name} starts!`;
+                    updates.updatedAt = serverTimestamp();
+                    
+                    transaction.update(gameDocRef, updates);
+                    logEvent("Host successfully finalized pre-game starting order via dedicated function.");
+                });
+            } catch (error) {
+                console.error("Error during host finalization of pre-game rolls:", error);
+                showMessageModal("Host Finalization Error", "Could not finalize game start: " + error.message);
+            }
+        }
+        // --- END FIX ---
+
+
         // --- UI Update Functions (Driven by Firestore) ---
-        function updateLocalUIFromFirestore(gameData) {
+        function updateLocalUIFromFirestore(gameData) { // gameData is the fresh snapshot from Firestore
             if (!currentUserId) {
                 logEvent("UpdateLocalUI: currentUserId not set yet, deferring UI update.");
                 if(gameStatusMessageP) gameStatusMessageP.textContent = "Authenticating..."; 
@@ -1338,6 +1402,26 @@
                 logEvent("UpdateLocalUI: No game data received.");
                 return;
             }
+            
+            // localGameData = gameData; // This line is already in subscribeToGameState, ensuring localGameData is up-to-date.
+                                      // Using the passed `gameData` parameter is safer within this function scope.
+
+            // --- BEGIN FIX ---
+            // Check if host needs to finalize pre-game rolls
+            // This check is performed using the gameData received from the snapshot
+            if (gameData.preGamePhase && 
+                gameData.status === "active" &&
+                gameData.hostId === currentUserId && // I am the host
+                gameData.playerOrder && gameData.playerOrder.length > 0 &&
+                gameData.preGameRolls &&
+                gameData.playerOrder.every(pid => gameData.preGameRolls[pid] !== undefined)
+               ) {
+                // All conditions met for host to potentially finalize.
+                // The finalizePreGameAsHost function will fetch fresh data again and check preGamePhase within a transaction.
+                logEvent("Host detected conditions to finalize pre-game based on current snapshot. Calling finalizePreGameAsHost.");
+                finalizePreGameAsHost(); // Call the new function. It uses global currentGameId.
+            }
+            // --- END FIX ---
 
             // Board setup logic
             logEvent("UpdateLocalUI: Checking board setup. Current boardLayout.length: " + boardLayout.length + ", gameData.boardLayout exists: " + !!gameData.boardLayout);
@@ -1469,10 +1553,9 @@
                 boardContainer.appendChild(spaceDiv);
             });
 
-            // Ensure players object and playerOrder exist before trying to create tokens
             if (gameData.players && gameData.playerOrder) {
                 Object.values(gameData.players).forEach(player => {
-                    if (player && player.id !== undefined && player.order !== undefined) { // Check if player object is valid
+                    if (player && player.id !== undefined && player.order !== undefined) { 
                         const token = document.createElement('div');
                         token.id = `player-token-${player.id}`; 
                         token.classList.add('player-token');
@@ -1495,13 +1578,12 @@
         }
 
         function updateBoardDynamicElements(gameData) {
-            // Ensure players object exists
             if (!gameData.players) {
                 logEvent("updateBoardDynamicElements: gameData.players is missing.");
                 return;
             }
             Object.values(gameData.players).forEach(player => {
-                 if (!player || player.id === undefined) { // Check if player object is valid
+                 if (!player || player.id === undefined) { 
                     logEvent("Warning: Invalid player data in updateBoardDynamicElements for token positioning.", player);
                     return;
                 }
@@ -1519,7 +1601,6 @@
                 }
             });
 
-            // Ensure propertyData and boardLayout exist
             if (!gameData.propertyData || !gameData.boardLayout) {
                  logEvent("updateBoardDynamicElements: gameData.propertyData or gameData.boardLayout is missing.");
                 return;
@@ -1529,11 +1610,11 @@
                 if (ownerIndicator) {
                     if (propInPropertyData.owner && gameData.players[propInPropertyData.owner] && !gameData.players[propInPropertyData.owner].isBankrupt) {
                         const ownerData = gameData.players[propInPropertyData.owner];
-                        if (ownerData && ownerData.order !== undefined) { // Check if ownerData is valid
+                        if (ownerData && ownerData.order !== undefined) { 
                             const ownerColor = playerColors[ownerData.order % playerColors.length];
                             ownerIndicator.style.backgroundColor = ownerColor;
                         } else {
-                             ownerIndicator.style.backgroundColor = 'transparent'; // Fallback
+                             ownerIndicator.style.backgroundColor = 'transparent'; 
                         }
                     } else {
                         ownerIndicator.style.backgroundColor = 'transparent';
@@ -1562,7 +1643,7 @@
 
             gameData.playerOrder.forEach(playerId => {
                 const p = gameData.players[playerId];
-                if (!p || p.id === undefined || p.order === undefined) { // Check if player object is valid
+                if (!p || p.id === undefined || p.order === undefined) { 
                     logEvent("Warning: Invalid player data in updatePlayerInfoPanel.", p);
                     return;
                 };
@@ -1578,7 +1659,7 @@
                     if (p.inDetention) pDiv.innerHTML += ` (In Detention - ${p.missedTurnsInDetention} missed)`;
                     pDiv.innerHTML += `<br><span style='font-size:12px;color:#f7ca18;'>From UK Gov: £${p.govReceived || 0}</span>`;
                 }
-                if (gameData.playerOrder[gameData.currentPlayerIndex] === p.id && !p.isBankrupt && gameData.status === "active" && !gameData.preGamePhase) { // Highlight only if not preGamePhase
+                if (gameData.playerOrder[gameData.currentPlayerIndex] === p.id && !p.isBankrupt && gameData.status === "active" && !gameData.preGamePhase) { 
                     pDiv.style.border = `2px solid ${playerColor}`;
                     pDiv.style.padding = "3px";
                     pDiv.style.borderRadius = "4px";
@@ -1595,7 +1676,12 @@
                  if (joined < gameData.maxPlayers) {
                     gameStatusMessageP.textContent = `Waiting for players... (${joined}/${gameData.maxPlayers} joined)`;
                  } else {
-                    gameStatusMessageP.textContent = "Pre-game: Determine starting player by rolling.";
+                    const allRolled = gameData.playerOrder.every(pid => gameData.preGameRolls && gameData.preGameRolls[pid] !== undefined);
+                    if (allRolled) {
+                        gameStatusMessageP.textContent = "All players rolled. Host is determining start order...";
+                    } else {
+                        gameStatusMessageP.textContent = "Pre-game: Determine starting player by rolling.";
+                    }
                  }
             } else if (gameData.status === "active") {
                 gameStatusMessageP.textContent = gameData.lastActionMessage || "Game in progress...";
@@ -1630,14 +1716,18 @@
                     currentTurnDisplay.textContent = `Current Turn: ${currentPlayerInOrder.name}`;
                     currentTurnDisplay.style.color = playerColors[currentPlayerInOrder.order % playerColors.length];
                 }
-            } else {
+            } else if (gameData.preGamePhase && Object.keys(gameData.players).length === gameData.maxPlayers) {
+                 currentTurnDisplay.textContent = "Waiting for Rolls...";
+                 currentTurnDisplay.style.color = '#ecf0f1';
+            }
+             else {
                 currentTurnDisplay.textContent = "Game Not Fully Started";
                 currentTurnDisplay.style.color = '#ecf0f1';
             }
         }
 
         function updateControlsBasedOnTurn(gameData) {
-            if (!currentUserId || !gameData.players || !gameData.players[currentUserId]) { // Ensure currentUserId and its player data exist
+            if (!currentUserId || !gameData.players || !gameData.players[currentUserId]) { 
                 logEvent("updateControlsBasedOnTurn: currentUserId or player data missing, skipping controls update.");
                 return;
             }
@@ -1653,13 +1743,10 @@
             if (amIBankrupt || gameData.status === "finished") return;
 
 
-            // Handle pre-game phase separately to show pre-game roll button
             if (gameData.preGamePhase && gameData.status === "active") { 
-                // Pre-game phase specific controls will be handled elsewhere
                 return; 
             }
             
-            // Only show main game controls when in active main game phase
             if (gameData.status !== "active" || gameData.gamePhase !== "main") return; 
 
             const isMyTurn = gameData.playerOrder[gameData.currentPlayerIndex] === currentUserId;
@@ -1718,7 +1805,7 @@
         }
         
         function updatePreGameRollUI(gameData) {
-            if (!preGameRollArea || !preGameRollButton || !preGameRollResultsDiv || !gameData.players) { // Add null checks for DOM elements
+            if (!preGameRollArea || !preGameRollButton || !preGameRollResultsDiv || !gameData.players) { 
                 logEvent("updatePreGameRollUI: Critical DOM element or gameData.players missing.");
                 return;
             }
@@ -1750,6 +1837,7 @@
             
             if (rolledPlayerCount === numberOfPlayers && numberOfPlayers > 0) {
                 preGameRollResultsDiv.innerHTML += "All players rolled. Determining start order...";
+                 // Host finalization logic is now primarily handled by the check in updateLocalUIFromFirestore
             } else if (numberOfPlayers > 0) {
                 let nextPlayerToRollId = null;
                 for (let i = 0; i < allPlayerIdsInOrder.length; i++) {
@@ -1912,13 +2000,14 @@
 
                     const currentPreGameRolls = { ...(freshGameData.preGameRolls || {}), [currentUserId]: roll };
                     const allPlayersInOrder = freshGameData.playerOrder || [];
-                    const allHaveRolled = allPlayersInOrder.every(pid => currentPreGameRolls[pid] !== undefined);
+                    const allHaveRolled = allPlayersInOrder.length > 0 && allPlayersInOrder.every(pid => currentPreGameRolls[pid] !== undefined);
 
 
-                    if (allHaveRolled && allPlayersInOrder.length > 0) {
+                    if (allHaveRolled) { // Check if all players have rolled
                         updates.lastActionMessage += " All players rolled.";
                         if (currentUserId === freshGameData.hostId) { 
-                            updates.lastActionMessage += " Host determining start order...";
+                            // Host is the one making the final roll, finalize immediately
+                            logEvent("Host is the last to roll in pre-game, finalizing directly.");
                             const sortedPlayerIds = [...allPlayersInOrder].sort((a, b) => {
                                 const rollA = currentPreGameRolls[a]; 
                                 const rollB = currentPreGameRolls[b];
@@ -1931,10 +2020,11 @@
                             updates.currentPlayerIndex = 0; 
                             updates.preGamePhase = false; 
                             updates.gamePhase = "main"; 
-                            // Make sure the game status is active
                             updates.status = "active";
                             updates.lastActionMessage = `Starting order determined. ${freshGameData.players[sortedPlayerIds[0]].name} starts!`;
                         } else {
+                            // Non-host made the (potentially) final roll. Message indicates waiting for host.
+                            // The host's client will pick this up via onSnapshot and call finalizePreGameAsHost.
                             updates.lastActionMessage += " Waiting for host to finalize starting order.";
                         }
                     }
@@ -2067,9 +2157,8 @@
 
         // --- Initial Load ---
         document.addEventListener('DOMContentLoaded', async () => {
-            reformatBoardLayout(); // Call once to set up the initial structure for boardLayout global var
+            reformatBoardLayout(); 
             await initializeFirebase();
-            // currentUserId might still be null here, so token specific logic might be better in onAuthStateChanged
         });
 
         document.body.addEventListener('click', async () => {
