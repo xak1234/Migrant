@@ -3069,21 +3069,108 @@
         }
 
         async function handleConfirmDevelopment(propertyId, developmentType) {
-            logEvent(`Attempting to develop property ${propertyId} with ${developmentType}`);
-            // This function will handle the Firestore transaction for development.
-            // It needs to:
-            // 1. Verify player turn, ownership, funds, and development validity (e.g., max tenancies).
-            // 2. Update player money.
-            // 3. Update propertyData (tenancies or permanentResidence).
-            // 4. Update lastActionMessage.
-            // 5. Check for bankruptcy.
-            // 6. Close the modal.
-            // 7. Trigger auto-end turn if applicable.
-            
-            // For now, just a placeholder:
-            showMessageModal("Development", `Development action for ${propertyId} (${developmentType}) needs to be fully implemented.`);
-            developPropertyContainer.style.display = 'none'; // Close modal
-            // Potentially call updateControlsBasedOnTurn or trigger auto-end here after actual Firestore update
+            logEvent(`handleConfirmDevelopment called for prop: ${propertyId}, type: ${developmentType}`);
+            if (!currentGameId || !localGameData || !currentUserId || !db) {
+                showMessageModal("Error", "Game data or connection issue.");
+                return;
+            }
+
+            const gameDocRef = doc(db, "games", currentGameId);
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const freshGameDoc = await transaction.get(gameDocRef);
+                    if (!freshGameDoc.exists()) throw new Error("Game not found for development.");
+                    
+                    const freshGameData = freshGameDoc.data();
+                    const playerState = freshGameData.players[currentUserId];
+                    const propLayout = freshGameData.boardLayout.find(s => s.id === propertyId);
+                    const propDataIndex = freshGameData.propertyData.findIndex(p => p.id === propertyId);
+
+                    if (propDataIndex === -1 || !propLayout || !playerState) {
+                        throw new Error("Property or player data not found for development.");
+                    }
+                    const propData = freshGameData.propertyData[propDataIndex];
+
+                    // Validation
+                    if (freshGameData.playerOrder[freshGameData.currentPlayerIndex] !== currentUserId) {
+                        throw new Error("Not your turn to develop.");
+                    }
+                    if (propData.owner !== currentUserId) {
+                        throw new Error("You do not own this property.");
+                    }
+                    if (propLayout.type !== 'property') {
+                        throw new Error("This type of property cannot be developed.");
+                    }
+
+                    // Check group ownership
+                    const groupPropertiesLayout = freshGameData.boardLayout.filter(s => s.groupId === propLayout.groupId && s.type === 'property');
+                    const ownsAllInGroup = groupPropertiesLayout.every(gpLayout => {
+                        const gpDataForCheck = freshGameData.propertyData.find(pd => pd.id === gpLayout.id);
+                        return gpDataForCheck && gpDataForCheck.owner === currentUserId;
+                    });
+                    if (!ownsAllInGroup) {
+                        throw new Error(`You must own all properties in the ${propLayout.color || propLayout.groupId} group to develop.`);
+                    }
+
+                    let cost = 0;
+                    let newTenancies = propData.tenancies;
+                    let newPR = propData.permanentResidence;
+                    let developmentMessage = "";
+
+                    if (developmentType === 'tenancy') {
+                        if (propData.permanentResidence) throw new Error("Cannot add tenancies to a property with Permanent Residence.");
+                        if (propData.tenancies >= MAX_TENANCIES) throw new Error("Maximum tenancies reached.");
+                        cost = TENANCY_COST;
+                        newTenancies++;
+                        developmentMessage = `added a tenancy to ${propLayout.name}`;
+                    } else if (developmentType === 'pr') {
+                        if (propData.permanentResidence) throw new Error("Permanent Residence already built.");
+                        if (propData.tenancies < MAX_TENANCIES) throw new Error(`Must have ${MAX_TENANCIES} tenancies to build PR.`);
+                        cost = PR_COST;
+                        newPR = true;
+                        developmentMessage = `built Permanent Residence on ${propLayout.name}`;
+                    } else {
+                        throw new Error("Invalid development type.");
+                    }
+
+                    if (playerState.money < cost) {
+                        throw new Error(`Insufficient funds. Need £${cost}.`);
+                    }
+
+                    // Prepare updates
+                    const updates = {};
+                    updates[`players.${currentUserId}.money`] = playerState.money - cost;
+                    
+                    // Create a new propertyData array with the updated property
+                    const updatedPropertyDataArray = freshGameData.propertyData.map((p, index) => {
+                        if (index === propDataIndex) {
+                            return { ...p, tenancies: newTenancies, permanentResidence: newPR };
+                        }
+                        return p;
+                    });
+                    updates.propertyData = updatedPropertyDataArray;
+                    
+                    updates.lastActionMessage = `${playerState.name} ${developmentMessage} for £${cost}.`;
+                    updates.updatedAt = serverTimestamp();
+                    
+                    // playerActionTakenThisTurn should already be true if they are at this stage
+                    // unless it's a doubles roll, in which case buying/developing is an interim action.
+                    // The existing logic in updateControlsBasedOnTurn and auto-end turn should handle this.
+
+                    transaction.update(gameDocRef, updates);
+                    logEvent("Development successful in transaction:", updates);
+                });
+
+                developPropertyContainer.style.display = 'none'; // Close modal on success
+                // The onSnapshot listener will call updateLocalUIFromFirestore, which calls updateControlsBasedOnTurn
+                // updateControlsBasedOnTurn will then trigger auto-end turn logic if applicable.
+
+            } catch (error) {
+                console.error("Error confirming development:", error);
+                showMessageModal("Development Error", error.message);
+                // Re-enable button or close modal might be needed here if transaction fails early
+                // but generally onSnapshot will refresh the UI state.
+            }
         }
 
 
