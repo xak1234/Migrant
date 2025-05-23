@@ -193,6 +193,15 @@
             gap: 18px;
             z-index: 2;
         }
+        #center-board-image {
+            width: 200px; /* Adjust as needed */
+            height: auto;
+            max-height: 150px; /* Adjust as needed */
+            object-fit: contain;
+            margin-bottom: 15px; /* Space between image and card decks */
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
         .card-deck {
             width: 110px;
             height: 60px;
@@ -1849,7 +1858,15 @@
 
             const cardDecksCenter = document.createElement('div');
             cardDecksCenter.id = 'card-decks-center';
-            cardDecksCenter.innerHTML = `
+            // Add image to the center
+            const centerImage = document.createElement('img');
+            centerImage.id = 'center-board-image';
+            // IMPORTANT: Replace with the actual path to your image
+            centerImage.src = 'https://placehold.co/200x150/34495e/ecf0f1?text=Migrant3.jpg'; 
+            centerImage.alt = 'Migrantopoly Center';
+            cardDecksCenter.appendChild(centerImage);
+
+            cardDecksCenter.innerHTML += `
                 <div class="card-deck opportunity">Opportunity</div>
                 <div class="card-deck welfare">Welfare</div>
             `;
@@ -2906,4 +2923,4 @@
     </script>
   </div>
 </body>
-</html>
+</ht
