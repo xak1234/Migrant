@@ -1174,6 +1174,14 @@
                 preGamePlayersRolled: [], 
                 preGamePhase: true, // Start in preGamePhase, status "waiting"
             };
+             // If creating a 1-player game (maxPlayers === 1), immediately set status to active
+            // For this game, min players is 2, so this specific condition might not be hit often
+            // but good for robustness if maxPlayers could be 1.
+            if (numPlayers === 1) {
+                initialGameState.status = "active"; // Game is active, preGamePhase handles the single player roll
+                initialGameState.lastActionMessage = `${localPlayerName} started a game. Ready to roll for start.`;
+            }
+
 
             try {
                 await setDoc(gameDocRef, initialGameState);
@@ -1241,12 +1249,11 @@
                         const newPlayerCount = gameData.playerOrder.length + 1; 
 
                         if (newPlayerCount === gameData.maxPlayers) {
-                            updates.preGamePhase = true; // Ensure this is true
-                            updates.status = "active";   // <-- ***** AMENDED LINE ***** Set status to active
+                            updates.preGamePhase = true; 
+                            updates.status = "active";   
                             updates.lastActionMessage = `${localPlayerName} joined. All players present! Starting pre-game rolls.`;
                         } else {
                             updates.lastActionMessage = `${localPlayerName} joined the game. Waiting for ${gameData.maxPlayers - newPlayerCount} more.`;
-                            // status remains "waiting" if not full yet
                         }
                         transaction.update(gameDocRef, updates);
                         logEvent(`${localPlayerName} joining game ${gameIdToJoin}.`);
@@ -1274,7 +1281,6 @@
                     localGameData = docSnap.data();
                     logEvent("Game state updated from Firestore:", localGameData.lastActionMessage);
                     updateLocalUIFromFirestore(localGameData);
-                    // This check might need to be more nuanced if status is "active" but preGamePhase is true
                     if ((localGameData.status === "active" || localGameData.preGamePhase) && onlineSetupScreen.style.display !== 'none') {
                         onlineSetupScreen.style.display = 'none';
                         gameContainer.style.display = 'flex';
@@ -1306,11 +1312,18 @@
             gameIdDisplayDiv.style.display = 'none';
             generatedGameIdSpan.textContent = '';
             gameIdInput.value = '';
-            boardLayout = []; // Reset board layout so it's re-initialized
+            boardLayout = []; 
         }
 
         // --- UI Update Functions (Driven by Firestore) ---
         function updateLocalUIFromFirestore(gameData) {
+            // ***** AMENDED: Added guard for currentUserId *****
+            if (!currentUserId) {
+                logEvent("UpdateLocalUI: currentUserId not set yet, deferring UI update.");
+                gameStatusMessageP.textContent = "Authenticating..."; // Give some feedback
+                return;
+            }
+
             if (!gameData || Object.keys(gameData).length === 0) {
                 logEvent("UpdateLocalUI: No game data received.");
                 return;
@@ -1327,10 +1340,9 @@
 
             updatePlayerInfoPanel(gameData);
             updateGameStatusPanel(gameData);
-            updateControlsBasedOnTurn(gameData); // Handles main game controls
+            updateControlsBasedOnTurn(gameData); 
             updateUkGovDisplay(gameData.ukGovMoney);
 
-            // Explicitly call preGameRollUI update if in that phase
             if (gameData.preGamePhase) {
                 updatePreGameRollUI(gameData);
             } else {
@@ -1340,7 +1352,6 @@
             if (gameData.status === "finished") {
                 handleGameEndUI(gameData);
             } 
-            // The condition for starting game on UI (hiding setup screen) was also moved slightly in subscribeToGameState
         }
         
         function setupBoardFromFirestore(gameData) {
@@ -1519,8 +1530,6 @@
         }
         
         function updateGameStatusPanel(gameData) {
-            // This function now mostly relies on preGamePhase to dictate the message
-            // if the game isn't fully "active" post-rolls.
             if (gameData.preGamePhase) {
                  const joined = Object.keys(gameData.players).length;
                  if (joined < gameData.maxPlayers) {
@@ -1532,7 +1541,7 @@
                 gameStatusMessageP.textContent = gameData.lastActionMessage || "Game in progress...";
             } else if (gameData.status === "finished") {
                 gameStatusMessageP.textContent = gameData.lastActionMessage || "Game Over!";
-            } else { // Default to waiting if status is "waiting" and not preGamePhase (should be rare)
+            } else { 
                  gameStatusMessageP.textContent = `Waiting for players... (${Object.keys(gameData.players).length}/${gameData.maxPlayers} joined)`;
             }
 
@@ -1540,13 +1549,21 @@
             const currentPlayerInOrder = gameData.players[gameData.playerOrder[gameData.currentPlayerIndex]];
             if (currentPlayerInOrder && !currentPlayerInOrder.isBankrupt && gameData.status === "active") {
                 if (gameData.preGamePhase) {
-                    const playerToRollId = gameData.playerOrder[Object.keys(gameData.preGameRolls || {}).length % gameData.playerOrder.length];
-                    const playerToRoll = gameData.players[playerToRollId];
+                    // Determine next player to roll for display
+                    let nextPlayerToRollForDisplayId = null;
+                    for(const pid of gameData.playerOrder) {
+                        if(!gameData.preGameRolls || gameData.preGameRolls[pid] === undefined) {
+                            nextPlayerToRollForDisplayId = pid;
+                            break;
+                        }
+                    }
+                    const playerToRoll = gameData.players[nextPlayerToRollForDisplayId];
+
                     if (playerToRoll) {
                          currentTurnDisplay.textContent = `Pre-Game Roll: ${playerToRoll.name}`;
                          currentTurnDisplay.style.color = playerColors[playerToRoll.order % playerColors.length];
-                    } else {
-                        currentTurnDisplay.textContent = "Pre-Game Roll";
+                    } else { // All might have rolled, waiting for host to finalize
+                        currentTurnDisplay.textContent = "Pre-Game Rolls Complete";
                         currentTurnDisplay.style.color = '#ecf0f1';
                     }
                 } else {
@@ -1568,18 +1585,17 @@
             developPropertyButton.style.display = 'none';
             otherActionsContainer.style.display = 'none';
             detentionActionsDiv.innerHTML = '';
-            preGameRollButton.style.display = 'none'; // Hide pre-game roll button by default
+            // preGameRollButton is handled by updatePreGameRollUI
 
             if (amIBankrupt || gameData.status === "finished") return;
 
 
-            if (gameData.preGamePhase && gameData.status === "active") { // Pre-game roll phase logic
-                // updatePreGameRollUI handles showing the preGameRollButton correctly
-                return; // No other controls during pre-game roll phase
+            if (gameData.preGamePhase && gameData.status === "active") { 
+                // Pre-game roll UI is handled by updatePreGameRollUI, so no main controls here
+                return; 
             }
             
-            // Main game turn logic
-            if (gameData.status !== "active" || gameData.preGamePhase) return; // Exit if not in active play phase
+            if (gameData.status !== "active" || gameData.preGamePhase) return; 
 
             const isMyTurn = gameData.playerOrder[gameData.currentPlayerIndex] === currentUserId;
             const amIInDetention = gameData.players[currentUserId]?.inDetention;
@@ -1637,37 +1653,34 @@
         }
         
         function updatePreGameRollUI(gameData) {
-            // ***** AMENDED GUARD CONDITION *****
             if (!gameData.preGamePhase) { 
                 preGameRollArea.style.display = 'none';
+                preGameRollButton.style.display = 'none';
                 return;
             }
-            // Only proceed if we are in preGamePhase. The game 'status' might still be 'waiting' or now 'active'.
             
             preGameRollArea.style.display = 'flex'; 
             preGameRollResultsDiv.innerHTML = ''; 
+            preGameRollButton.style.display = 'none'; // Default to hidden
 
             let allPlayerIdsInOrder = gameData.playerOrder || [];
             let preGameRollsData = gameData.preGameRolls || {};
             let numberOfPlayers = allPlayerIdsInOrder.length;
-            let rolledPlayerCount = Object.keys(preGameRollsData).length;
-
+            
+            let rolledPlayerCount = 0;
             allPlayerIdsInOrder.forEach(pid => {
                 const playerName = gameData.players[pid]?.name || 'Unknown Player';
                 if (preGameRollsData[pid] !== undefined) {
                     preGameRollResultsDiv.innerHTML += `${playerName} rolled: ${preGameRollsData[pid]}<br>`;
+                    rolledPlayerCount++;
                 } else {
                     preGameRollResultsDiv.innerHTML += `${playerName} has not rolled yet.<br>`;
                 }
             });
             
             if (rolledPlayerCount === numberOfPlayers && numberOfPlayers > 0) {
-                preGameRollButton.style.display = 'none';
                 preGameRollResultsDiv.innerHTML += "All players rolled. Determining start order...";
-                // Host logic in handlePreGameRollAction will finalize this.
             } else if (numberOfPlayers > 0) {
-                // Determine whose turn it is to roll among those who haven't rolled yet.
-                // This assumes players roll in their current 'playerOrder'.
                 let nextPlayerToRollId = null;
                 for (let i = 0; i < allPlayerIdsInOrder.length; i++) {
                     const pid = allPlayerIdsInOrder[i];
@@ -1679,21 +1692,17 @@
 
                 if (nextPlayerToRollId === currentUserId) {
                     preGameRollButton.style.display = 'block';
-                    preGameRollButton.textContent = `Your turn, ${gameData.players[currentUserId].name}, Roll to Start`;
+                    preGameRollButton.textContent = `Your turn, ${gameData.players[currentUserId]?.name || 'Player'}, Roll to Start`;
                     preGameRollButton.disabled = false;
                 } else if (nextPlayerToRollId && gameData.players[nextPlayerToRollId]) {
                     preGameRollButton.style.display = 'block';
                     preGameRollButton.textContent = `Waiting for ${gameData.players[nextPlayerToRollId].name} to roll...`;
                     preGameRollButton.disabled = true;
-                } else if (rolledPlayerCount < numberOfPlayers) { // Some haven't rolled, but it's not clear who's next (shouldn't happen)
+                } else if (rolledPlayerCount < numberOfPlayers) { 
                     preGameRollButton.style.display = 'block';
                     preGameRollButton.textContent = `Waiting for players to roll...`;
                     preGameRollButton.disabled = true;
-                } else {
-                     preGameRollButton.style.display = 'none'; 
                 }
-            } else {
-                 preGameRollButton.style.display = 'none';
             }
         }
 
@@ -1757,7 +1766,6 @@
                     let newPosition = playerState.position;
                     let messages = [];
                     let updates = {};
-                    // let newPlayerState = {...playerState}; // Not directly modifying newPlayerState here, but using playerState for reads
 
                     updates[`players.${currentUserId}.doublesRolledInTurn`] = isDoubles ? (playerState.doublesRolledInTurn || 0) + 1 : 0;
                     
@@ -1818,34 +1826,32 @@
 
                     let updates = {};
                     updates[`preGameRolls.${currentUserId}`] = roll;
-                    updates.preGamePlayersRolled = arrayUnion(currentUserId); // Keep this to track who has rolled
+                    updates.preGamePlayersRolled = arrayUnion(currentUserId); 
                     updates.lastActionMessage = `${freshGameData.players[currentUserId].name} rolled ${roll} for starting order.`;
                     updates.updatedAt = serverTimestamp();
 
-                    // Check if all players have rolled by comparing preGameRolls keys with playerOrder
                     const currentPreGameRolls = { ...(freshGameData.preGameRolls || {}), [currentUserId]: roll };
                     const allPlayersInOrder = freshGameData.playerOrder || [];
                     const allHaveRolled = allPlayersInOrder.every(pid => currentPreGameRolls[pid] !== undefined);
 
 
                     if (allHaveRolled && allPlayersInOrder.length > 0) {
-                        updates.lastActionMessage += " All players rolled. Determining start order...";
-                        if (currentUserId === freshGameData.hostId) { // Host finalizes
+                        updates.lastActionMessage += " All players rolled.";
+                        if (currentUserId === freshGameData.hostId) { 
+                            updates.lastActionMessage += " Host determining start order...";
                             const sortedPlayerIds = [...allPlayersInOrder].sort((a, b) => {
                                 const rollA = currentPreGameRolls[a]; 
                                 const rollB = currentPreGameRolls[b];
-                                if (rollB === rollA) { // Handle ties by original order if rolls are same
+                                if (rollB === rollA) { 
                                     return allPlayersInOrder.indexOf(a) - allPlayersInOrder.indexOf(b);
                                 }
-                                return rollB - rollA; // Highest roll first
+                                return rollB - rollA; 
                             });
-                            updates.playerOrder = sortedPlayerIds; // Update playerOrder based on rolls
+                            updates.playerOrder = sortedPlayerIds; 
                             updates.currentPlayerIndex = 0; 
                             updates.preGamePhase = false; 
-                            // status is already "active" if it was set when lobby became full
                             updates.lastActionMessage = `Starting order determined. ${freshGameData.players[sortedPlayerIds[0]].name} starts!`;
                         } else {
-                            // If not host, just indicate waiting for host to finalize
                             updates.lastActionMessage += " Waiting for host to finalize starting order.";
                         }
                     }
