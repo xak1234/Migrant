@@ -47,8 +47,12 @@
             color: #ecf0f1;
             text-align: center;
             width: auto;
-            max-width: 450px;
+            max-width: 450px; /* Adjusted for better layout with game list */
         }
+        #online-setup-screen {
+             max-width: 600px; /* Wider for game list */
+        }
+
         #player-setup-screen h2, #online-setup-screen h2 {
             color: #1abc9c;
             margin-top: 0;
@@ -133,6 +137,36 @@
             font-size: 0.8em;
             z-index: 1000;
         }
+        #active-games-list-container {
+            margin-top: 20px;
+            width: 100%;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #7f8c8d;
+            border-radius: 6px;
+            padding: 10px;
+            background-color: #34495e;
+        }
+        #active-games-list-container h4 {
+            margin-top: 0;
+            color: #1abc9c;
+        }
+        .game-list-item {
+            background-color: #2c3e50;
+            padding: 8px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .game-list-item button {
+            padding: 5px 10px;
+            font-size: 0.8em;
+            margin-left: 10px;
+            background-color: #3498db;
+        }
+         .game-list-item button:hover {
+            background-color: #2980b9;
+        }
 
 
         #game-container, #game-info-area, #board-container {
@@ -166,16 +200,6 @@
             overflow: visible; /* Changed from hidden to visible if tokens were clipped */
             margin-top: 20px;
         }
-        /* Optional: Add a semi-transparent overlay if text on spaces is hard to read */
-        /* #board-container::before {
-            content: "";
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: rgba(44, 62, 80, 0.3); 
-            z-index: 0; 
-            border-radius: inherit;
-        } */
-
 
         #card-decks-center {
             position: absolute;
@@ -188,16 +212,15 @@
             gap: 18px;
             z-index: 2; /* Ensure this is above the board background/overlay */
         }
-        /* Removed #center-board-image as it's now part of the board background */
-
-        .card-deck {
+      
+        .card-deck { /* This style is now unused if decks are removed */
             width: 110px;
             height: 60px;
             background: linear-gradient(135deg, #f7ca18 60%, #f1c40f 100%);
             border: 2px solid #7f8c8d;
             border-radius: 10px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-            display: flex;
+            display: none; /* Hide card decks */
             align-items: center;
             justify-content: center;
             font-size: 1.1em;
@@ -692,13 +715,13 @@
 
         #dice-display-master-container {
             min-height: 32px;
-            text-align: center;
+            text-align: center; /* Center the inline-flex child */
             margin-bottom: 8px;
         }
         #actual-dice-faces {
-            display: inline-flex;
+            display: inline-flex; /* Allows centering via text-align on parent */
             gap: 5px;
-            margin-left: 5px;
+            /* margin-left: 5px; Removed as parent will center it */
             vertical-align: middle;
         }
         #dice-total-display-text {
@@ -776,6 +799,14 @@
             <input type="text" id="game-id-input" placeholder="Enter Game ID to join">
         </div>
         <button id="join-game-button">Join Game</button>
+        <button id="refresh-games-list-button" class="secondary" style="margin-left:10px;">Refresh Games</button>
+        <hr style="width:80%; margin: 20px 0; border-color: #7f8c8d;">
+        <div id="active-games-list-container" style="display:none;">
+            <h4>Active Games:</h4>
+            <div id="active-games-list">
+                <p>No active games found or list not refreshed.</p>
+            </div>
+        </div>
         <hr style="width:80%; margin: 20px 0; border-color: #7f8c8d;">
         <div class="setup-row">
             <label for="num-players-online-select">Total Players in Game:</label>
@@ -888,7 +919,7 @@
         // Firebase SDK imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, serverTimestamp, arrayUnion, arrayRemove, runTransaction, writeBatch, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, serverTimestamp, arrayUnion, arrayRemove, runTransaction, writeBatch, deleteDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Added getDocs, query, where
         // import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js"; // Analytics can be added if needed
 
         let db, auth, currentUserId = null, localPlayerName = '';
@@ -910,6 +941,10 @@
         const gameIdDisplayDiv = document.getElementById('game-id-display');
         const generatedGameIdSpan = document.getElementById('generated-game-id');
         const localUserIdSpan = document.getElementById('local-user-id');
+        const activeGamesListDiv = document.getElementById('active-games-list');
+        const activeGamesListContainer = document.getElementById('active-games-list-container');
+        const refreshGamesListButton = document.getElementById('refresh-games-list-button');
+
 
         const boardContainer = document.getElementById('board-container');
         const playerInfoDiv = document.getElementById('player-info');
@@ -1121,7 +1156,7 @@
                         onlineSetupMessage.textContent = "Connected. Ready to create or join a game.";
                         createGameButton.disabled = false;
                         joinGameButton.disabled = false;
-                        // onSnapshot will handle UI updates if already subscribed
+                        await displayActiveGames(); // Display games once authenticated
                     } else {
                         currentUserId = null;
                         localUserIdSpan.textContent = "Not Signed In";
@@ -1225,6 +1260,7 @@
                 preGamePlayersRolled: [], 
                 preGamePhase: true, 
                 gamePhase: "setup", 
+                drawnCard: null // Field to store currently drawn card
             };
             
             if (Object.keys(initialGameState.players).length < numPlayers) {
@@ -1976,11 +2012,12 @@
             // centerImage.alt = 'Migrantopoly Center';
             // cardDecksCenter.appendChild(centerImage);
 
-            cardDecksCenter.innerHTML += `
-                <div class="card-deck opportunity">Opportunity</div>
-                <div class="card-deck welfare">Welfare</div>
-            `;
-            boardContainer.appendChild(cardDecksCenter);
+            // Card decks are no longer visually displayed in the center
+            // cardDecksCenter.innerHTML += `
+            //     <div class="card-deck opportunity">Opportunity</div>
+            //     <div class="card-deck welfare">Welfare</div>
+            // `;
+            boardContainer.appendChild(cardDecksCenter); // Still append for potential future use or structure
 
             const onBoardCardDiv = document.createElement('div');
             onBoardCardDiv.id = 'on-board-card-display'; 
