@@ -1072,6 +1072,11 @@
                         onlineSetupMessage.textContent = "Connected. Ready to create or join a game.";
                         createGameButton.disabled = false;
                         joinGameButton.disabled = false;
+                         // ***** ADDED: If game data already exists, try to update UI now that user is authed *****
+                        if (localGameData && Object.keys(localGameData).length > 0 && currentGameId) {
+                            logEvent("User authenticated, re-processing existing localGameData for UI.");
+                            updateLocalUIFromFirestore(localGameData);
+                        }
                     } else {
                         currentUserId = null;
                         localUserIdSpan.textContent = "Not Signed In";
@@ -1119,9 +1124,9 @@
             // ***** AMENDED Firestore Path *****
             const gameDocRef = doc(db, "games", newGameId);
 
-            reformatBoardLayout(); 
+            reformatBoardLayout(); // This populates the global `boardLayout`
 
-            const initialPropertyDataForFirestore = JSON.parse(JSON.stringify(boardLayout))
+            const initialPropertyDataForFirestore = JSON.parse(JSON.stringify(boardLayout)) // Use the globally set boardLayout
                 .filter(s => s.type === 'property' || s.type === 'set_property')
                 .map(p => ({
                     id: p.id,
@@ -1159,7 +1164,7 @@
                 players: { [currentUserId]: initialPlayerData }, 
                 playerOrder: [currentUserId], 
                 currentPlayerIndex: 0, 
-                boardLayout: boardLayout, 
+                boardLayout: boardLayout, // Use the globally set boardLayout
                 propertyData: initialPropertyDataForFirestore, 
                 bankMoney: 15000,
                 ukGovMoney: 20000,
@@ -1175,9 +1180,11 @@
                 preGamePlayersRolled: [], 
                 preGamePhase: true, 
             };
-            if (numPlayers === 1 && Object.keys(initialGameState.players).length === 1) { // Check if it's a single player game from the start
-                initialGameState.status = "active"; 
-                initialGameState.lastActionMessage = `${localPlayerName} started a game. Ready to roll for start.`;
+            // If the game is full immediately upon creation (e.g. maxPlayers is 1, though our UI min is 2)
+            // Set status to active to trigger pre-game rolls.
+            if (Object.keys(initialGameState.players).length === numPlayers) {
+                initialGameState.status = "active";
+                initialGameState.lastActionMessage = `${localPlayerName} created the game. Starting pre-game rolls.`;
             }
 
 
@@ -1279,11 +1286,12 @@
             unsubscribeGameState = onSnapshot(gameDocRef, (docSnap) => {
                 if (docSnap.exists()) {
                     localGameData = docSnap.data();
-                    logEvent("Game state updated from Firestore:", localGameData.lastActionMessage);
+                    logEvent("Game state updated from Firestore:", localGameData.lastActionMessage || "No last action message");
                     updateLocalUIFromFirestore(localGameData);
-                    if ((localGameData.status === "active" || localGameData.preGamePhase) && onlineSetupScreen.style.display !== 'none') {
-                        onlineSetupScreen.style.display = 'none';
-                        gameContainer.style.display = 'flex';
+                    // Show game container if we have a game ID and the setup screen is visible
+                    if (currentGameId && onlineSetupScreen.style.display !== 'none') {
+                         onlineSetupScreen.style.display = 'none';
+                         gameContainer.style.display = 'flex';
                     }
                 } else {
                     logEvent(`Game ${gameId} no longer exists or access denied.`);
@@ -1313,13 +1321,14 @@
             generatedGameIdSpan.textContent = '';
             gameIdInput.value = '';
             boardLayout = []; 
+            if(boardContainer) boardContainer.innerHTML = ''; // Explicitly clear board container
         }
 
         // --- UI Update Functions (Driven by Firestore) ---
         function updateLocalUIFromFirestore(gameData) {
             if (!currentUserId) {
                 logEvent("UpdateLocalUI: currentUserId not set yet, deferring UI update.");
-                gameStatusMessageP.textContent = "Authenticating..."; 
+                if(gameStatusMessageP) gameStatusMessageP.textContent = "Authenticating..."; 
                 return;
             }
 
@@ -1327,13 +1336,22 @@
                 logEvent("UpdateLocalUI: No game data received.");
                 return;
             }
-            if (gameData.boardLayout && gameData.boardLayout.length > 0 && boardLayout.length === 0) {
-                 boardLayout = gameData.boardLayout; 
-                 const dcSpace = boardLayout.find(s => s.name === "Detention Center");
-                 detentionCenterSpaceId = dcSpace ? dcSpace.id : (boardLayout.find(s => s.type === "detention_visiting")?.id || 8);
-                 setupBoardFromFirestore(gameData); 
-            } else if (boardLayout.length > 0) {
-                 updateBoardDynamicElements(gameData);
+
+            // Board setup logic
+            logEvent("UpdateLocalUI: Checking board setup. Current boardLayout.length: " + boardLayout.length + ", gameData.boardLayout exists: " + !!gameData.boardLayout);
+            if (gameData.boardLayout && gameData.boardLayout.length > 0) {
+                if (boardLayout.length === 0 || (boardContainer && boardContainer.innerHTML.trim() === '')) {
+                    logEvent("UpdateLocalUI: Setting up board from Firestore data.");
+                    boardLayout = gameData.boardLayout; 
+                    const dcSpace = boardLayout.find(s => s.name === "Detention Center");
+                    detentionCenterSpaceId = dcSpace ? dcSpace.id : (boardLayout.find(s => s.type === "detention_visiting")?.id || 8);
+                    setupBoardFromFirestore(gameData); 
+                } else {
+                    logEvent("UpdateLocalUI: Board already seems set up, updating dynamic elements.");
+                    updateBoardDynamicElements(gameData);
+                }
+            } else {
+                logEvent("UpdateLocalUI: gameData.boardLayout is missing or empty. Board not set up.");
             }
 
 
@@ -1345,7 +1363,7 @@
             if (gameData.preGamePhase) {
                 updatePreGameRollUI(gameData);
             } else {
-                preGameRollArea.style.display = 'none';
+                if(preGameRollArea) preGameRollArea.style.display = 'none';
             }
 
             if (gameData.status === "finished") {
@@ -1354,6 +1372,11 @@
         }
         
         function setupBoardFromFirestore(gameData) {
+            logEvent("setupBoardFromFirestore called.");
+            if (!boardContainer) {
+                logEvent("Error: boardContainer DOM element not found in setupBoardFromFirestore.");
+                return;
+            }
             boardContainer.innerHTML = ''; 
             const dcSpace = gameData.boardLayout.find(s => s.name === "Detention Center");
             detentionCenterSpaceId = dcSpace ? dcSpace.id : (gameData.boardLayout.find(s => s.type === "detention_visiting")?.id || 8) ;
@@ -1444,23 +1467,42 @@
                 boardContainer.appendChild(spaceDiv);
             });
 
-            Object.values(gameData.players).forEach(player => {
-                const token = document.createElement('div');
-                token.id = `player-token-${player.id}`; 
-                token.classList.add('player-token');
-                token.textContent = playerEmojis[player.order % playerEmojis.length];
-                const playerTokenColor = playerColors[player.order % playerColors.length];
-                token.style.color = playerTokenColor;
-                token.style.filter = `drop-shadow(0 0 3px ${playerTokenColor})`;
-                
-                const startSpace = document.getElementById('space-0');
-                if (startSpace) startSpace.appendChild(token);
-            });
+            // Ensure players object and playerOrder exist before trying to create tokens
+            if (gameData.players && gameData.playerOrder) {
+                Object.values(gameData.players).forEach(player => {
+                    if (player && player.id !== undefined && player.order !== undefined) { // Check if player object is valid
+                        const token = document.createElement('div');
+                        token.id = `player-token-${player.id}`; 
+                        token.classList.add('player-token');
+                        token.textContent = playerEmojis[player.order % playerEmojis.length];
+                        const playerTokenColor = playerColors[player.order % playerColors.length];
+                        token.style.color = playerTokenColor;
+                        token.style.filter = `drop-shadow(0 0 3px ${playerTokenColor})`;
+                        
+                        const startSpace = document.getElementById('space-0');
+                        if (startSpace) startSpace.appendChild(token);
+                    } else {
+                        logEvent("Warning: Invalid player data in setupBoardFromFirestore, skipping token creation for one player.", player);
+                    }
+                });
+            } else {
+                logEvent("Warning: gameData.players or gameData.playerOrder is missing in setupBoardFromFirestore.");
+            }
             updateBoardDynamicElements(gameData); 
+            logEvent("setupBoardFromFirestore completed.");
         }
 
         function updateBoardDynamicElements(gameData) {
+            // Ensure players object exists
+            if (!gameData.players) {
+                logEvent("updateBoardDynamicElements: gameData.players is missing.");
+                return;
+            }
             Object.values(gameData.players).forEach(player => {
+                 if (!player || player.id === undefined) { // Check if player object is valid
+                    logEvent("Warning: Invalid player data in updateBoardDynamicElements for token positioning.", player);
+                    return;
+                }
                 const token = document.getElementById(`player-token-${player.id}`);
                 if (token) {
                     if (player.isBankrupt) {
@@ -1475,13 +1517,22 @@
                 }
             });
 
+            // Ensure propertyData and boardLayout exist
+            if (!gameData.propertyData || !gameData.boardLayout) {
+                 logEvent("updateBoardDynamicElements: gameData.propertyData or gameData.boardLayout is missing.");
+                return;
+            }
             gameData.propertyData.forEach(propInPropertyData => {
                 const ownerIndicator = document.getElementById(`owner-indicator-${propInPropertyData.id}`);
                 if (ownerIndicator) {
                     if (propInPropertyData.owner && gameData.players[propInPropertyData.owner] && !gameData.players[propInPropertyData.owner].isBankrupt) {
                         const ownerData = gameData.players[propInPropertyData.owner];
-                        const ownerColor = playerColors[ownerData.order % playerColors.length];
-                        ownerIndicator.style.backgroundColor = ownerColor;
+                        if (ownerData && ownerData.order !== undefined) { // Check if ownerData is valid
+                            const ownerColor = playerColors[ownerData.order % playerColors.length];
+                            ownerIndicator.style.backgroundColor = ownerColor;
+                        } else {
+                             ownerIndicator.style.backgroundColor = 'transparent'; // Fallback
+                        }
                     } else {
                         ownerIndicator.style.backgroundColor = 'transparent';
                     }
@@ -1503,10 +1554,16 @@
         }
 
         function updatePlayerInfoPanel(gameData) {
+            if (!playerInfoDiv) return;
             playerInfoDiv.innerHTML = '';
+            if (!gameData.playerOrder || !gameData.players) return;
+
             gameData.playerOrder.forEach(playerId => {
                 const p = gameData.players[playerId];
-                if (!p) return;
+                if (!p || p.id === undefined || p.order === undefined) { // Check if player object is valid
+                    logEvent("Warning: Invalid player data in updatePlayerInfoPanel.", p);
+                    return;
+                };
 
                 const playerColor = playerColors[p.order % playerColors.length];
                 const pDiv = document.createElement('div');
@@ -1529,6 +1586,8 @@
         }
         
         function updateGameStatusPanel(gameData) {
+            if (!gameStatusMessageP || !currentTurnDisplay || !gameData.players || !gameData.playerOrder) return;
+
             if (gameData.preGamePhase) {
                  const joined = Object.keys(gameData.players).length;
                  if (joined < gameData.maxPlayers) {
@@ -1544,11 +1603,11 @@
                  gameStatusMessageP.textContent = `Waiting for players... (${Object.keys(gameData.players).length}/${gameData.maxPlayers} joined)`;
             }
 
+            const currentPlayerIdInOrder = gameData.playerOrder[gameData.currentPlayerIndex];
+            const currentPlayerInOrder = gameData.players[currentPlayerIdInOrder];
 
-            const currentPlayerInOrder = gameData.players[gameData.playerOrder[gameData.currentPlayerIndex]];
             if (currentPlayerInOrder && !currentPlayerInOrder.isBankrupt && gameData.status === "active") {
                 if (gameData.preGamePhase) {
-                    // Determine next player to roll for display
                     let nextPlayerToRollForDisplayId = null;
                     for(const pid of gameData.playerOrder) {
                         if(!gameData.preGameRolls || gameData.preGameRolls[pid] === undefined) {
@@ -1558,10 +1617,10 @@
                     }
                     const playerToRoll = gameData.players[nextPlayerToRollForDisplayId];
 
-                    if (playerToRoll) {
+                    if (playerToRoll && playerToRoll.name !== undefined && playerToRoll.order !== undefined) {
                          currentTurnDisplay.textContent = `Pre-Game Roll: ${playerToRoll.name}`;
                          currentTurnDisplay.style.color = playerColors[playerToRoll.order % playerColors.length];
-                    } else { // All might have rolled, waiting for host to finalize
+                    } else { 
                         currentTurnDisplay.textContent = "Pre-Game Rolls Complete";
                         currentTurnDisplay.style.color = '#ecf0f1';
                     }
@@ -1576,6 +1635,10 @@
         }
 
         function updateControlsBasedOnTurn(gameData) {
+            if (!currentUserId || !gameData.players || !gameData.players[currentUserId]) { // Ensure currentUserId and its player data exist
+                logEvent("updateControlsBasedOnTurn: currentUserId or player data missing, skipping controls update.");
+                return;
+            }
             const amIBankrupt = gameData.players[currentUserId]?.isBankrupt;
             
             rollDiceButton.style.display = 'none';
@@ -1584,13 +1647,11 @@
             developPropertyButton.style.display = 'none';
             otherActionsContainer.style.display = 'none';
             detentionActionsDiv.innerHTML = '';
-            // preGameRollButton is handled by updatePreGameRollUI
 
             if (amIBankrupt || gameData.status === "finished") return;
 
 
             if (gameData.preGamePhase && gameData.status === "active") { 
-                // Pre-game roll UI is handled by updatePreGameRollUI, so no main controls here
                 return; 
             }
             
@@ -1652,6 +1713,11 @@
         }
         
         function updatePreGameRollUI(gameData) {
+            if (!preGameRollArea || !preGameRollButton || !preGameRollResultsDiv || !gameData.players) { // Add null checks for DOM elements
+                logEvent("updatePreGameRollUI: Critical DOM element or gameData.players missing.");
+                return;
+            }
+
             if (!gameData.preGamePhase) { 
                 preGameRollArea.style.display = 'none';
                 preGameRollButton.style.display = 'none';
@@ -1660,7 +1726,7 @@
             
             preGameRollArea.style.display = 'flex'; 
             preGameRollResultsDiv.innerHTML = ''; 
-            preGameRollButton.style.display = 'none'; // Default to hidden
+            preGameRollButton.style.display = 'none'; 
 
             let allPlayerIdsInOrder = gameData.playerOrder || [];
             let preGameRollsData = gameData.preGameRolls || {};
@@ -1730,13 +1796,16 @@
         }
 
         async function handleRollDiceAction() {
-            if (!currentGameId || !localGameData || localGameData.playerOrder[localGameData.currentPlayerIndex] !== currentUserId) {
+            if (!currentGameId || !localGameData || !localGameData.playerOrder || localGameData.playerOrder[localGameData.currentPlayerIndex] !== currentUserId) {
                 showMessageModal("Not your turn", "It's not your turn to roll the dice.");
                 return;
             }
              if (localGameData.preGamePhase) {
                 showMessageModal("Game Phase Error", "Cannot roll main dice during pre-game roll phase.");
                 return;
+            }
+            if (!localGameData.players || !localGameData.players[currentUserId]) {
+                 showMessageModal("Error", "Player data not found."); return;
             }
             if (localGameData.players[currentUserId]?.playerActionTakenThisTurn && !localGameData.lastDiceRoll?.isDoubles) {
                  showMessageModal("Action Taken", "You've already taken your main action for this roll.");
@@ -1754,7 +1823,6 @@
             const totalRoll = die1 + die2;
             const isDoubles = die1 === die2;
 
-            // ***** AMENDED Firestore Path *****
             const gameDocRef = doc(db, "games", currentGameId);
             try {
                 await runTransaction(db, async (transaction) => {
@@ -1762,6 +1830,7 @@
                     if (!freshGameDoc.exists()) throw new Error("Game document not found during roll.");
                     const freshGameData = freshGameDoc.data();
                     
+                    if (!freshGameData.players || !freshGameData.players[currentUserId]) throw new Error("Player data missing in Firestore during roll.");
                     const playerState = freshGameData.players[currentUserId];
                     let newPosition = playerState.position;
                     let messages = [];
@@ -1800,7 +1869,7 @@
             } catch (error) {
                 console.error("Error during roll dice action:", error);
                 showMessageModal("Roll Error", "Could not process roll: " + error.message);
-                rollDiceButton.disabled = false; 
+                if(rollDiceButton) rollDiceButton.disabled = false; 
             }
         }
         
@@ -1814,16 +1883,17 @@
                 return;
             }
 
-            preGameRollButton.disabled = true;
+            if(preGameRollButton) preGameRollButton.disabled = true;
             const roll = Math.floor(Math.random() * 6) + 1 + Math.floor(Math.random() * 6) + 1; 
 
-            // ***** AMENDED Firestore Path *****
             const gameDocRef = doc(db, "games", currentGameId);
             try {
                 await runTransaction(db, async (transaction) => {
                     const freshGameDoc = await transaction.get(gameDocRef);
                     if (!freshGameDoc.exists()) throw new Error("Game not found for pre-game roll.");
                     const freshGameData = freshGameDoc.data();
+                     if (!freshGameData.players || !freshGameData.players[currentUserId]) throw new Error("Player data missing in Firestore for pre-game roll.");
+
 
                     let updates = {};
                     updates[`preGameRolls.${currentUserId}`] = roll;
@@ -1861,7 +1931,7 @@
             } catch (error) {
                 console.error("Error during pre-game roll:", error);
                 showMessageModal("Roll Error", "Could not process pre-game roll: " + error.message);
-                preGameRollButton.disabled = false;
+                if(preGameRollButton) preGameRollButton.disabled = false;
             }
         }
 
@@ -1894,7 +1964,7 @@
         }
 
         function canPlayerDevelopAnyProperty(playerState, gameData) {
-            if (!playerState || playerState.isBankrupt) return false;
+            if (!playerState || playerState.isBankrupt || !gameData || !gameData.propertyData || !gameData.boardLayout) return false;
             return playerState.properties.some(propId => {
                 const propDetails = gameData.propertyData.find(p => p.id === propId);
                 const propLayout = gameData.boardLayout.find(s => s.id === propId);
@@ -1913,14 +1983,13 @@
         }
         
         function setupDetentionActionsUI(playerState, gameData) {
+            if (!playerState || !playerState.inDetention || !detentionActionsDiv) return;
             detentionActionsDiv.innerHTML = ''; 
-            if (!playerState || !playerState.inDetention) return;
 
             if (playerState.getOutOfDetentionCards > 0) {
                 const useCardBtn = document.createElement('button');
                 useCardBtn.textContent = "Use Legal Aid Card";
                 useCardBtn.onclick = async () => { 
-                    // ***** AMENDED Firestore Path *****
                     const gameDocRef = doc(db, "games", currentGameId);
                     try {
                         await updateDoc(gameDocRef, {
@@ -1941,7 +2010,6 @@
                 const payFineBtn = document.createElement('button');
                 payFineBtn.textContent = `Pay £${fineAmount} Fine`;
                 payFineBtn.onclick = async () => { 
-                    // ***** AMENDED Firestore Path *****
                     const gameDocRef = doc(db, "games", currentGameId);
                      try {
                         await updateDoc(gameDocRef, {
@@ -1966,7 +2034,6 @@
                 const isDoubles = die1 === die2;
                 const totalRoll = die1 + die2;
                 
-                // ***** AMENDED Firestore Path *****
                 const gameDocRef = doc(db, "games", currentGameId);
                 let updates = { updatedAt: serverTimestamp(), lastDiceRoll: {die1, die2, total: totalRoll, isDoubles} };
                 if (isDoubles) {
@@ -1988,10 +2055,9 @@
 
         // --- Initial Load ---
         document.addEventListener('DOMContentLoaded', async () => {
-            reformatBoardLayout(); 
+            reformatBoardLayout(); // Call once to set up the initial structure for boardLayout global var
             await initializeFirebase();
-            const playerToken = document.getElementById(`player-token-${currentUserId}`); 
-            if(playerToken) playerToken.classList.remove('token-flash');
+            // currentUserId might still be null here, so token specific logic might be better in onAuthStateChanged
         });
 
         document.body.addEventListener('click', async () => {
