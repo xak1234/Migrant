@@ -2924,8 +2924,8 @@
 
                 const groupPropertiesLayout = gameData.boardLayout.filter(s => s.groupId === propLayout.groupId && s.type === 'property');
                 const ownsAllInGroup = groupPropertiesLayout.every(gpLayout => {
-                    const gpData = gameData.propertyData.find(pd => pd.id === gpLayout.id);
-                    return gpData && gpData.owner === playerState.id;
+                    const gpDataForCheck = gameData.propertyData.find(pd => pd.id === gpLayout.id);
+                    return gpDataForCheck && gpDataForCheck.owner === playerState.id;
                 });
                 if (!ownsAllInGroup) return false;
                 
@@ -3127,4 +3127,4 @@
     </script>
   </div>
 </body>
-</ht
+</html>
