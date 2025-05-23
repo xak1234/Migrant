@@ -1179,6 +1179,7 @@
                 preGameRolls: {}, 
                 preGamePlayersRolled: [], 
                 preGamePhase: true, 
+                gamePhase: "setup", 
             };
             // If the game is full immediately upon creation (e.g. maxPlayers is 1, though our UI min is 2)
             // Set status to active to trigger pre-game rolls.
@@ -1655,7 +1656,7 @@
                 return; 
             }
             
-            if (gameData.status !== "active" || gameData.preGamePhase) return; 
+            if (gameData.status !== "active" || gameData.preGamePhase || gameData.gamePhase !== "main") return; 
 
             const isMyTurn = gameData.playerOrder[gameData.currentPlayerIndex] === currentUserId;
             const amIInDetention = gameData.players[currentUserId]?.inDetention;
@@ -1800,8 +1801,8 @@
                 showMessageModal("Not your turn", "It's not your turn to roll the dice.");
                 return;
             }
-             if (localGameData.preGamePhase) {
-                showMessageModal("Game Phase Error", "Cannot roll main dice during pre-game roll phase.");
+             if (localGameData.preGamePhase || localGameData.gamePhase !== "main") {
+                showMessageModal("Game Phase Error", "Cannot roll main dice during pre-game roll phase or before game has started.");
                 return;
             }
             if (!localGameData.players || !localGameData.players[currentUserId]) {
@@ -1921,6 +1922,7 @@
                             updates.playerOrder = sortedPlayerIds; 
                             updates.currentPlayerIndex = 0; 
                             updates.preGamePhase = false; 
+                            updates.gamePhase = "main"; // Add this line to set the game phase to main
                             updates.lastActionMessage = `Starting order determined. ${freshGameData.players[sortedPlayerIds[0]].name} starts!`;
                         } else {
                             updates.lastActionMessage += " Waiting for host to finalize starting order.";
