@@ -1,0 +1,146 @@
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    color: #fff;
+    text-align: center;
+    overflow: hidden;
+
+    /* --- NEW BACKGROUND STYLES --- */
+    background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('migrant3.jpg'); /* Overlay on top of image */
+    background-size: cover; /* Cover the entire viewport */
+    background-position: center; /* Center the image */
+    background-attachment: fixed; /* Keep image fixed when scrolling (if content overflows) */
+    background-color: #333; /* Fallback color if image doesn't load */
+    /* --- END NEW BACKGROUND STYLES --- */
+}
+
+.container {
+    background-color: rgba(0, 0, 0, 0.75); /* Slightly less transparent for better text contrast */
+    padding: 40px 60px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    max-width: 900px;
+    width: 90%;
+    transform: scale(0.95);
+    animation: fadeInScale 0.8s ease-out forwards;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.game-title {
+    font-size: 3.5em;
+    margin-bottom: 10px;
+    letter-spacing: 3px;
+    color: #ffcc00;
+    text-shadow: 0 0 15px rgba(255, 204, 0, 0.7);
+}
+
+.tagline {
+    font-size: 1.2em;
+    margin-bottom: 40px;
+    color: #ccc;
+}
+
+.version-selection {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 30px;
+    margin-bottom: 40px;
+}
+
+.game-button {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 280px;
+    height: 150px;
+    background-color: #007bff;
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    text-decoration: none;
+    font-size: 1.5em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 15px rgba(0, 123, 255, 0.4);
+}
+
+.game-button:hover {
+    background-color: #0056b3;
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 123, 255, 0.6);
+}
+
+.game-button:active {
+    transform: translateY(0);
+    box-shadow: 0 3px 10px rgba(0, 123, 255, 0.4);
+}
+
+.game-button .button-text {
+    margin-bottom: 5px;
+    font-size: 1.3em;
+}
+
+.game-button .button-subtext {
+    font-size: 0.8em;
+    font-weight: normal;
+    opacity: 0.8;
+}
+
+.game-button.multi-button {
+    background-color: #28a745;
+    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+}
+
+.game-button.multi-button:hover {
+    background-color: #218838;
+    box-shadow: 0 10px 25px rgba(40, 167, 69, 0.6);
+}
+
+.footer-note {
+    font-size: 0.9em;
+    color: #aaa;
+    margin-top: 20px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .container {
+        padding: 30px 40px;
+    }
+    .game-title {
+        font-size: 2.5em;
+    }
+    .game-button {
+        width: 100%;
+        height: 120px;
+    }
+    .version-selection {
+        gap: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 20px 20px;
+    }
+    .game-title {
+        font-size: 2em;
+    }
+}
