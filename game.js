@@ -3524,21 +3524,7 @@ async function handlePropertyDoubleClick(space, playerId) {
     const isOwnCard = space.owner === thisPlayerId;
     const isOtherCard = space.owner && space.owner !== thisPlayerId;
 
-    // --- FIX: Check for swap confirmation first! ---
-    // Case 1: Target player confirms by double-clicking their own (flashing) card
-    if (
-        pendingSwap &&
-        pendingSwap.status === 'awaiting_confirmation' &&
-        isOwnCard &&
-        space.id === pendingSwap.targetCardId &&
-        thisPlayerId === pendingSwap.targetPlayerId
-    ) {
-        // Complete swap in Firebase
-        await completeCardSwapInFirestore();
-        return;
-    }
-
-    // Case 2: Initiate swap (first player double-clicks their own card)
+    // Case 1: Initiate swap (first player double-clicks their own card)
     if (!pendingSwap && isOwnCard) {
         // Start the swap proposal
         swapInitiatorCardId = space.id;
@@ -3554,7 +3540,7 @@ async function handlePropertyDoubleClick(space, playerId) {
         return;
     }
 
-    // Case 3: Initiator selects target card (owned by another player)
+    // Case 2: Initiator selects target card (owned by another player)
     if (pendingSwap && pendingSwap.status === 'awaiting_target' && isOtherCard && pendingSwap.initiatorPlayerId === thisPlayerId) {
         swapTargetCardId = space.id;
         swapTargetPlayerId = space.owner;
@@ -3567,6 +3553,20 @@ async function handlePropertyDoubleClick(space, playerId) {
             targetPlayerId: swapTargetPlayerId,
             status: 'awaiting_confirmation'
         });
+        return;
+    }
+
+    // Case 3: Target player confirms by double-clicking their own (flashing) card
+    // This block is key: it allows the *target* player to confirm swap ANY TIME their card is flashing and swap is pending.
+    if (
+        pendingSwap &&
+        pendingSwap.status === 'awaiting_confirmation' &&
+        isOwnCard &&
+        space.id === pendingSwap.targetCardId &&
+        thisPlayerId === pendingSwap.targetPlayerId
+    ) {
+        // Complete swap in Firebase
+        await completeCardSwapInFirestore();
         return;
     }
 
@@ -3631,20 +3631,6 @@ async function completeCardSwapInFirestore() {
 }
 
 // --- Listen for Firebase pendingSwap updates and update UI ---
-
-
-    // Highlight initiator card
-    if (pendingSwap.initiatorCardId != null) {
-        highlightCard(pendingSwap.initiatorCardId);
-    }
-
-    // Highlight target card
-    if (pendingSwap.targetCardId != null) {
-        highlightCard(pendingSwap.targetCardId);
-    }
-}
-
-
 function watchPendingSwap(gameData) {
     pendingSwap = gameData.pendingSwap || null;
 
@@ -3656,22 +3642,11 @@ function watchPendingSwap(gameData) {
         return;
     }
 
-    // --- Only show message to target player ---
-    if (
-        pendingSwap.status === 'awaiting_confirmation' &&
-        currentUserId === pendingSwap.targetPlayerId
-    ) {
-        // Optionally include initiator's name if you track that
-        showMessageModal(
-            "Card Swap Request",
-            "Player wants to swap a card with you! Double-click your flashing card to confirm the swap."
-        );
-    }
-
     // Highlight initiator card
     if (pendingSwap.initiatorCardId != null) {
         highlightCard(pendingSwap.initiatorCardId);
     }
+
     // Highlight target card
     if (pendingSwap.targetCardId != null) {
         highlightCard(pendingSwap.targetCardId);
