@@ -28,6 +28,10 @@ body {
          z-index: 0;
          mix-blend-mode: lighten;
          }
+.property-flash {
+    animation: flash-animation 1s infinite alternate;
+    box-shadow: 0 0 10px 5px gold !important; /* Example flash effect */
+}
          .main-content {
          position: relative;
          z-index: 3;
@@ -484,6 +488,11 @@ body {
          background: #ffeaa7;
          color: #222d3a !important;
          }
+@keyframes flash-animation {
+    from { opacity: 1; }
+    to { opacity: 0.5; }
+}
+
          @keyframes player-highlight-flash {
          0% { background: #ffeaa7; }
          60% { background: #ffeaa7; }
