@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+   <head>
+    <link rel="stylesheet" href="styles.css">
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Migrantopoly - Online Multiplayer</title>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+      
+   </head>
+   <body>
+      <div class="overlay"></div>
+      <div id="user-id-display">Your User ID: <span id="local-user-id">Not Signed In</span></div>
+      <div class="main-content">
+         <div id="online-setup-screen">
+            <h2>Migrantopoly Online</h2>
+            <div class="setup-row">
+               <label for="player-name-input">Your Name:</label>
+               <input type="text" id="player-name-input" placeholder="Enter your name" value="Player">
+            </div>
+            <div class="setup-row">
+               <label for="game-id-input">Game ID (for joining):</label>
+               <input type="text" id="game-id-input" placeholder="Enter Game ID to join">
+            </div>
+            <button id="join-game-button">Join Game</button>
+            <hr style="width:80%; margin: 20px 0; border-color: #7f8c8d;">
+            <div class="setup-row">
+               <label for="num-human-players-select">Human Players (You + Others):</label>
+               <select id="num-human-players-select">
+                  <option value="1" selected>1 (Just You)</option>
+                  <option value="2">2 Humans</option>
+                  <option value="3">3 Humans</option>
+                  <option value="4">4 Humans</option>
+               </select>
+            </div>
+            <div class="setup-row">
+               <label for="num-ai-players-select">AI Players:</label>
+               <select id="num-ai-players-select">
+                  <option value="0" selected>0 AI</option>
+                  <option value="1">1 AI</option>
+                  <option value="2">2 AI</option>
+                  <option value="3">3 AI</option>
+               </select>
+            </div>
+            <button id="create-game-button">Create New Game</button>
+            <p id="online-setup-message"></p>
+            <div id="game-id-display" style="display:none;">
+               Share this Game ID: <span id="generated-game-id" title="Click to copy"></span>
+            </div>
+         </div>
+         <div id="player-setup-screen" style="display: none;">
+            <h2>Player Setup (Local)</h2>
+         </div>
+         <div id="game-container" style="display: none;">
+            <div id="board-container">
+            </div>
+            <div id="game-info-area">
+               <div id="player-info">
+               </div>
+               <div id="controls">
+                  <h3 id="current-turn-display">Current Turn: Player 1</h3>
+                  <div id="pre-game-roll-area" style="display:none;">
+                     <h4>Determine Starting Player</h4>
+                     <button id="pre-game-roll-button">Roll to Start</button>
+                     <div id="pre-game-roll-results"></div>
+                  </div>
+                  <div id="dice-display-master-container">
+                     <span>Dice: </span>
+                     <div id="actual-dice-faces">
+                        <div class="die" id="die-face-1">--</div>
+                        <div class="die" id="die-face-2">--</div>
+                     </div>
+                     <span id="dice-total-display-text"></span>
+                  </div>
+                  <button id="roll-dice-button" style="display:none;">Roll Dice</button>
+                  <button id="end-turn-button" style="display:none;">End Turn</button>
+                  <div id="other-actions-container" style="text-align: center; margin-top: 5px;">
+                     <button id="develop-property-button" style="display:none;">Develop Property</button>
+                     <button id="buy-property-button" style="display:none;">Buy Property (£<span id="buy-property-price"></span>)</button>
+                  </div>
+                  <div id="detention-actions" style="margin-top: 10px;">
+                  </div>
+               </div>
+               <div id="develop-property-container" style="display:none;">
+                  <h3 id="develop-property-name">Develop Property</h3>
+                  <div id="develop-property-options">
+                  </div>
+                  <button id="close-develop-button">Close</button>
+               </div>
+               <div id="card-display-container" style="display:none;">
+                  <h3 id="card-type-title">Card Drawn</h3>
+                  <p id="card-message"></p>
+                  <button id="card-ok-button">OK</button>
+               </div>
+               <div id="game-status-message-container">
+                  <h4>Game Status:</h4>
+                  <p id="game-status-message">Waiting for game to start...</p>
+               </div>
+               <div id="uk-gov-status-container">
+                  <div id="uk-gov-status">
+                     UK Gov: £<span id="uk-gov-cash">20000</span>
+                  </div>
+               </div>
+            </div>
+         </div>
+         <div id="money-flash"></div>
+         <div id="rent-flash"></div>
+         <div id="message-modal" class="modal">
+            <div class="modal-content">
+               <h3 id="modal-title">Notification</h3>
+               <p id="modal-message">This is a sample message.</p>
+               <button id="modal-ok-button">OK</button>
+            </div>
+         </div>
+      </div>
+      
+      </div>
+     <script type="module" src="game.js"></script>
+</body>
+</html>
