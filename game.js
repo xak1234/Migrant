@@ -3283,6 +3283,16 @@
             const currentPlayerState = gameData.players[currentPlayerId];
             const gameDocRef = doc(db, "games", currentGameId); //
         
+            // --- NEW CHECK HERE ---
+            // If a swap is active and the current player is not the initiator, they cannot initiate a new swap.
+            // They are expected to click their own flashing card to confirm via the global click listener.
+            if (window._propertySwapState.swapActive && window._propertySwapState.swapInitiatorPlayerId !== currentPlayerId) {
+                logEvent(`Property swap initiation denied for player ${currentPlayerId}: A swap is active and they are not the initiator.`);
+                if (!currentPlayerState.isAI) showMessageModal("Swap in Progress", "A property swap is currently proposed. Please respond to that proposal.");
+                return; // Exit the function, preventing new swap initiation.
+            }
+            // --- END NEW CHECK ---
+
             // Ensure valid game state and player status for initiating a swap
             if (!currentPlayerState || currentPlayerState.isBankrupt || gameData.status !== 'active' || gameData.preGamePhase) {
                 logEvent("Property swap initiation: Not allowed due to player state or game state.");
@@ -3303,7 +3313,8 @@
             }
         
             // Clear any existing flashing state in Firestore, then update local state
-            await updateDoc(gameDocRef, { flashingProperties: [] }); //
+            // This will clear any previous partial selections or timed-out proposals.
+            await updateDoc(gameDocRef, { flashingProperties: [], updatedAt: serverTimestamp() });
             if (window._propertySwapState.swapTimeout) {
                 clearTimeout(window._propertySwapState.swapTimeout);
                 window._propertySwapState.swapTimeout = null;
@@ -3317,15 +3328,15 @@
                 window._propertySwapState.cardB = null; // Reset target card
                 window._propertySwapState.swapInitiatorPlayerId = currentPlayerId;
                 window._propertySwapState.swapActive = false; // Not active yet, only one card selected
-                
+        
                 // Update Firestore to make this card flash for everyone
-                await updateDoc(gameDocRef, { flashingProperties: [space.id], updatedAt: serverTimestamp() }); //
+                await updateDoc(gameDocRef, { flashingProperties: [space.id], updatedAt: serverTimestamp() });
         
                 if (!currentPlayerState.isAI) showMessageModal("Card Swap", `You selected your property: ${space.name}. Now double-click another player's property to propose a swap.`);
         
                 // Set a timeout for the first selection to expire if no second card is picked
-                window._propertySwapState.swapTimeout = setTimeout(async () => { // Made async
-                    await updateDoc(gameDocRef, { flashingProperties: [], updatedAt: serverTimestamp() }); //
+                window._propertySwapState.swapTimeout = setTimeout(async () => {
+                    await updateDoc(gameDocRef, { flashingProperties: [], updatedAt: serverTimestamp() });
                     window._propertySwapState.cardA = null;
                     window._propertySwapState.swapInitiatorPlayerId = null;
                     if (!currentPlayerState.isAI) showMessageModal("Card Swap", "Property selection timed out. Please start the swap process again.");
@@ -3339,17 +3350,17 @@
                 window._propertySwapState.swapActive = true; // Now both cards are selected
         
                 // Update Firestore to make both cards flash for everyone
-                await updateDoc(gameDocRef, { 
-                    flashingProperties: [window._propertySwapState.cardA.propId, space.id], //
-                    updatedAt: serverTimestamp() 
+                await updateDoc(gameDocRef, {
+                    flashingProperties: [window._propertySwapState.cardA.propId, space.id],
+                    updatedAt: serverTimestamp()
                 });
         
                 if (!currentPlayerState.isAI) showMessageModal("Card Swap", `${gameData.players[clickedPropData.owner].name}, ${currentPlayerState.name} wants to swap properties. Click YOUR flashing card to confirm.`);
         
                 // Set a timeout for the entire swap process to expire
                 if (window._propertySwapState.swapTimeout) clearTimeout(window._propertySwapState.swapTimeout);
-                window._propertySwapState.swapTimeout = setTimeout(async () => { // Made async
-                    await updateDoc(gameDocRef, { flashingProperties: [], updatedAt: serverTimestamp() }); //
+                window._propertySwapState.swapTimeout = setTimeout(async () => {
+                    await updateDoc(gameDocRef, { flashingProperties: [], updatedAt: serverTimestamp() });
                     window._propertySwapState.cardA = null;
                     window._propertySwapState.cardB = null;
                     window._propertySwapState.swapActive = false;
@@ -3359,7 +3370,7 @@
         
             } else if (window._propertySwapState.cardA && window._propertySwapState.swapInitiatorPlayerId === currentPlayerId && clickedPropData.owner === null) {
                 logEvent("Property swap initiation: Double-clicked unowned property as target, cancelling.");
-                await updateDoc(gameDocRef, { flashingProperties: [], updatedAt: serverTimestamp() }); //
+                await updateDoc(gameDocRef, { flashingProperties: [], updatedAt: serverTimestamp() });
                 window._propertySwapState.cardA = null;
                 window._propertySwapState.cardB = null;
                 window._propertySwapState.swapActive = false;
@@ -3368,7 +3379,7 @@
             } else if (window._propertySwapState.cardA && window._propertySwapState.swapInitiatorPlayerId === currentPlayerId && clickedPropData.owner === currentPlayerId) {
                  // Double-clicked own card again, if already selected first card, means deselecting.
                 logEvent("Property swap initiation: Double-clicked own card again, deselecting.");
-                await updateDoc(gameDocRef, { flashingProperties: [], updatedAt: serverTimestamp() }); //
+                await updateDoc(gameDocRef, { flashingProperties: [], updatedAt: serverTimestamp() });
                 window._propertySwapState.cardA = null;
                 window._propertySwapState.cardB = null;
                 window._propertySwapState.swapActive = false;
@@ -3388,24 +3399,34 @@
                  return;
              }
          
-             const currentPlayerId = currentUserId;
-             const clickedElement = e.target.closest('.space'); // Get the closest property space element
+             const currentPlayerId = currentUserId; 
+             const clickedElement = e.target.closest('.space'); 
          
-             if (!clickedElement) return; // If clicked outside a property space
+             // Log initial state for this click event
+             logEvent(`Swap Confirm Click: User: ${currentPlayerId}, Swap Active: ${window._propertySwapState.swapActive}, Card A: ${JSON.stringify(window._propertySwapState.cardA)}, Card B: ${JSON.stringify(window._propertySwapState.cardB)}, Initiator: ${window._propertySwapState.swapInitiatorPlayerId}`);
+         
+         
+             if (!clickedElement) {
+                 logEvent("Swap Confirm Click: Clicked outside a .space element.");
+                 return; // If clicked outside a property space
+             }
+             logEvent(`Swap Confirm Click: Clicked element ID: ${clickedElement.id}`);
+         
          
              // Check if the clicked element is the 'target' player's flashing card (cardB)
              if (clickedElement.id === `space-${window._propertySwapState.cardB.propId}`) {
+                 logEvent(`Swap Confirm Click: Clicked cardB (ID: space-${window._propertySwapState.cardB.propId}). Checking owner.`);
                  // Ensure the current user is the owner of cardB and thus eligible to confirm
                  if (currentPlayerId === window._propertySwapState.cardB.playerId) {
-                     logEvent(`Player ${currentPlayerId} (recipient) clicked their flashing card to confirm swap.`);
-                     
+                     logEvent(`Swap Confirm Click: Player ${currentPlayerId} IS owner of cardB. Attempting to perform swap.`);
+                    
                      // Perform the swap (assuming localGameData is up-to-date for checks within performPropertySwap)
                      await performPropertySwap(window._propertySwapState.cardA, window._propertySwapState.cardB); 
          
                      // Clear the swap state after successful transaction, including Firebase flashing state
-                     const gameDocRef = doc(db, "games", currentGameId); //
-                     await updateDoc(gameDocRef, { flashingProperties: [], updatedAt: serverTimestamp() }); //
-                     
+                     const gameDocRef = doc(db, "games", currentGameId); 
+                     await updateDoc(gameDocRef, { flashingProperties: [], updatedAt: serverTimestamp() }); 
+                    
                      window._propertySwapState.cardA = null;
                      window._propertySwapState.cardB = null;
                      window._propertySwapState.swapActive = false;
@@ -3414,14 +3435,28 @@
                          clearTimeout(window._propertySwapState.swapTimeout);
                          window._propertySwapState.swapTimeout = null;
                      }
+                     logEvent("Swap Confirm Click: Swap process completed and state reset.");
                  } else {
                      // A player clicked a flashing card, but it's not their card to confirm, or they're not the designated recipient.
-                     logEvent(`Player ${currentPlayerId} clicked a flashing card (${clickedElement.id}), but not the designated recipient's card or not their turn to confirm.`);
-                     // Optional: Show message to the clicking player that it's not their turn to confirm.
+                     logEvent(`Swap Confirm Click: Player ${currentPlayerId} clicked cardB, but IS NOT its owner (${window._propertySwapState.cardB.playerId}). No action.`);
+                     
+                     if (currentUserId === window._propertySwapState.swapInitiatorPlayerId) {
+                         // Initiator clicked player B's card.
+                         // This should probably do nothing, or give a message "Waiting for other player"
+                         showMessageModal("Swap Info", "Waiting for the other player to confirm by clicking their own flashing card.");
+                     } else if (currentUserId !== window._propertySwapState.cardB.playerId && window._propertySwapState.cardA && window._propertySwapState.cardA.playerId !== currentUserId) {
+                        // Someone else entirely clicked it
+                         showMessageModal("Swap Info", "This is not your property to confirm the swap with.");
+                     }
                  }
+             } else if (window._propertySwapState.cardA && clickedElement.id === `space-${window._propertySwapState.cardA.propId}` && currentUserId === window._propertySwapState.cardB.playerId) {
+                 // This is player B (recipient) clicking player A's (initiator's) card.
+                 logEvent(`Swap Confirm Click: Player ${currentPlayerId} (recipient) clicked initiator's card (cardA: space-${window._propertySwapState.cardA.propId}). No action.`);
+                 showMessageModal("Swap Info", "Please click *your* flashing property card to confirm the swap.");
+             } else {
+                 logEvent(`Swap Confirm Click: Clicked element (ID: ${clickedElement.id}) is not the target cardB (space-${window._propertySwapState.cardB.propId ? window._propertySwapState.cardB.propId : 'N/A'}) for confirmation. No action.`);
+                 // Consider if initiator clicks their own card again to cancel - this should be handled by double click or a timeout
              }
-             // If clicked on other flashing card (instigator's) by the recipient, it should not trigger swap
-             // If clicked on non-flashing card, ignore
          }, true); // Use capture phase to ensure it's caught early
          
          function clearPropertySwapFlash() {
@@ -3502,153 +3537,3 @@
                  showMessageModal('Swap Error', 'Could not swap properties: ' + e.message);
              }
          }
-
-// --- Property Card Swap System with Pending Swap in Firebase ---
-function resetSwapUI() {
-    swapInitiatorCardId = null;
-    swapTargetCardId = null;
-    swapInitiatorPlayerId = null;
-    swapTargetPlayerId = null;
-    document.querySelectorAll('.property-flash').forEach(el => el.classList.remove('property-flash'));
-}
-
-function highlightCard(cardId) {
-    document.querySelectorAll('.property-flash').forEach(el => el.classList.remove('property-flash'));
-    const cardElem = document.querySelector(`[data-space-id="\${cardId}"]`);
-    if (cardElem) cardElem.classList.add('property-flash');
-}
-
-// Handles all the swap logic and initiates the swap process via Firebase
-async function handlePropertyDoubleClick(space, playerId) {
-    const thisPlayerId = currentUserId;
-    const isOwnCard = space.owner === thisPlayerId;
-    const isOtherCard = space.owner && space.owner !== thisPlayerId;
-
-    // Case 1: Initiate swap (first player double-clicks their own card)
-    if (!pendingSwap && isOwnCard) {
-        // Start the swap proposal
-        swapInitiatorCardId = space.id;
-        swapInitiatorPlayerId = thisPlayerId;
-        highlightCard(space.id);
-
-        // Store pending swap in Firebase
-        await setPendingSwap({
-            initiatorCardId: swapInitiatorCardId,
-            initiatorPlayerId: swapInitiatorPlayerId,
-            status: 'awaiting_target'
-        });
-        return;
-    }
-
-    // Case 2: Initiator selects target card (owned by another player)
-    if (pendingSwap && pendingSwap.status === 'awaiting_target' && isOtherCard && pendingSwap.initiatorPlayerId === thisPlayerId) {
-        swapTargetCardId = space.id;
-        swapTargetPlayerId = space.owner;
-        highlightCard(swapTargetCardId);
-
-        // Update pending swap with target info in Firebase
-        await setPendingSwap({
-            ...pendingSwap,
-            targetCardId: swapTargetCardId,
-            targetPlayerId: swapTargetPlayerId,
-            status: 'awaiting_confirmation'
-        });
-        return;
-    }
-
-    // Case 3: Target player confirms by double-clicking their own (flashing) card
-    // This block is key: it allows the *target* player to confirm swap ANY TIME their card is flashing and swap is pending.
-    if (
-        pendingSwap &&
-        pendingSwap.status === 'awaiting_confirmation' &&
-        isOwnCard &&
-        space.id === pendingSwap.targetCardId &&
-        thisPlayerId === pendingSwap.targetPlayerId
-    ) {
-        // Complete swap in Firebase
-        await completeCardSwapInFirestore();
-        return;
-    }
-
-    // If anything else, just reset
-    if (pendingSwap && (thisPlayerId !== pendingSwap.initiatorPlayerId && thisPlayerId !== pendingSwap.targetPlayerId)) {
-        showMessageModal("Swap in Progress", "Another swap is currently being processed. Please wait.");
-    }
-}
-
-// Helper: Set pending swap object in Firebase game doc
-async function setPendingSwap(swapObj) {
-    const gameDocRef = doc(db, "games", currentGameId);
-    await updateDoc(gameDocRef, { pendingSwap: swapObj });
-}
-
-// Helper: Clear pending swap in Firebase
-async function clearPendingSwap() {
-    const gameDocRef = doc(db, "games", currentGameId);
-    await updateDoc(gameDocRef, { pendingSwap: null });
-}
-
-// SWAP LOGIC: Actually swap cards in Firestore and clear pendingSwap
-async function completeCardSwapInFirestore() {
-    const gameDocRef = doc(db, "games", currentGameId);
-    await runTransaction(db, async (transaction) => {
-        const gameDoc = await transaction.get(gameDocRef);
-        if (!gameDoc.exists()) throw new Error("Game not found");
-        const gameData = gameDoc.data();
-
-        // Safety: Check pendingSwap
-        const swap = gameData.pendingSwap;
-        if (
-            !swap ||
-            !swap.initiatorCardId ||
-            !swap.targetCardId ||
-            !swap.initiatorPlayerId ||
-            !swap.targetPlayerId ||
-            swap.status !== 'awaiting_confirmation'
-        ) throw new Error("Invalid swap request");
-
-        // Find the two property objects
-        const propertyData = gameData.propertyData || [];
-        const card1 = propertyData.find(p => p.id === swap.initiatorCardId);
-        const card2 = propertyData.find(p => p.id === swap.targetCardId);
-        if (!card1 || !card2) throw new Error("Property card not found");
-
-        // Swap owners
-        const tempOwner = card1.owner;
-        card1.owner = card2.owner;
-        card2.owner = tempOwner;
-
-        // Apply changes
-        transaction.update(gameDocRef, {
-            propertyData: propertyData,
-            pendingSwap: null // clear swap state
-        });
-    });
-
-    // Local reset
-    resetSwapUI();
-    showMessageModal("Swap Complete", "The property cards have been swapped.");
-}
-
-// --- Listen for Firebase pendingSwap updates and update UI ---
-function watchPendingSwap(gameData) {
-    pendingSwap = gameData.pendingSwap || null;
-
-    // Remove old flashes
-    document.querySelectorAll('.property-flash').forEach(el => el.classList.remove('property-flash'));
-
-    if (!pendingSwap) {
-        resetSwapUI();
-        return;
-    }
-
-    // Highlight initiator card
-    if (pendingSwap.initiatorCardId != null) {
-        highlightCard(pendingSwap.initiatorCardId);
-    }
-
-    // Highlight target card
-    if (pendingSwap.targetCardId != null) {
-        highlightCard(pendingSwap.targetCardId);
-    }
-}
