@@ -160,6 +160,10 @@ if (!window._propertySwapState) {
         swapTimeout: null            // Stores setTimeout ID for timeouts
     };
 }
+// Add a global lock for player move animations
+if (!window._playerMoveAnimationLocks) {
+    window._playerMoveAnimationLocks = {};
+}
 
 // --- Utility Functions ---
 function logEvent(message, data = null) {
@@ -1511,27 +1515,45 @@ function updateLocalUIFromFirestore(gameData) {
 // --- ACTION HANDLERS (Dice, Turn, Property, etc.) ---
 
 async function animatePlayerMove(playerId, startPos, steps, currentBoardLayout) {
+    // Check if an animation is already in progress for this player
+    if (window._playerMoveAnimationLocks[playerId]) {
+        logEvent(`Animation lock: Already animating for ${playerId}, skipping new animation.`);
+        return; // Already animating
+    }
+    window._playerMoveAnimationLocks[playerId] = true; // Set the lock
+    logEvent(`Animation lock: Set for ${playerId}`);
     const token = document.getElementById(`player-token-${playerId}`);
-    if (!token || !currentBoardLayout || currentBoardLayout.length === 0) return;
-    if (steps > 0 && audioContextStarted && toneSynth) {
-        try {
-            toneSynth.triggerAttackRelease("A5", "16n", Tone.now());
-        } catch (e) {
-            console.error("Token move sound error:", e);
-        }
+    if (!token || !currentBoardLayout || currentBoardLayout.length === 0) {
+        window._playerMoveAnimationLocks[playerId] = false; // Release lock if animation can't start
+        logEvent(`Animation lock: Released for ${playerId} (no token/board).`);
+        return;
     }
     let currentVisualPos = startPos;
     const stepDelay = 200;
-    for (let i = 0; i < steps; i++) {
-        currentVisualPos = (currentVisualPos + 1) % currentBoardLayout.length;
-        const nextSpaceEl = document.getElementById(`space-${currentVisualPos}`);
-        if (nextSpaceEl) {
-            nextSpaceEl.appendChild(token);
-            token.classList.remove('token-arrive-step');
-            void token.offsetWidth;
-            token.classList.add('token-arrive-step');
+    try {
+        for (let i = 0; i < steps; i++) {
+            currentVisualPos = (currentVisualPos + 1) % currentBoardLayout.length;
+            const nextSpaceEl = document.getElementById(`space-${currentVisualPos}`);
+            if (nextSpaceEl) {
+                nextSpaceEl.appendChild(token);
+                token.classList.remove('token-arrive-step');
+                void token.offsetWidth;
+                token.classList.add('token-arrive-step');
+            }
+            if (audioContextStarted && toneSynth) {
+                try {
+                    toneSynth.triggerAttackRelease("A5", "32n", Tone.now());
+                } catch (e) {
+                    console.error("Token move sound error:", e);
+                }
+            }
+            await new Promise(resolve => setTimeout(resolve, stepDelay));
         }
-        await new Promise(resolve => setTimeout(resolve, stepDelay));
+    } catch (error) {
+        console.error(`Error during animation for ${playerId}:`, error);
+    } finally {
+        window._playerMoveAnimationLocks[playerId] = false; // Always release the lock
+        logEvent(`Animation lock: Released for ${playerId} (animation finished/failed).`);
     }
 }
 
