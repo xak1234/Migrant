@@ -1,28 +1,133 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Migrantopoly: Choose Your Game!</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>Migrantopoly Game Selection</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #161c23 0%, #252f43 100%);
+      color: #f2f2f2;
+      font-family: 'Orbitron', Arial, sans-serif;
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    h1 {
+      font-size: 2.6em;
+      letter-spacing: 2px;
+      margin-bottom: 30px;
+      color: #58fff0;
+      text-shadow: 0 4px 16px #021c29;
+      text-align: center;
+    }
+    .game-card {
+      display: flex;
+      gap: 3rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 40px;
+    }
+    .game-select {
+      background: rgba(40,56,83,0.90);
+      border: 2px solid #58fff0;
+      border-radius: 1.5em;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+      width: 320px;
+      max-width: 95vw;
+      padding: 2.3em 2em;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: transform .18s, box-shadow .18s;
+      cursor: pointer;
+      position: relative;
+    }
+    .game-select:hover {
+      transform: scale(1.045);
+      box-shadow: 0 12px 32px #68e2f7cc;
+      border-color: #21ffe7;
+    }
+    .game-icon {
+      font-size: 3.2em;
+      margin-bottom: 0.8em;
+      filter: drop-shadow(0 2px 6px #03f7fc40);
+    }
+    .title {
+      font-size: 1.5em;
+      font-weight: 700;
+      margin-bottom: 0.7em;
+      color: #fff;
+      letter-spacing: 1px;
+      text-shadow: 0 2px 8px #0004;
+    }
+    .desc {
+      font-size: 1.04em;
+      color: #d9f5ff;
+      text-align: center;
+      margin-bottom: 1.2em;
+    }
+    .start-btn {
+      background: linear-gradient(90deg, #00e1fd 30%, #5fffca 100%);
+      color: #17262d;
+      border: none;
+      border-radius: 1em;
+      padding: 0.8em 2.2em;
+      font-size: 1.15em;
+      font-weight: 700;
+      margin-top: 0.5em;
+      cursor: pointer;
+      letter-spacing: 1.2px;
+      transition: background .15s, color .12s;
+      box-shadow: 0 2px 16px #29fae050;
+    }
+    .start-btn:hover {
+      background: linear-gradient(90deg, #ffeb3b 20%, #00e1fd 100%);
+      color: #1b2a3d;
+    }
+    @media (max-width: 750px) {
+      .game-card {
+        flex-direction: column;
+        gap: 2rem;
+      }
+      .game-select {
+        width: 97vw;
+        padding: 1.6em 0.2em;
+      }
+    }
+    footer {
+      margin-top: 38px;
+      color: #81f8e6;
+      font-size: 1em;
+      letter-spacing: 1px;
+      opacity: 0.7;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1 class="game-title">MIGRANTOPOLY</h1>
-        <p class="tagline">The Game of Global Journeys</p>
-
-        <div class="version-selection">
-            <a href="migrantsingle.html" class="game-button">
-                <span class="button-text">Single Player & AI</span>
-                <span class="button-subtext">Play against the computer</span>
-            </a>
-            <a href="index.html" class="game-button multi-button">
-                <span class="button-text">Multiplayer Online</span>
-                <span class="button-subtext">Challenge friends worldwide</span>
-            </a>
-        </div>
-
-        <p class="footer-note">Choose your path in the world of Migrantopoly.</p>
+  <h1>Migrantopoly – Choose Your Game</h1>
+  <div class="game-card">
+    <div class="game-select" onclick="window.location.href='migrantsingle.html'">
+      <span class="game-icon">👤🤖</span>
+      <div class="title">Single/AI Player</div>
+      <div class="desc">Play Migrantopoly solo against the AI. Test your luck, strategy, and street smarts—no friends needed (but AI might roast you anyway).</div>
+      <button class="start-btn">Start Single/AI Game</button>
     </div>
+    <div class="game-select" onclick="window.location.href='index.html'">
+      <span class="game-icon">🌐👥</span>
+      <div class="title">Multiplayer Online</div>
+      <div class="desc">Go head-to-head with your mates online! Set up a game, share the code, and see who can survive Migrantopoly’s chaos the longest. May the best hustler win.</div>
+      <button class="start-btn">Start Multiplayer</button>
+    </div>
+  </div>
+  <footer>
+    &copy; 2025 Migrantopoly &bull; Powered by Gen Z Energy 💥
+  </footer>
 </body>
 </html>
