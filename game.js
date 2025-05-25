@@ -196,61 +196,84 @@ function generateGameId() {
 }
 
 function reformatBoardLayout() {
-    const newBoardLocations = [
+    const newBoardLocations = [ // These are the 'set_property' types from previous change
         { name: "Boat Sank After Renting", type: "set_property", price: 100, rent_base: 150, groupId: "special_set" },
         { name: "People Trafficking", type: "set_property", price: 100, rent_base: 150, groupId: "special_set" },
         { name: "More than 15 children", type: "set_property", price: 100, rent_base: 150, groupId: "special_set" },
         { name: "Crypto Scam from Iqbhal", type: "set_property", price: 100, rent_base: 150, groupId: "special_set" }
     ];
+
+    const crackHouseRents = [2, 10, 30, 90, 160, 250];
+    const crackHouseCost = 50;
+    const crackHouseColorGroup = "darkgrey";
+
+    const crackHouse1 = { name: "Crack House 1", type: "property", price: 50, rent: crackHouseRents, color: crackHouseColorGroup, groupId: crackHouseColorGroup, houseCost: crackHouseCost };
+    const crackHouse2 = { name: "Crack House 2", type: "property", price: 50, rent: crackHouseRents, color: crackHouseColorGroup, groupId: crackHouseColorGroup, houseCost: crackHouseCost };
+    const crackHouse3 = { name: "Crack House 3", type: "property", price: 50, rent: crackHouseRents, color: crackHouseColorGroup, groupId: crackHouseColorGroup, houseCost: crackHouseCost };
+    const crackHouse4 = { name: "Crack House 4", type: "property", price: 50, rent: crackHouseRents, color: crackHouseColorGroup, groupId: crackHouseColorGroup, houseCost: crackHouseCost };
+
     let tempBoard = [];
-    tempBoard.push(initialBoardLayout.find(s => s.id === 0));
-    const welfareCardOriginalSide1 = initialBoardLayout.find(s => s.id === 2);
-    const boatSankProperty = newBoardLocations[0];
-    tempBoard.push(initialBoardLayout.find(s => s.id === 1));
-    tempBoard.push(boatSankProperty);
-    tempBoard.push(initialBoardLayout.find(s => s.id === 3));
-    tempBoard.push(initialBoardLayout.find(s => s.id === 4));
-    tempBoard.push(welfareCardOriginalSide1);
-    tempBoard.push(...initialBoardLayout.filter(s => s.id >= 5 && s.id <= 7));
-    tempBoard.push(initialBoardLayout.find(s => s.id === 8));
 
-    const peopleTraffickingProperty = newBoardLocations[1];
-    const payoutJobSeekersOriginal = initialBoardLayout.find(s => s.id === 9);
-    tempBoard.push(peopleTraffickingProperty);
-    tempBoard.push(initialBoardLayout.find(s => s.id === 10));
-    tempBoard.push(initialBoardLayout.find(s => s.id === 11));
-    tempBoard.push(initialBoardLayout.find(s => s.id === 12));
-    tempBoard.push(payoutJobSeekersOriginal);
-    tempBoard.push(initialBoardLayout.find(s => s.id === 13));
-    tempBoard.push(initialBoardLayout.find(s => s.id === 14));
-    tempBoard.push(initialBoardLayout.find(s => s.id === 15));
+    // Corner 0: GO
+    tempBoard.push(initialBoardLayout.find(s => s.id === 0)); // GO
 
-    tempBoard.push(initialBoardLayout.find(s => s.id === 16));
-    const moreThan15ChildrenProperty = newBoardLocations[2];
-    const opportunityCardSide3Original = initialBoardLayout.find(s => s.id === 18);
-    tempBoard.push(initialBoardLayout.find(s => s.id === 17));
-    tempBoard.push(moreThan15ChildrenProperty);
-    tempBoard.push(initialBoardLayout.find(s => s.id === 19));
-    tempBoard.push(initialBoardLayout.find(s => s.id === 20));
-    tempBoard.push(opportunityCardSide3Original);
-    tempBoard.push(...initialBoardLayout.filter(s => s.id >= 21 && s.id <= 23));
+    // Side 1 (9 spaces: 1-9)
+    tempBoard.push(initialBoardLayout.find(s => s.id === 1));       // Original Prop
+    tempBoard.push(crackHouse1);                                    // New Crack House
+    tempBoard.push(newBoardLocations[0]);                           // Boat Sank (set_property)
+    tempBoard.push(initialBoardLayout.find(s => s.id === 3));       // Original Prop
+    tempBoard.push(initialBoardLayout.find(s => s.id === 4));       // Original set_property (Black Market)
+    tempBoard.push(initialBoardLayout.find(s => s.id === 2));       // Welfare Card (original position was id 2)
+    tempBoard.push(initialBoardLayout.find(s => s.id === 5));       // Tax (Fake PIP)
+    tempBoard.push(initialBoardLayout.find(s => s.id === 6));       // Original Prop
+    tempBoard.push(initialBoardLayout.find(s => s.id === 7));       // Original Prop
 
-    tempBoard.push(initialBoardLayout.find(s => s.id === 24));
-    const cryptoScamProperty = newBoardLocations[3];
-    const opportunityCardSide4Original = initialBoardLayout.find(s => s.id === 30);
-    tempBoard.push(initialBoardLayout.find(s => s.id === 25));
-    tempBoard.push(initialBoardLayout.find(s => s.id === 26));
-    tempBoard.push(initialBoardLayout.find(s => s.id === 27));
-    tempBoard.push(initialBoardLayout.find(s => s.id === 28));
-    tempBoard.push(opportunityCardSide4Original);
-    tempBoard.push(initialBoardLayout.find(s => s.id === 29));
-    tempBoard.push(cryptoScamProperty);
-    tempBoard.push(initialBoardLayout.find(s => s.id === 31));
+    // Corner 1: Detention Center (Visiting) - Will be index 10
+    tempBoard.push(initialBoardLayout.find(s => s.id === 8)); 
+
+    // Side 2 (9 spaces: 11-19)
+    tempBoard.push(newBoardLocations[1]);                           // People Trafficking (set_property)
+    tempBoard.push(crackHouse2);                                    // New Crack House
+    tempBoard.push(initialBoardLayout.find(s => s.id === 10));      // Original Prop
+    tempBoard.push(initialBoardLayout.find(s => s.id === 11));      // Original Prop
+    tempBoard.push(initialBoardLayout.find(s => s.id === 12));      // Original set_property (Forced Marriage)
+    tempBoard.push(initialBoardLayout.find(s => s.id === 9));       // Payout: Job Seeker's (original position was id 9)
+    tempBoard.push(initialBoardLayout.find(s => s.id === 13));      // Welfare Card (original position was id 13)
+    tempBoard.push(initialBoardLayout.find(s => s.id === 14));      // Original Prop
+    tempBoard.push(initialBoardLayout.find(s => s.id === 15));      // Original Prop
+
+    // Corner 2: Crime Spree / Free Parking - Will be index 20
+    tempBoard.push(initialBoardLayout.find(s => s.id === 16)); 
+
+    // Side 3 (9 spaces: 21-29)
+    tempBoard.push(initialBoardLayout.find(s => s.id === 17));      // Original Prop
+    tempBoard.push(crackHouse3);                                    // New Crack House
+    tempBoard.push(newBoardLocations[2]);                           // More than 15 Children (set_property)
+    tempBoard.push(initialBoardLayout.find(s => s.id === 19));      // Original Prop
+    tempBoard.push(initialBoardLayout.find(s => s.id === 20));      // Original set_property (Child Wives)
+    tempBoard.push(initialBoardLayout.find(s => s.id === 18));      // Opportunity Card (original position was id 18)
+    tempBoard.push(initialBoardLayout.find(s => s.id === 21));      // Tax (Fake ID)
+    tempBoard.push(initialBoardLayout.find(s => s.id === 22));      // Original Prop
+    tempBoard.push(initialBoardLayout.find(s => s.id === 23));      // Original Prop
+
+    // Corner 3: Go To Detention Center - Will be index 30
+    tempBoard.push(initialBoardLayout.find(s => s.id === 24)); 
+
+    // Side 4 (9 spaces: 31-39)
+    tempBoard.push(initialBoardLayout.find(s => s.id === 25));      // Welfare Card (original position was id 25)
+    tempBoard.push(crackHouse4);                                    // New Crack House
+    tempBoard.push(initialBoardLayout.find(s => s.id === 26));      // Original Prop
+    tempBoard.push(initialBoardLayout.find(s => s.id === 27));      // Original Prop
+    tempBoard.push(initialBoardLayout.find(s => s.id === 28));      // Original set_property (I Don't Speak English)
+    tempBoard.push(initialBoardLayout.find(s => s.id === 30));      // Opportunity Card (original position was id 30)
+    tempBoard.push(initialBoardLayout.find(s => s.id === 29));      // Original Prop
+    tempBoard.push(newBoardLocations[3]);                           // Crypto Scam (set_property)
+    tempBoard.push(initialBoardLayout.find(s => s.id === 31));      // Original Prop
 
     boardLayout = tempBoard.map((space, index) => ({ ...space, id: index }));
 
     const dcSpace = boardLayout.find(s => s.name === "Detention Center");
-    detentionCenterSpaceId = dcSpace ? dcSpace.id : (boardLayout.find(s => s.type === "detention_visiting")?.id || 8);
+    detentionCenterSpaceId = dcSpace ? dcSpace.id : 10; // Detention Center is now at index 10
 }
 
 function playSirenSound() {
@@ -528,9 +551,9 @@ async function handleJoinGame() {
             if (gameData.boardLayout && gameData.boardLayout.length > 0) {
                 boardLayout = gameData.boardLayout;
                 const dcSpace = boardLayout.find(s => s.name === "Detention Center");
-                detentionCenterSpaceId = dcSpace ? dcSpace.id : (boardLayout.find(s => s.type === "detention_visiting")?.id || 8);
+                detentionCenterSpaceId = dcSpace ? dcSpace.id : (boardLayout.find(s => s.type === "detention_visiting")?.id || 10);
             } else {
-                reformatBoardLayout();
+                reformatBoardLayout(); // This will use the new 40-space layout
                 logEvent("Warning: Joined game was missing boardLayout, reformatted locally.");
             }
 
@@ -674,7 +697,7 @@ function subscribeToGameState(gameId) {
                 logEvent("Board layout received from Firestore is different or not set, adopting it.");
                 boardLayout = gameData.boardLayout;
                 const dcSpace = boardLayout.find(s => s.name === "Detention Center");
-                detentionCenterSpaceId = dcSpace ? dcSpace.id : (boardLayout.find(s => s.type === "detention_visiting")?.id || 8);
+                detentionCenterSpaceId = dcSpace ? dcSpace.id : (boardLayout.find(s => s.type === "detention_visiting")?.id || 10);
                 if (boardContainer.innerHTML.trim() !== '') {
                     logEvent("Board was already drawn, re-setting up from new Firestore layout.");
                     setupBoardFromFirestore(gameData);
@@ -1396,12 +1419,12 @@ function setupBoardFromFirestore(gameData) {
     if (gameData.boardLayout && gameData.boardLayout.length > 0) {
         boardLayout = gameData.boardLayout;
     } else {
-        logEvent("setupBoardFromFirestore: gameData.boardLayout is missing or empty. Cannot setup board.");
-        return;
+        logEvent("setupBoardFromFirestore: gameData.boardLayout is missing or empty. Calling reformatBoardLayout.");
+        reformatBoardLayout(); // Ensure boardLayout is populated if missing from Firestore
     }
 
     const dcSpace = boardLayout.find(s => s.name === "Detention Center");
-    detentionCenterSpaceId = dcSpace ? dcSpace.id : (boardLayout.find(s => s.type === "detention_visiting")?.id || 8);
+    detentionCenterSpaceId = dcSpace ? dcSpace.id : (boardLayout.find(s => s.type === "detention_visiting")?.id || 10);
 
     const cardDecksCenter = document.createElement('div');
     cardDecksCenter.id = 'card-decks-center';
@@ -1509,18 +1532,15 @@ function setupBoardFromFirestore(gameData) {
         }
 
         const currentId = s.id;
-        if (currentId === 0) { spaceDiv.style.gridArea = `1 / 1`; }
-        else if (currentId >= 1 && currentId <= 8) { spaceDiv.style.gridArea = `1 / ${currentId + 1}`; }
-        else if (currentId === 9) { spaceDiv.style.gridArea = `1 / 10`; }
-        else if (currentId >= 10 && currentId <= 17) { spaceDiv.style.gridArea = `${(currentId - 9) + 1} / 10`; }
-        else if (currentId === 18) { spaceDiv.style.gridArea = `10 / 10`; }
-        else if (currentId >= 19 && currentId <= 26) { spaceDiv.style.gridArea = `10 / ${10 - (currentId - 18)}`; }
-        else if (currentId === 27) { spaceDiv.style.gridArea = `10 / 1`; }
-        else if (currentId >= 28 && currentId <= 31) {
-            spaceDiv.style.gridArea = `${10 - (currentId - 27)} / 1`;
-        } else if (currentId >= 28 && currentId <= 35) {
-            spaceDiv.style.gridArea = `${10 - (currentId - 27)} / 1`;
-        }
+        if (currentId === 0) { spaceDiv.style.gridArea = `1 / 1`; } 
+        else if (currentId >= 1 && currentId <= 9) { spaceDiv.style.gridArea = `1 / ${currentId + 1}`; } 
+        else if (currentId === 10) { spaceDiv.style.gridArea = `1 / 11`; } 
+        else if (currentId >= 11 && currentId <= 19) { spaceDiv.style.gridArea = `${(currentId - 10) + 1} / 11`; } 
+        else if (currentId === 20) { spaceDiv.style.gridArea = `11 / 11`; } 
+        else if (currentId >= 21 && currentId <= 29) { spaceDiv.style.gridArea = `11 / ${11 - (currentId - 20)}`; } 
+        else if (currentId === 30) { spaceDiv.style.gridArea = `11 / 1`; } 
+        else if (currentId >= 31 && currentId <= 39) { spaceDiv.style.gridArea = `${11 - (currentId - 30)} / 1`; }
+
 
         // For general single-click info or other non-swap actions
         spaceDiv.addEventListener('click', (e) => {
