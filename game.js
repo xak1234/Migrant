@@ -157,7 +157,6 @@ let constructionSoundBuffer = null; // For construction sound
 if (!window._processedAnimationRollIds) {
     window._processedAnimationRollIds = new Set();
 }
-window._lastGoPayoutEventIdShown = null; // Initialize for trumpet sound
 
 // --- Global state for property swap ---
 if (!window._propertySwapState) {
@@ -276,37 +275,6 @@ function playSirenSound() {
         }, 1500);
     } else {
         logEvent("Siren sound skipped: Audio context not ready or Tone.js not fully loaded.");
-    }
-}
-
-function playTrumpetSound() {
-    if (audioContextStarted && Tone && Tone.Synth) {
-        logEvent("Playing trumpet sound for passing GO.");
-        const trumpet = new Tone.Synth({
-            oscillator: { type: "sawtooth" }, // Sawtooth can give a brassy tone
-            envelope: {
-                attack: 0.05, // Quick attack
-                decay: 0.3,   // Fairly quick decay
-                sustain: 0.2, // Short sustain
-                release: 0.4  // Moderate release
-            },
-            volume: -6 // Adjust volume as needed
-        }).toDestination();
-
-        const now = Tone.now();
-        // Simple fanfare: C4, G4, C5 (can be adjusted for better sound)
-        trumpet.triggerAttackRelease("C4", "8n", now);
-        trumpet.triggerAttackRelease("G4", "8n", now + 0.25); // Slightly adjusted timing
-        trumpet.triggerAttackRelease("C5", "4n", now + 0.5);  // Slightly adjusted timing
-
-        // Clean up synth
-        setTimeout(() => {
-            if (trumpet && typeof trumpet.dispose === 'function') {
-                trumpet.dispose();
-            }
-        }, 1500);
-    } else {
-        logEvent("Trumpet sound skipped: Audio context not ready or Tone.js not fully loaded.");
     }
 }
 
@@ -797,13 +765,6 @@ function subscribeToGameState(gameId) {
                 window._propertySwapState = { cardA: null, cardB: null, swapInitiatorPlayerId: null, swapActive: false, swapTimeout: null };
             }
 
-            // --- Play trumpet for GO Payout Event ---
-            if (gameData.lastGoPayoutEvent && (!window._lastGoPayoutEventIdShown || window._lastGoPayoutEventIdShown !== gameData.lastGoPayoutEvent.eventId)) {
-                window._lastGoPayoutEventIdShown = gameData.lastGoPayoutEvent.eventId;
-                logEvent(`Player ${gameData.players[gameData.lastGoPayoutEvent.playerId]?.name || gameData.lastGoPayoutEvent.playerId} received GO payout of £${gameData.lastGoPayoutEvent.amount}. Playing trumpet.`);
-                playTrumpetSound();
-            }
-
         } else {
             logEvent(`Game ${gameId} no longer exists or access denied.`);
             showMessageModal("Game Ended", "The game session has ended or is no longer available.");
@@ -841,7 +802,6 @@ function resetToSetupScreen() {
     if(gameStatusMessageP) gameStatusMessageP.textContent = 'Waiting for game to start...';
     // Reset swap state
     window._propertySwapState = { cardA: null, cardB: null, swapInitiatorPlayerId: null, swapActive: false, swapTimeout: null };
-    window._lastGoPayoutEventIdShown = null; // Reset for trumpet sound
 }
 
 async function finalizePreGameAsHost() {
@@ -2030,12 +1990,6 @@ async function handleRollDiceAction() {
                     updates.ukGovMoney = (freshGameData.ukGovMoney || 0) - goPayout;
                     updates[`players.${currentUserId}.govReceived`] = (playerState.govReceived || 0) + goPayout;
                     messages.push(`${playerState.name} passed Dole and collected £${goPayout}.`);
-                    updates.lastGoPayoutEvent = { // Add event for trumpet sound
-                        eventId: `${Date.now()}_go_${currentUserId}_${Math.random().toString(36).substr(2,5)}`,
-                        playerId: currentUserId,
-                        amount: goPayout,
-                        timestamp: serverTimestamp()
-                    };
                 }
 
                 if (landedSpace.type === 'payout' && landedSpace.amount) {
@@ -3193,12 +3147,6 @@ async function applyCardAction(card, playerId, deckType) {
                             updates.ukGovMoney = (updates.ukGovMoney !== undefined ? updates.ukGovMoney : freshGameData.ukGovMoney) - goPayout;
                             updates[`players.${playerId}.govReceived`] = (updates[`players.${playerId}.govReceived`] || playerState.govReceived || 0) + goPayout;
                             messages.push(`Passed Dole and collected £${goPayout}.`);
-                            updates.lastGoPayoutEvent = { // Add event for trumpet sound
-                                eventId: `${Date.now()}_go_${playerId}_card_payout_${Math.random().toString(36).substr(2,5)}`,
-                                playerId: playerId,
-                                amount: goPayout,
-                                timestamp: serverTimestamp()
-                            };
                         }
 
                         const payoutSpace = freshGameData.boardLayout[nearestPayoutId];
@@ -3253,12 +3201,6 @@ async function applyCardAction(card, playerId, deckType) {
                     updates.ukGovMoney = (updates.ukGovMoney !== undefined ? updates.ukGovMoney : freshGameData.ukGovMoney) - goSalary;
                     updates[`players.${playerId}.govReceived`] = (updates[`players.${playerId}.govReceived`] || playerState.govReceived || 0) + goSalary;
                     messages.push(`Collected £${goSalary}.`);
-                    updates.lastGoPayoutEvent = { // Add event for trumpet
-                        eventId: `${Date.now()}_go_${playerId}_card_advance_${Math.random().toString(36).substr(2,5)}`,
-                        playerId: playerId,
-                        amount: goSalary,
-                        timestamp: serverTimestamp()
-                    };
                     break;
                 default:
                     messages.push(`(Action '${card.action}' not fully implemented).`);
