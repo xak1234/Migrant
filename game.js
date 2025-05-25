@@ -146,9 +146,18 @@ const opportunityCards = [
 ];
 const playerEmojis = ['🐕‍🦺', '🐈', '🐘', '🐅', '🐒', '🦊'];
 const playerColors = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#1abc9c'];
+const playerColorNames = ['Red', 'Blue', 'Green', 'Yellow', 'Purple', 'Teal']; // Added color names
 
 let toneSynth;
 let audioContextStarted = false;
+let autoRollDiceTimeout = null; // For auto-rolling dice
+let constructionSoundBuffer = null; // For construction sound
+
+// Client-side set to track processed roll IDs for animation
+if (!window._processedAnimationRollIds) {
+    window._processedAnimationRollIds = new Set();
+}
+window._lastGoPayoutEventIdShown = null; // Initialize for trumpet sound
 
 // --- Global state for property swap ---
 if (!window._propertySwapState) {
@@ -245,6 +254,96 @@ function reformatBoardLayout() {
     detentionCenterSpaceId = dcSpace ? dcSpace.id : (boardLayout.find(s => s.type === "detention_visiting")?.id || 8);
 }
 
+function playSirenSound() {
+    if (audioContextStarted && Tone && Tone.Synth) {
+        logEvent("Playing siren sound.");
+        const siren = new Tone.Synth({
+            oscillator: { type: "sawtooth" },
+            envelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.5 }
+        }).toDestination();
+
+        const now = Tone.now();
+        siren.triggerAttackRelease("A4", "8n", now);
+        siren.triggerAttackRelease("E5", "8n", now + 0.25);
+        siren.triggerAttackRelease("A4", "8n", now + 0.5);
+        siren.triggerAttackRelease("E5", "8n", now + 0.75);
+
+        // Clean up synth after a short delay to prevent memory leaks if many are created
+        setTimeout(() => {
+            if (siren && typeof siren.dispose === 'function') {
+                siren.dispose();
+            }
+        }, 1500);
+    } else {
+        logEvent("Siren sound skipped: Audio context not ready or Tone.js not fully loaded.");
+    }
+}
+
+function playTrumpetSound() {
+    if (audioContextStarted && Tone && Tone.Synth) {
+        logEvent("Playing trumpet sound for passing GO.");
+        const trumpet = new Tone.Synth({
+            oscillator: { type: "sawtooth" }, // Sawtooth can give a brassy tone
+            envelope: {
+                attack: 0.05, // Quick attack
+                decay: 0.3,   // Fairly quick decay
+                sustain: 0.2, // Short sustain
+                release: 0.4  // Moderate release
+            },
+            volume: -6 // Adjust volume as needed
+        }).toDestination();
+
+        const now = Tone.now();
+        // Simple fanfare: C4, G4, C5 (can be adjusted for better sound)
+        trumpet.triggerAttackRelease("C4", "8n", now);
+        trumpet.triggerAttackRelease("G4", "8n", now + 0.25); // Slightly adjusted timing
+        trumpet.triggerAttackRelease("C5", "4n", now + 0.5);  // Slightly adjusted timing
+
+        // Clean up synth
+        setTimeout(() => {
+            if (trumpet && typeof trumpet.dispose === 'function') {
+                trumpet.dispose();
+            }
+        }, 1500);
+    } else {
+        logEvent("Trumpet sound skipped: Audio context not ready or Tone.js not fully loaded.");
+    }
+}
+
+async function loadConstructionSound() {
+    if (!audioContextStarted || !Tone || !Tone.Player || constructionSoundBuffer) return;
+    try {
+        // Replace 'path/to/your/construction_sound.mp3' with an actual URL to a short construction sound effect
+        // For example, you can find free sounds and host them, or use a placeholder sound for now.
+        // const soundUrl = "https://cdn.freesound.org/previews/516/516142_3238378-lq.mp3"; // Example URL (check licensing)
+        const soundUrl = "https://www.soundjay.com/mechanical/sounds/tool-box-open-close-1.mp3"; // Placeholder, find a better one
+
+        const player = new Tone.Player(soundUrl, () => {
+            constructionSoundBuffer = player.buffer;
+            player.dispose(); // Dispose player once buffer is loaded
+            logEvent("Construction sound loaded and buffer stored.");
+        }).toDestination();
+        player.load(); // This seems to be new with latest Tone.js to actually load
+    } catch (error) {
+        console.error("Error loading construction sound:", error);
+    }
+}
+
+function playConstructionSound() {
+    if (audioContextStarted && Tone && constructionSoundBuffer) {
+        try {
+            const player = new Tone.Player(constructionSoundBuffer).toDestination();
+            player.start();
+            logEvent("Playing construction sound.");
+            // Player will auto-dispose if not looped
+        } catch (error) {
+            console.error("Error playing construction sound:", error);
+        }
+    } else if (!constructionSoundBuffer) {
+        logEvent("Construction sound buffer not loaded. Attempting to load now.");
+        loadConstructionSound(); // Attempt to load if not already loaded
+    }
+}
 
 // --- Firebase Setup ---
 async function initializeFirebase() {
@@ -569,12 +668,31 @@ function subscribeToGameState(gameId) {
                             player.id === gameData.playerOrder[gameData.currentPlayerIndex] &&
                             !player.inDetention && !oldPlayerState.inDetention ) {
 
-                            const playerMakingTurnId = gameData.playerOrder[gameData.currentPlayerIndex];
-                            if (gameData.lastDiceRoll && player.id === playerMakingTurnId) {
-                                logEvent(`Animating move for opponent ${player.name} from ${oldPlayerState.position} to ${player.position}`);
-                                animatePlayerMove(player.id, oldPlayerState.position, gameData.lastDiceRoll.total, gameData.boardLayout);
+                            const playerMakingTurnId = gameData.playerOrder[gameData.currentPlayerIndex]; // This is the player whose turn it was
+                            // Ensure the lastDiceRoll corresponds to the player who just moved and hasn't been animated yet
+                            if (gameData.lastDiceRoll && gameData.lastDiceRoll.playerId === player.id && gameData.lastDiceRoll.rollId) {
+                                if (!window._processedAnimationRollIds.has(gameData.lastDiceRoll.rollId)) {
+                                    logEvent(`Animating move for opponent ${player.name} from ${oldPlayerState.position} to ${player.position} for rollId ${gameData.lastDiceRoll.rollId}`);
+                                    animatePlayerMove(player.id, oldPlayerState.position, gameData.lastDiceRoll.total, gameData.boardLayout);
+                                    window._processedAnimationRollIds.add(gameData.lastDiceRoll.rollId);
+
+                                    // Basic cleanup for the set to prevent unbounded growth
+                                    if (window._processedAnimationRollIds.size > Object.keys(gameData.players).length * 5) {
+                                        const oldestRolls = Array.from(window._processedAnimationRollIds).slice(0, window._processedAnimationRollIds.size - Object.keys(gameData.players).length * 3);
+                                        oldestRolls.forEach(id => window._processedAnimationRollIds.delete(id));
+                                        logEvent(`Cleaned up ${oldestRolls.length} old rollIDs from animation tracking set.`);
+                                    }
+                                } else {
+                                    logEvent(`Skipping animation for opponent ${player.name}, rollId ${gameData.lastDiceRoll.rollId} already processed.`);
+                                }
                             }
                         }
+                    }
+                    // Check for newly detained players to play siren
+                    const oldPlayerStateForSiren = previousLocalGameDataForComparison.players[player.id];
+                    if (oldPlayerStateForSiren && player.inDetention && !oldPlayerStateForSiren.inDetention) {
+                        logEvent(`Player ${player.name} (ID: ${player.id}) was just sent to detention. Playing siren.`);
+                        playSirenSound();
                     }
                 });
             }
@@ -679,6 +797,13 @@ function subscribeToGameState(gameId) {
                 window._propertySwapState = { cardA: null, cardB: null, swapInitiatorPlayerId: null, swapActive: false, swapTimeout: null };
             }
 
+            // --- Play trumpet for GO Payout Event ---
+            if (gameData.lastGoPayoutEvent && (!window._lastGoPayoutEventIdShown || window._lastGoPayoutEventIdShown !== gameData.lastGoPayoutEvent.eventId)) {
+                window._lastGoPayoutEventIdShown = gameData.lastGoPayoutEvent.eventId;
+                logEvent(`Player ${gameData.players[gameData.lastGoPayoutEvent.playerId]?.name || gameData.lastGoPayoutEvent.playerId} received GO payout of £${gameData.lastGoPayoutEvent.amount}. Playing trumpet.`);
+                playTrumpetSound();
+            }
+
         } else {
             logEvent(`Game ${gameId} no longer exists or access denied.`);
             showMessageModal("Game Ended", "The game session has ended or is no longer available.");
@@ -716,6 +841,7 @@ function resetToSetupScreen() {
     if(gameStatusMessageP) gameStatusMessageP.textContent = 'Waiting for game to start...';
     // Reset swap state
     window._propertySwapState = { cardA: null, cardB: null, swapInitiatorPlayerId: null, swapActive: false, swapTimeout: null };
+    window._lastGoPayoutEventIdShown = null; // Reset for trumpet sound
 }
 
 async function finalizePreGameAsHost() {
@@ -841,7 +967,48 @@ function updatePlayerInfoPanel(gameData) {
 }
 
 function updateGameStatusPanel(gameData) {
-    if (!gameStatusMessageP || !currentTurnDisplay || !gameData.players || !gameData.playerOrder) return;
+    // --- "You Are : [ColorName]" display ---
+    let youAreDisplayElement = document.getElementById('you-are-display');
+    const currentTurnDisplayRef = document.getElementById('current-turn-display'); // Ensure we have this reference
+
+    if (!youAreDisplayElement && currentTurnDisplayRef && currentTurnDisplayRef.parentNode) {
+        if (document.getElementById('you-are-display') === null) { // Create only if it truly doesn't exist
+            youAreDisplayElement = document.createElement('h2');
+            youAreDisplayElement.id = 'you-are-display';
+            youAreDisplayElement.style.textAlign = 'center';
+            youAreDisplayElement.style.fontSize = '1.2em'; // Slightly smaller than current turn display
+            youAreDisplayElement.style.marginBottom = '3px'; // Optional spacing
+            currentTurnDisplayRef.parentNode.insertBefore(youAreDisplayElement, currentTurnDisplayRef);
+        } else {
+            youAreDisplayElement = document.getElementById('you-are-display'); // Re-fetch if somehow missed
+        }
+    }
+
+    if (youAreDisplayElement) {
+        if (currentUserId && gameData.players && gameData.players[currentUserId]) {
+            const localPlayer = gameData.players[currentUserId];
+            if (localPlayer && typeof localPlayer.order !== 'undefined') {
+                const playerHexColor = playerColors[localPlayer.order % playerColors.length];
+                const colorName = playerColorNames[localPlayer.order % playerColorNames.length];
+                
+                youAreDisplayElement.innerHTML = `<span style="color: white;">You Are : </span><span style="color: ${playerHexColor}; font-weight: bold;">${colorName}</span>`;
+                youAreDisplayElement.style.display = 'block'; 
+            } else {
+                 youAreDisplayElement.innerHTML = ''; 
+                 youAreDisplayElement.style.display = 'none';
+            }
+        } else {
+            youAreDisplayElement.innerHTML = ''; 
+            youAreDisplayElement.style.display = 'none';
+        }
+    }
+    // --- End of "You Are : [ColorName]" display ---
+
+    if (!gameStatusMessageP || !currentTurnDisplayRef || !gameData.players || !gameData.playerOrder) {
+        // Log or handle missing critical elements if necessary, then return
+        // console.warn("updateGameStatusPanel: Missing critical DOM elements or game data.");
+        return;
+    }
 
     if (gameData.preGamePhase) {
         const joinedHumans = Object.values(gameData.players).filter(p => !p.isAI).length;
@@ -888,20 +1055,22 @@ function updateGameStatusPanel(gameData) {
                 currentTurnDisplay.classList.remove('pulsing');
             } else if (gameData.playerOrder.length === gameData.maxPlayers && gameData.playerOrder.every(pid => gameData.preGameRolls && gameData.preGameRolls[pid] !== undefined)) {
                 currentTurnDisplay.textContent = "Pre-Game Rolls Complete";
-                currentTurnDisplay.style.color = '#ecf0f1';
+                currentTurnDisplay.style.color = '#ecf0f1'; // Default color for this status
                 currentTurnDisplay.classList.remove('pulsing');
             } else {
                 currentTurnDisplay.textContent = "Waiting for Players...";
-                currentTurnDisplay.style.color = '#ecf0f1';
+                currentTurnDisplay.style.color = '#ecf0f1'; // Default color
                 currentTurnDisplay.classList.remove('pulsing');
             }
         } else if (gameData.gamePhase === "main" && !currentPlayerInOrder.isBankrupt) {
-            currentTurnDisplay.textContent = `Current Turn: ${playerNameForDisplay}`;
-            currentTurnDisplay.style.color = playerColors[currentPlayerInOrder.order % playerColors.length];
+            // currentTurnDisplay.textContent = `Current Turn: ${playerNameForDisplay}`;
+            // currentTurnDisplay.style.color = playerColors[currentPlayerInOrder.order % playerColors.length];
+            const playerColor = playerColors[currentPlayerInOrder.order % playerColors.length];
+            currentTurnDisplay.innerHTML = `<span style="color: white;">Current Player: </span><span style="color: ${playerColor};">${playerNameForDisplay}</span>`;
             currentTurnDisplay.classList.add('pulsing');
         } else if (gameData.gamePhase === "main" && currentPlayerInOrder.isBankrupt) {
             currentTurnDisplay.textContent = `Skipping Bankrupt: ${playerNameForDisplay}`;
-            currentTurnDisplay.style.color = '#7f8c8d';
+            currentTurnDisplay.style.color = '#7f8c8d'; // Muted color for skipped bankrupt player
             currentTurnDisplay.classList.remove('pulsing');
         }
     } else if (gameData.status === "finished") {
@@ -910,7 +1079,7 @@ function updateGameStatusPanel(gameData) {
         currentTurnDisplay.classList.remove('pulsing');
     } else {
         currentTurnDisplay.textContent = "Game Not Fully Started";
-        currentTurnDisplay.style.color = '#ecf0f1';
+        currentTurnDisplay.style.color = '#ecf0f1'; // Default color
         currentTurnDisplay.classList.remove('pulsing');
     }
 }
@@ -928,6 +1097,7 @@ function updateControlsBasedOnTurn(gameData) {
     const amIBankrupt = gameData.players[currentUserId]?.isBankrupt;
     const amIAI = gameData.players[currentUserId]?.isAI;
 
+    // Default to hidden
     rollDiceButton.style.display = 'none';
     endTurnButton.style.display = 'none';
     buyPropertyButton.style.display = 'none';
@@ -938,15 +1108,36 @@ function updateControlsBasedOnTurn(gameData) {
     if (amIBankrupt || amIAI || gameData.status === "finished" || gameData.preGamePhase) {
         const playerToken = document.getElementById(`player-token-${currentUserId}`);
         if (playerToken) playerToken.classList.remove('token-flash');
+        if (autoRollDiceTimeout) {
+            clearTimeout(autoRollDiceTimeout);
+            autoRollDiceTimeout = null;
+        }
         return;
     }
 
-    if (gameData.status !== "active" || gameData.gamePhase !== "main") return;
+    if (gameData.status !== "active" || gameData.gamePhase !== "main") {
+        if (autoRollDiceTimeout) {
+            clearTimeout(autoRollDiceTimeout);
+            autoRollDiceTimeout = null;
+        }
+        return;
+    }
 
     const isMyTurn = gameData.playerOrder[gameData.currentPlayerIndex] === currentUserId;
     const myPlayerState = gameData.players[currentUserId];
     const amIInDetention = myPlayerState.inDetention;
     const myPlayerActionTakenThisTurn = myPlayerState.playerActionTakenThisTurn;
+
+    if (autoRollDiceTimeout && !isMyTurn) { // Clear if it's no longer my turn
+        clearTimeout(autoRollDiceTimeout);
+        autoRollDiceTimeout = null;
+        logEvent("Not my turn anymore, cleared auto-roll dice timeout.");
+    } else if (isMyTurn && autoRollDiceTimeout && (amIInDetention || cardDisplayContainer.style.display !== 'none' || (onBoardCardDisplayDiv && onBoardCardDisplayDiv.style.display !== 'none'))) {
+        // Clear if conditions for auto-roll are clearly no longer met (e.g., in detention, card shown)
+        clearTimeout(autoRollDiceTimeout);
+        autoRollDiceTimeout = null;
+        logEvent("Auto-roll conditions invalidated (detention/card), cleared timeout.");
+    }
 
     const playerToken = document.getElementById(`player-token-${currentUserId}`);
     if (isMyTurn) {
@@ -963,27 +1154,39 @@ function updateControlsBasedOnTurn(gameData) {
     if (isMyTurn) {
         if (amIInDetention) {
             setupDetentionActionsUI(myPlayerState, gameData);
+            // End turn is available if action for detention turn is taken (e.g., failed roll, paid fine to stay, etc.)
             if (myPlayerActionTakenThisTurn) {
                 endTurnButton.style.display = 'block';
                 endTurnButton.disabled = false;
                 endTurnButton.classList.add('main-action-button');
-                detentionActionsDiv.innerHTML = '';
+                detentionActionsDiv.innerHTML = ''; // Clear actions if turn can be ended
             }
-        } else {
+        } else { // Not in detention
             const rolledDoubles = gameData.lastDiceRoll?.isDoubles;
             const doublesCount = myPlayerState.doublesRolledInTurn || 0;
 
+            // Roll Dice button is primary if no action taken OR if doubles allow another roll
             if (!myPlayerActionTakenThisTurn || (rolledDoubles && doublesCount > 0 && doublesCount < 3) ) {
                 rollDiceButton.style.display = 'block';
                 rollDiceButton.disabled = false;
                 rollDiceButton.classList.add('main-action-button');
+                // Add pulsing class if it is the primary action
+                if (!amIInDetention && endTurnButton.style.display === 'none' && buyPropertyButton.style.display === 'none' && developPropertyButton.style.display === 'none') {
+                    rollDiceButton.classList.add('pulsing');
+                } else {
+                    rollDiceButton.classList.remove('pulsing');
+                }
                 if (rolledDoubles && doublesCount > 0 && doublesCount < 3 && gameStatusMessageP) {
                     gameStatusMessageP.textContent = `${myPlayerState.name} rolled doubles! Roll again.`;
                 }
+            } else {
+                rollDiceButton.classList.remove('pulsing'); // Ensure pulsing is removed if not the primary action
             }
 
             let showOptionalActions = false;
-            if (gameData.lastDiceRoll || myPlayerActionTakenThisTurn) {
+            // Optional actions (buy/develop) are available only AFTER the main roll action is taken for this segment of the turn,
+            // OR if playerActionTakenThisTurn is true from a previous part of a multi-roll turn.
+            if (myPlayerActionTakenThisTurn || gameData.lastDiceRoll) { // Simpler: if action is taken OR a roll just happened
                 showOptionalActions = true;
             }
 
@@ -1011,22 +1214,32 @@ function updateControlsBasedOnTurn(gameData) {
                 }
 
                 if (buyPropertyButton.style.display === 'none' && developPropertyButton.style.display === 'none') {
-                    otherActionsContainer.style.display = 'none';
+                    otherActionsContainer.style.display = 'none'; // Hide container if no optional actions
                 }
-            } else {
-                otherActionsContainer.style.display = 'none';
             }
 
+            // End Turn button appears if the player has taken their action for this turn segment
+            // AND they are not obligated to roll again due to doubles.
             if (myPlayerActionTakenThisTurn && !(rolledDoubles && doublesCount > 0 && doublesCount < 3) ) {
                 endTurnButton.style.display = 'block';
                 endTurnButton.disabled = false;
                 endTurnButton.classList.add('main-action-button');
+                rollDiceButton.classList.remove('pulsing'); // Remove pulsing from roll if end turn is now available
+            }
+
+            // Auto-roll dice logic (relies on button states set above)
+            // Clear any existing auto-roll timeout at the start of this evaluation IF it's my turn
+            // (Moved clearing to earlier in the function, this is just the check)
+            if (autoRollDiceTimeout && !isMyTurn) {
+                clearTimeout(autoRollDiceTimeout);
+                autoRollDiceTimeout = null;
             }
 
             const noMandatoryRollPending = !((myPlayerState.doublesRolledInTurn || 0) > 0 && (myPlayerState.doublesRolledInTurn || 0) < 3 && !myPlayerActionTakenThisTurn);
             const noOptionalActionsAvailable = buyPropertyButton.style.display === 'none' && developPropertyButton.style.display === 'none';
             const noCardActionPending = cardDisplayContainer.style.display === 'none' && (!onBoardCardDisplayDiv || onBoardCardDisplayDiv.style.display === 'none');
 
+            // Auto-end turn (original logic)
             if (myPlayerActionTakenThisTurn && noMandatoryRollPending && noOptionalActionsAvailable && noCardActionPending) {
                 logEvent("Auto-ending turn conditions met. Setting timeout.");
                 setTimeout(() => {
@@ -1051,6 +1264,62 @@ function updateControlsBasedOnTurn(gameData) {
                         logEvent("Auto-end timeout: Could not get fresh player data. Not auto-ending.");
                     }
                 }, 1500);
+            }
+
+            // Auto-roll dice (new logic, revised conditions)
+            const canAutoRoll = isMyTurn &&
+                                !amIAI &&
+                                !amIInDetention &&
+                                rollDiceButton.style.display === 'block' && !rollDiceButton.disabled && // Roll dice must be the available action
+                                (buyPropertyButton.style.display === 'none' || buyPropertyButton.disabled === true) && // No buy
+                                (developPropertyButton.style.display === 'none' || developPropertyButton.disabled === true) && // No develop
+                                (detentionActionsDiv.innerHTML.trim() === '') && // No detention actions
+                                (cardDisplayContainer.style.display === 'none') && // No main card modal
+                                (!onBoardCardDisplayDiv || onBoardCardDisplayDiv.style.display === 'none') && // No on-board card modal
+                                endTurnButton.style.display === 'none' && // Critically, End Turn is NOT yet an option
+                                (!myPlayerState.playerActionTakenThisTurn || (rolledDoubles && doublesCount > 0 && doublesCount < 3)); // Roll is pending
+
+            if (canAutoRoll) {
+                if (!autoRollDiceTimeout) { // Start timeout only if not already running
+                    logEvent("Auto-roll dice conditions met. Setting 5s timeout.");
+                    autoRollDiceTimeout = setTimeout(() => {
+                        logEvent("Auto-roll dice timeout fired.");
+                        const freshLocalDataForAutoRoll = localGameData;
+                        if (freshLocalDataForAutoRoll && freshLocalDataForAutoRoll.players && freshLocalDataForAutoRoll.players[currentUserId]) {
+                            const stillMyTurnNow = freshLocalDataForAutoRoll.playerOrder[freshLocalDataForAutoRoll.currentPlayerIndex] === currentUserId;
+                            const playerStateNow = freshLocalDataForAutoRoll.players[currentUserId];
+                            const rolledDoublesNow = freshLocalDataForAutoRoll.lastDiceRoll?.isDoubles;
+                            const doublesCountNow = playerStateNow.doublesRolledInTurn || 0;
+
+                            const canStillAutoRollNow = stillMyTurnNow &&
+                                !playerStateNow.isAI &&
+                                !playerStateNow.inDetention &&
+                                document.getElementById('roll-dice-button').style.display === 'block' && !document.getElementById('roll-dice-button').disabled &&
+                                (document.getElementById('buy-property-button').style.display === 'none' || document.getElementById('buy-property-button').disabled === true) &&
+                                (document.getElementById('develop-property-button').style.display === 'none' || document.getElementById('develop-property-button').disabled === true) &&
+                                (document.getElementById('detention-actions').innerHTML.trim() === '') &&
+                                (document.getElementById('card-display-container').style.display === 'none') &&
+                                (!document.getElementById('on-board-card-display') || document.getElementById('on-board-card-display').style.display === 'none') &&
+                                document.getElementById('end-turn-button').style.display === 'none' &&
+                                (!playerStateNow.playerActionTakenThisTurn || (rolledDoublesNow && doublesCountNow > 0 && doublesCountNow < 3));
+
+                            if (canStillAutoRollNow) {
+                                logEvent("Auto-roll conditions still met. Calling handleRollDiceAction.");
+                                handleRollDiceAction();
+                            } else {
+                                logEvent("Auto-roll conditions no longer met at time of timeout execution.");
+                            }
+                        }
+                        autoRollDiceTimeout = null;
+                    }, 5000);
+                }
+            } else {
+                // If conditions for auto-roll are not met, and a timeout exists, clear it.
+                if (autoRollDiceTimeout) {
+                    clearTimeout(autoRollDiceTimeout);
+                    autoRollDiceTimeout = null;
+                    logEvent("Auto-roll conditions no longer met, cleared existing timeout.");
+                }
             }
         }
     }
@@ -1241,12 +1510,22 @@ function setupBoardFromFirestore(gameData) {
             spaceDiv.appendChild(colorBar);
         } else if (s.type === 'set_property') {
             spaceDiv.classList.add('set-property');
+        } else if (s.type === 'opportunity' || s.type === 'welfare') {
+            spaceDiv.classList.add('card-space'); // Add a class for general card space styling
+            spaceDiv.style.backgroundColor = 'grey'; // Grey background for card spaces
         }
         const nameDiv = document.createElement('div'); nameDiv.classList.add('name');
         if (s.name === 'Detention Center') nameDiv.classList.add('detention-center-name');
         nameDiv.textContent = s.name;
+
+        // Style for DOLE (GO) space
+        if (s.type === 'go') { // Dole is type 'go'
+            nameDiv.style.color = 'red';
+        }
+
         if (s.type === 'opportunity' || s.type === 'welfare') {
-            nameDiv.style.color = '#ff9800';
+            nameDiv.style.color = 'white'; // Set font color to white
+            nameDiv.style.fontSize = '1.1em'; // Make font a tiny bit larger
         }
         spaceDiv.appendChild(nameDiv);
 
@@ -1258,7 +1537,9 @@ function setupBoardFromFirestore(gameData) {
         }
         if (s.price) {
             const priceDiv = document.createElement('div'); priceDiv.classList.add('price');
-            priceDiv.textContent = `£${s.price}`; spaceDiv.appendChild(priceDiv);
+            priceDiv.textContent = `£${s.price}`;
+            priceDiv.style.fontSize = '0.9em'; // Make price font slightly larger
+            spaceDiv.appendChild(priceDiv);
         }
         if (s.type === 'property' || s.type === 'set_property') {
             const ownerIndicator = document.createElement('div');
@@ -1542,7 +1823,7 @@ async function animatePlayerMove(playerId, startPos, steps, currentBoardLayout) 
             }
             if (audioContextStarted && toneSynth) {
                 try {
-                    toneSynth.triggerAttackRelease("A5", "32n", Tone.now());
+                    // toneSynth.triggerAttackRelease("A5", "32n", Tone.now()); // Sound disabled
                 } catch (e) {
                     console.error("Token move sound error:", e);
                 }
@@ -1634,6 +1915,11 @@ async function makePaymentTransaction(payerId, recipientId, amount, reason = "Pa
 
 
 async function handleRollDiceAction() {
+    if (autoRollDiceTimeout) { // Clear timeout if dice rolled manually
+        clearTimeout(autoRollDiceTimeout);
+        autoRollDiceTimeout = null;
+        logEvent("Manually rolled dice, cleared auto-roll timeout.");
+    }
     if (!currentGameId || !localGameData || !localGameData.playerOrder || localGameData.playerOrder[localGameData.currentPlayerIndex] !== currentUserId) {
         showMessageModal("Not your turn", "It's not your turn to roll the dice.");
         return;
@@ -1744,6 +2030,12 @@ async function handleRollDiceAction() {
                     updates.ukGovMoney = (freshGameData.ukGovMoney || 0) - goPayout;
                     updates[`players.${currentUserId}.govReceived`] = (playerState.govReceived || 0) + goPayout;
                     messages.push(`${playerState.name} passed Dole and collected £${goPayout}.`);
+                    updates.lastGoPayoutEvent = { // Add event for trumpet sound
+                        eventId: `${Date.now()}_go_${currentUserId}_${Math.random().toString(36).substr(2,5)}`,
+                        playerId: currentUserId,
+                        amount: goPayout,
+                        timestamp: serverTimestamp()
+                    };
                 }
 
                 if (landedSpace.type === 'payout' && landedSpace.amount) {
@@ -1798,7 +2090,14 @@ async function handleRollDiceAction() {
                 updates[`players.${currentUserId}.playerActionTakenThisTurn`] = !isDoubles;
             }
 
-            updates.lastDiceRoll = { die1, die2, total: totalRoll, isDoubles };
+            updates.lastDiceRoll = { 
+                die1, 
+                die2, 
+                total: totalRoll, 
+                isDoubles, 
+                playerId: currentUserId, // Associate roll with the player who made it
+                rollId: `${Date.now()}-${crypto.randomUUID()}` // Unique ID for this specific roll
+            };
             updates.lastActionMessage = messages.join(" ");
             updates.updatedAt = serverTimestamp();
             transaction.update(gameDocRef, updates);
@@ -1854,6 +2153,11 @@ async function handleRollDiceAction() {
 }
 
 async function handleEndTurnAction() {
+    if (autoRollDiceTimeout) { // Clear timeout if turn ended manually or by AI
+        clearTimeout(autoRollDiceTimeout);
+        autoRollDiceTimeout = null;
+        logEvent("Turn ended, cleared auto-roll dice timeout.");
+    }
     logEvent("handleEndTurnAction called by user/AI: " + currentUserId);
 
     if (!currentGameId || !localGameData || !currentUserId || !db) {
@@ -1881,6 +2185,14 @@ async function handleEndTurnAction() {
         showMessageModal("Error", "Cannot end turn (player state error).");
         return;
     }
+
+    // Prevent ending turn if no action has been taken, unless in detention
+    if (!playerState.playerActionTakenThisTurn && !playerState.inDetention && !playerState.isBankrupt) {
+        logEvent(`EndTurn: Exiting for ${playerEndingTurnId} - Player has not taken their main action and is not in detention.`);
+        if (!playerState.isAI) showMessageModal("Action Required", "You must take an action (e.g., roll dice) before ending your turn.");
+        return;
+    }
+
     if (playerState.isBankrupt) {
         logEvent(`EndTurn: Exiting - Player ${playerEndingTurnId} is bankrupt, turn should have been skipped.`);
     } else {
@@ -1988,6 +2300,11 @@ async function handleEndTurnAction() {
 }
 
 async function handleBuyPropertyAction() {
+    if (autoRollDiceTimeout) {
+        clearTimeout(autoRollDiceTimeout);
+        autoRollDiceTimeout = null;
+        logEvent("Attempting to buy property, cleared auto-roll dice timeout.");
+    }
     logEvent("BuyProp: Action initiated by user: " + currentUserId);
 
     if (!currentGameId || !localGameData || !currentUserId || !db) {
@@ -2337,6 +2654,11 @@ function canPlayerDevelopAnyProperty(playerState, gameData) {
 }
 
 function setupDetentionActionsUI(playerState, gameData) {
+    if (autoRollDiceTimeout) {
+        clearTimeout(autoRollDiceTimeout);
+        autoRollDiceTimeout = null;
+        logEvent("Setting up detention actions, cleared auto-roll dice timeout.");
+    }
     if (!playerState || !playerState.inDetention || !detentionActionsDiv || playerState.isAI) return;
     detentionActionsDiv.innerHTML = '';
 
@@ -2432,6 +2754,11 @@ function setupDetentionActionsUI(playerState, gameData) {
 }
 
 function showDevelopPropertyOptions(playerState, gameData) {
+    if (autoRollDiceTimeout) {
+        clearTimeout(autoRollDiceTimeout);
+        autoRollDiceTimeout = null;
+        logEvent("Opening develop options, cleared auto-roll dice timeout.");
+    }
     if (!developPropertyContainer || !developPropertyOptionsDiv || !developPropertyNameH3 || playerState.isAI) return;
 
     developPropertyOptionsDiv.innerHTML = '';
@@ -2564,6 +2891,7 @@ async function handleConfirmDevelopment(propertyId, developmentType, cost) {
             logEvent("Development successful in transaction:", updates);
         });
 
+        playConstructionSound(); // Play sound after successful development
         developPropertyContainer.style.display = 'none';
 
     } catch (error) {
@@ -2654,6 +2982,7 @@ document.body.addEventListener('click', async () => {
                 }).toDestination();
                 logEvent("Tone.Synth initialized.");
             }
+            loadConstructionSound(); // Attempt to load construction sound after audio context is started
         } catch (e) {
             console.error("Error starting Tone.js AudioContext or initializing synth:", e);
         }
@@ -2679,9 +3008,18 @@ async function setCurrentCardDraw(card, type, playerId) {
 }
 
 function showCardModal(card, type, onOkCallback) {
+    if (autoRollDiceTimeout) {
+        clearTimeout(autoRollDiceTimeout);
+        autoRollDiceTimeout = null;
+        logEvent("Showing card modal, cleared auto-roll dice timeout.");
+    }
     if (!onBoardCardDisplayDiv || !onBoardCardTypeH4 || !onBoardCardTextP || !onBoardCardOkButton) return;
     onBoardCardTypeH4.textContent = `${type} Card`;
     onBoardCardTextP.textContent = card.text;
+    // Style the card text to be bold and black
+    onBoardCardTextP.style.color = 'black';
+    onBoardCardTextP.style.fontWeight = 'bold';
+
     onBoardCardDisplayDiv.style.display = 'flex';
 
     const playerWhoDrew = localGameData.players[card.playerId];
@@ -2855,6 +3193,12 @@ async function applyCardAction(card, playerId, deckType) {
                             updates.ukGovMoney = (updates.ukGovMoney !== undefined ? updates.ukGovMoney : freshGameData.ukGovMoney) - goPayout;
                             updates[`players.${playerId}.govReceived`] = (updates[`players.${playerId}.govReceived`] || playerState.govReceived || 0) + goPayout;
                             messages.push(`Passed Dole and collected £${goPayout}.`);
+                            updates.lastGoPayoutEvent = { // Add event for trumpet sound
+                                eventId: `${Date.now()}_go_${playerId}_card_payout_${Math.random().toString(36).substr(2,5)}`,
+                                playerId: playerId,
+                                amount: goPayout,
+                                timestamp: serverTimestamp()
+                            };
                         }
 
                         const payoutSpace = freshGameData.boardLayout[nearestPayoutId];
@@ -2909,6 +3253,12 @@ async function applyCardAction(card, playerId, deckType) {
                     updates.ukGovMoney = (updates.ukGovMoney !== undefined ? updates.ukGovMoney : freshGameData.ukGovMoney) - goSalary;
                     updates[`players.${playerId}.govReceived`] = (updates[`players.${playerId}.govReceived`] || playerState.govReceived || 0) + goSalary;
                     messages.push(`Collected £${goSalary}.`);
+                    updates.lastGoPayoutEvent = { // Add event for trumpet
+                        eventId: `${Date.now()}_go_${playerId}_card_advance_${Math.random().toString(36).substr(2,5)}`,
+                        playerId: playerId,
+                        amount: goSalary,
+                        timestamp: serverTimestamp()
+                    };
                     break;
                 default:
                     messages.push(`(Action '${card.action}' not fully implemented).`);
@@ -3124,6 +3474,7 @@ async function handleAITurn(gameData, aiPlayerId) {
         const die2 = Math.floor(Math.random() * 6) + 1;
         const totalRoll = die1 + die2;
         const isDoubles = die1 === die2;
+        const rollId = `${Date.now()}-${crypto.randomUUID()}`; // Generate rollId upfront
 
         try {
             if (audioContextStarted && toneSynth) {
@@ -3133,6 +3484,8 @@ async function handleAITurn(gameData, aiPlayerId) {
 
             const playerStartPos = aiPlayerState.position;
             await animatePlayerMove(aiPlayerId, playerStartPos, totalRoll, gameData.boardLayout);
+            window._processedAnimationRollIds.add(rollId); // Mark as processed on host for AI move
+            logEvent(`AI ${aiPlayerId} move animated locally, rollId ${rollId} added to processed set.`);
 
             let landedSpaceId;
             let rentPaymentRequired = false;
@@ -3248,7 +3601,14 @@ async function handleAITurn(gameData, aiPlayerId) {
                         }
                     }
 
-                    updates.lastDiceRoll = { die1, die2, total: totalRoll, isDoubles };
+                    updates.lastDiceRoll = { 
+                        die1, 
+                        die2, 
+                        total: totalRoll, 
+                        isDoubles, 
+                        playerId: aiPlayerId, // Associate roll with the AI player
+                        rollId: rollId // Use the pre-generated rollId
+                    };
                     updates.lastActionMessage = messages.join(" ");
                     updates.updatedAt = serverTimestamp();
                     transaction.update(gameDocRef, updates);
