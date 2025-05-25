@@ -95,7 +95,7 @@ body {
          #player-setup-screen button, #online-setup-screen button {
          background-color: #27ae60;
          color: white;
-         padding: 10px 18px;
+         padding: 5px 18px;
          font-size: 1em;
          border: none;
          border-radius: 5px;
@@ -153,7 +153,7 @@ body {
          display: none; /* Initially hidden */
          flex-wrap: wrap;
          justify-content: center;
-         gap: 25px;
+         gap: 115px;
          padding-top: 0px;
          }
          #board-container {
@@ -165,7 +165,7 @@ body {
          height: 760px; /* Fixed height */
          position: relative;
          background-color: rgba(52, 73, 94, 0.68);
-         border-radius: 10px;
+         border-radius: 5px;
          box-shadow: 0 5px 15px rgba(0,0,0,0.3);
          overflow: visible;
          margin-top: 20px;
@@ -366,7 +366,7 @@ body {
          width: 320px;
          display: flex;
          flex-direction: column;
-         gap: 15px;
+         gap: 40px;
          }
          #player-info, #controls, #card-display-container, #game-status-message-container, #develop-property-container {
          padding: 15px;
